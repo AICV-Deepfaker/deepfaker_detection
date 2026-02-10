@@ -22,7 +22,7 @@ members = [
     "deepfaker-detection",
     "wavelet-clip",
 ]
-constraints = [{ name = "setuptools", specifier = "<70" }]
+build-constraints = [{ name = "setuptools", specifier = "<82.0.0" }]
 
 [[package]]
 name = "absl-py"
@@ -3028,7 +3028,6 @@ dependencies = [
     { name = "scipy" },
     { name = "seaborn" },
     { name = "segmentation-models-pytorch" },
-    { name = "setuptools" },
     { name = "simplejson" },
     { name = "tensorboard" },
     { name = "timm" },
@@ -3071,7 +3070,6 @@ requires-dist = [
     { name = "scipy", specifier = ">=1.17.0" },
     { name = "seaborn", specifier = ">=0.13.2" },
     { name = "segmentation-models-pytorch", specifier = ">=0.5.0" },
-    { name = "setuptools", specifier = "<70.0.0" },
     { name = "simplejson", specifier = ">=3.20.2" },
     { name = "tensorboard", specifier = ">=2.20.0" },
     { name = "timm", specifier = ">=1.0.24" },
