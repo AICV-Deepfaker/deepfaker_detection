@@ -1,0 +1,34 @@
+# macOS
+.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+env/
+.env
+.env.*
+*.egg-info/
+.eggs/
+
+# Node (ddp_frontend 등)
+node_modules/
+
+# IDE / Editor (선택)
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 로그·캐시
+*.log
+.cache/
+
+# 대용량 데이터·모델 (필요시 주석 해제)
+# *.pth
+# *.ckpt
+# datasets/

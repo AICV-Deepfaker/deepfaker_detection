@@ -1,0 +1,21 @@
+# Web Server & Tunneling
+fastapi
+uvicorn
+pyngrok
+nest-asyncio
+
+# AI & Deep Learning
+torch
+torchvision
+insightface
+onnxruntime-gpu  # NVIDIA GPU 사용 시 (CPU 환경이면 onnxruntime으로 변경)
+
+# Image & Video Processing
+opencv-python
+numpy
+PyWavelets
+Pillow
+
+# Visualization & Utilities
+matplotlib
+pyyaml
