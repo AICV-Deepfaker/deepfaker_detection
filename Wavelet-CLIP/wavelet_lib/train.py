@@ -13,13 +13,13 @@ import torch.optim as optim
 from torch.utils.data.distributed import DistributedSampler
 import torch.distributed as dist
 
-from optimizor.SAM import SAM
-from optimizor.LinearLR import LinearDecayLR
+from wavelet_lib.optimizer.SAM import SAM
+from wavelet_lib.optimizer.LinearLR import LinearDecayLR
 
-from trainer.trainer import Trainer
-from detectors import DETECTOR
-from dataset import DeepfakeAbstractBaseDataset
-from metrics.utils import parse_metric_for_print
+from wavelet_lib.trainer.trainer import Trainer
+from wavelet_lib.detectors import DETECTOR
+from wavelet_lib.dataset import DeepfakeAbstractBaseDataset
+from wavelet_lib.metrics.utils import parse_metric_for_print
 from logger import create_logger, RankFilter
 
 torch.backends.cudnn.benchmark = True

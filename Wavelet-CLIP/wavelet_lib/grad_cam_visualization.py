@@ -11,7 +11,7 @@ from pytorch_grad_cam import GradCAM, HiResCAM, ScoreCAM, GradCAMPlusPlus, Ablat
 from pytorch_grad_cam.utils.model_targets import ClassifierOutputTarget
 from pytorch_grad_cam.utils.image import show_cam_on_image
 
-from detectors import DETECTOR
+from wavelet_lib.detectors import DETECTOR
 from torchvision import transforms as T
 from PIL import Image
 from tqdm import tqdm

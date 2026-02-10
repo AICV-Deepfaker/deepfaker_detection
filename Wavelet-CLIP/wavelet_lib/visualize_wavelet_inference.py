@@ -5,7 +5,7 @@ import torch
 import numpy as np
 import matplotlib.pyplot as plt
 import pywt
-from detectors import DETECTOR
+from wavelet_lib.detectors import DETECTOR
 from torchvision import transforms as T
 from PIL import Image
 from tqdm import tqdm

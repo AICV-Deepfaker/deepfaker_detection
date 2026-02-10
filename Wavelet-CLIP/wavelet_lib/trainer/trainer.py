@@ -14,11 +14,11 @@ from tqdm import tqdm
 import time
 import torch
 from torch.utils.tensorboard import SummaryWriter
-from metrics.base_metrics_class import Recorder
+from wavelet_lib.metrics.base_metrics_class import Recorder
 from torch.optim.swa_utils import AveragedModel
 from torch import distributed as dist
 from torch.nn.parallel import DistributedDataParallel as DDP
-from metrics.utils import get_test_metrics
+from wavelet_lib.metrics.utils import get_test_metrics
 
 
 FFpp_pool=['FaceForensics++','FF-DF','FF-F2F','FF-FS','FF-NT']#

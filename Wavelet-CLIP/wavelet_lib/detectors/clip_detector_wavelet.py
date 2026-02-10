@@ -1,11 +1,11 @@
 import logging
 import torch
 import torch.nn as nn
-from metrics.base_metrics_class import calculate_metrics_for_train
+from wavelet_lib.metrics.base_metrics_class import calculate_metrics_for_train
 
 from .base_detector import AbstractDetector
-from detectors import DETECTOR
-from loss import LOSSFUNC
+from wavelet_lib.detectors import DETECTOR
+from wavelet_lib.loss import LOSSFUNC
 from transformers import AutoProcessor, CLIPModel
 from pytorch_wavelets import DWT1DForward, DWT1DInverse
 

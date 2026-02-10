@@ -6,13 +6,13 @@ import numpy as np
 import random
 import yaml
 from tqdm import tqdm
-from metrics.utils import get_test_metrics
+from wavelet_lib.metrics.utils import get_test_metrics
 import torch
 import torch.nn.parallel
 import torch.backends.cudnn as cudnn
 import torch.utils.data
-from dataset.abstract_dataset import DeepfakeAbstractBaseDataset
-from detectors import DETECTOR
+from wavelet_lib.dataset.abstract_dataset import DeepfakeAbstractBaseDataset
+from wavelet_lib.detectors import DETECTOR
 import argparse
 
 parser = argparse.ArgumentParser(description='Process some paths.')

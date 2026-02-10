@@ -9,7 +9,7 @@ import torch
 import torch.nn.parallel
 import torch.backends.cudnn as cudnn
 import torch.utils.data
-from detectors import DETECTOR
+from wavelet_lib.detectors import DETECTOR
 from torch.utils.data import Dataset
 from torchvision import transforms as T
 
