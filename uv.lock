@@ -22,6 +22,7 @@ members = [
     "deepfaker-detection",
     "wavelet-clip",
 ]
+constraints = [{ name = "setuptools", specifier = "<70" }]
 
 [[package]]
 name = "absl-py"
@@ -410,9 +411,9 @@ requires-dist = [
     { name = "pyngrok", specifier = ">=7.5.0" },
     { name = "pywavelets", specifier = ">=1.9.0" },
     { name = "pyyaml", specifier = ">=6.0.3" },
-    { name = "torch", marker = "sys_platform != 'linux'", specifier = ">=2.10.0", index = "https://pypi.org/simple" },
+    { name = "torch", marker = "sys_platform != 'linux'", specifier = ">=2.10.0" },
     { name = "torch", marker = "sys_platform == 'linux'", specifier = ">=2.10.0", index = "https://download.pytorch.org/whl/cu126" },
-    { name = "torchvision", marker = "sys_platform != 'linux'", specifier = ">=0.25.0", index = "https://pypi.org/simple" },
+    { name = "torchvision", marker = "sys_platform != 'linux'", specifier = ">=0.25.0" },
     { name = "torchvision", marker = "sys_platform == 'linux'", specifier = ">=0.25.0", index = "https://download.pytorch.org/whl/cu126" },
     { name = "uvicorn", specifier = ">=0.40.0" },
     { name = "wavelet-clip", editable = "Wavelet-CLIP" },
@@ -3074,11 +3075,11 @@ requires-dist = [
     { name = "simplejson", specifier = ">=3.20.2" },
     { name = "tensorboard", specifier = ">=2.20.0" },
     { name = "timm", specifier = ">=1.0.24" },
-    { name = "torch", marker = "sys_platform != 'linux'", specifier = ">=2.10.0", index = "https://pypi.org/simple" },
+    { name = "torch", marker = "sys_platform != 'linux'", specifier = ">=2.10.0" },
     { name = "torch", marker = "sys_platform == 'linux'", specifier = ">=2.10.0", index = "https://download.pytorch.org/whl/cu126" },
     { name = "torchaudio", specifier = ">=2.10.0" },
     { name = "torchtoolbox", specifier = ">=0.1.8.2" },
-    { name = "torchvision", marker = "sys_platform != 'linux'", specifier = ">=0.25.0", index = "https://pypi.org/simple" },
+    { name = "torchvision", marker = "sys_platform != 'linux'", specifier = ">=0.25.0" },
     { name = "torchvision", marker = "sys_platform == 'linux'", specifier = ">=0.25.0", index = "https://download.pytorch.org/whl/cu126" },
     { name = "tqdm", specifier = ">=4.67.3" },
     { name = "transformers", specifier = ">=5.1.0" },
