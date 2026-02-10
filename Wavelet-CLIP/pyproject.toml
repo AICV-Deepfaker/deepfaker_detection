@@ -1,0 +1,72 @@
+[project]
+name = "wavelet-clip"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "albumentations>=2.0.8",
+    "clip",
+    "dlib>=20.0.0",
+    "efficientnet-pytorch>=0.7.1",
+    "einops>=0.8.2",
+    "filterpy>=1.4.5",
+    "imageio>=2.37.2",
+    "imgaug>=0.4.0",
+    "imutils>=0.5.4",
+    "insightface>=0.7.3",
+    "kornia>=0.8.2",
+    "lmdb>=1.7.5",
+    "loralib>=0.1.2",
+    "numpy>=2.4.2",
+    "onnxruntime>=1.24.1",
+    "opencv-python>=4.13.0.92",
+    "pandas>=3.0.0",
+    "pillow>=12.1.0",
+    "pytorch-wavelets>=1.3.0",
+    "pytorchvideo>=0.1.5",
+    "pyyaml>=6.0.3",
+    "scikit-image>=0.26.0",
+    "scikit-learn>=1.8.0",
+    "scipy>=1.17.0",
+    "seaborn>=0.13.2",
+    "segmentation-models-pytorch>=0.5.0",
+    "setuptools<70.0.0",
+    "simplejson>=3.20.2",
+    "tensorboard>=2.20.0",
+    "timm>=1.0.24",
+    "torch>=2.10.0",
+    "torchaudio>=2.10.0",
+    "torchtoolbox>=0.1.8.2",
+    "torchvision>=0.25.0",
+    "tqdm>=4.67.3",
+    "transformers>=5.1.0",
+    "wheel>=0.46.3",
+]
+
+[tool.uv.extra-build-dependencies]
+clip = ["setuptools<70.0.0"]
+git = ["setuptools<70.0.0"]
+
+[build-system]
+requires = ["uv_build>=0.10.0,<0.11.0"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = ["wavelet_lib"]
+module-root = ""
+
+
+[tool.uv.sources]
+torch = [
+  { index = "pytorch-cu126", marker = "sys_platform == 'linux'" },
+]
+torchvision = [
+  { index = "pytorch-cu126", marker = "sys_platform == 'linux'" },
+]
+clip = { git = "https://github.com/openai/CLIP.git" }
+
+[[tool.uv.index]]
+name = "pytorch-cu126"
+url = "https://download.pytorch.org/whl/cu126"
+explicit = true

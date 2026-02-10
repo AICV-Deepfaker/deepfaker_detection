@@ -21,12 +21,8 @@ from insightface.app import FaceAnalysis
 # 1. 경로 및 설정 (본인 환경에 맞게 수정)
 # ==========================================
 # Wavelet-CLIP 소스 코드가 위치한 경로
-REPO_PATH = "./Wavelet-CLIP/training" 
-if REPO_PATH not in sys.path:
-    sys.path.append(REPO_PATH)
-
 try:
-    from detectors import DETECTOR
+    from wavelet_lib.detectors import DETECTOR
 except ImportError:
     print("❌ 'detectors' 모듈을 찾을 수 없습니다. REPO_PATH 설정을 확인하세요.")
     sys.exit(1)

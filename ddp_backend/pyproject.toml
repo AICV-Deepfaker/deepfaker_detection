@@ -1,0 +1,37 @@
+[project]
+name = "ddp-backend"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.128.6",
+    "insightface>=0.7.3",
+    "matplotlib>=3.10.8",
+    "nest-asyncio>=1.6.0",
+    "numpy>=2.4.2",
+    "onnxruntime-gpu>=1.24.1",
+    "opencv-python>=4.13.0.92",
+    "pillow>=12.1.0",
+    "pyngrok>=7.5.0",
+    "pywavelets>=1.9.0",
+    "pyyaml>=6.0.3",
+    "torch>=2.10.0",
+    "torchvision>=0.25.0",
+    "uvicorn>=0.40.0",
+    "wavelet-clip",
+]
+
+[tool.uv.sources]
+torch = [
+  { index = "pytorch-cu126", marker = "sys_platform == 'linux'" },
+]
+torchvision = [
+  { index = "pytorch-cu126", marker = "sys_platform == 'linux'" },
+]
+wavelet-clip = { workspace = true }
+
+[[tool.uv.index]]
+name = "pytorch-cu126"
+url = "https://download.pytorch.org/whl/cu126"
+explicit = true
