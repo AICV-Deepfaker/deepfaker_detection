@@ -25,11 +25,9 @@ dependencies = [
 [tool.uv.sources]
 torch = [
   { index = "pytorch-cu126", marker = "sys_platform == 'linux'" },
-  { index = "pypi", marker = "sys_platform != 'linux'" },
 ]
 torchvision = [
   { index = "pytorch-cu126", marker = "sys_platform == 'linux'" },
-  { index = "pypi", marker = "sys_platform != 'linux'" },
 ]
 wavelet-clip = { workspace = true }
 
@@ -37,8 +35,3 @@ wavelet-clip = { workspace = true }
 name = "pytorch-cu126"
 url = "https://download.pytorch.org/whl/cu126"
 explicit = true
-
-[[tool.uv.index]]
-name = "pypi"
-url = "https://pypi.org/simple"
-default = true
