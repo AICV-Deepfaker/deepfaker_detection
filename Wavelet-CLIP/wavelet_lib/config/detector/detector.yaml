@@ -2,7 +2,7 @@
 log_dir: ./logs_debug/clip_wavelet
 
 # model setting
-pretrained: ./training/pretrained/clip_wavelet_best.pth # path to a pre-trained model, if using one
+pretrained: /Users/sienna/deepfaker_detection/ddp_backend/ckpt_best.pth # path to a pre-trained model, if using one
 model_name: clip_wavelet   # model name
 backbone_name: vit  # backbone name
 
