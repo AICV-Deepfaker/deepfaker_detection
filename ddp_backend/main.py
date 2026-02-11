@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 import os
 import shutil
 from typing import Annotated
@@ -21,15 +22,39 @@ NGROK_AUTH_TOKEN = os.environ.get(
     "NGROK_AUTH_TOKEN", "여기에_본인의_NGROK_토큰을_입력하세요"
 )
 
-app = FastAPI()
-
-
 detector = WaveletDetector.from_yaml(DETECTOR_YAML, IMG_SIZE, CKPT_PATH)
-detector.load_model()
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):  # pyright: ignore[reportUnusedParameter]
+    detector.load_model()
+    public_url = None
+
+    if NGROK_AUTH_TOKEN and NGROK_AUTH_TOKEN != "여기에_본인의_NGROK_토큰을_입력하세요":
+        ngrok.set_auth_token(NGROK_AUTH_TOKEN)
+        tunnel = ngrok.connect("8000")
+        public_url = tunnel.public_url
+        print(f"\n🚀 외부 접속 주소 (ngrok): {public_url}/predict")
+    else:
+        print("\n⚠️ NGROK 토큰이 설정되지 않았습니다. 로컬에서만 접속 가능합니다.")
+
+    print("🚀 FastAPI 서버를 시작합니다 (Port: 8000)...")
+
+    yield
+    
+    # [Shutdown] 서버 종료 시 실행
+    if public_url:
+        print("\n🛠️ ngrok 터널을 종료 중입니다...")
+        ngrok.disconnect(public_url)
+        ngrok.kill()
+        print("✅ ngrok이 종료되었습니다.")
+
+app = FastAPI(lifespan=lifespan)
+
+
 
 
 # ==========================================
-# 5. API 경로
+# API 경로
 # ==========================================
 @app.post("/predict")
 async def predict_deepfake(file: Annotated[UploadFile, File(...)], mode: str = "full"):
@@ -61,16 +86,6 @@ async def predict_deepfake(file: Annotated[UploadFile, File(...)], mode: str = "
 # 6. 메인 실행부
 # ==========================================
 if __name__ == "__main__":
-    # ngrok 설정
-    if NGROK_AUTH_TOKEN and NGROK_AUTH_TOKEN != "여기에_본인의_NGROK_토큰을_입력하세요":
-        ngrok.set_auth_token(NGROK_AUTH_TOKEN)
-        public_url = ngrok.connect("8000")
-        print(f"\n🚀 외부 접속 주소 (ngrok): {public_url}/predict")
-    else:
-        print("\n⚠️ NGROK 토큰이 설정되지 않았습니다. 로컬에서만 접속 가능합니다.")
-
-    print("🚀 FastAPI 서버를 시작합니다 (Port: 8000)...")
-
     # 일반 .py 파일에서는 nest_asyncio와 uvicorn.run 조합보다
     # uvicorn.run(app) 직접 호출이 더 안정적입니다.
     uvicorn.run(app, host="0.0.0.0", port=8000)
