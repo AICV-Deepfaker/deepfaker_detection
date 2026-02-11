@@ -25,7 +25,7 @@ except ImportError:
 
 # 모델 및 환경 변수
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-DETECTOR_YAML = "./Wavelet-CLIP/training/config/detector/detector.yaml"
+DETECTOR_YAML = "./Wavelet-CLIP/wavelet_lib/config/detector/detector.yaml"
 CKPT_PATH = "./ckpt_best.pth"
 IMG_SIZE = 224
 
