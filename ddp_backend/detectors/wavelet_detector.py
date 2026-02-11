@@ -39,7 +39,7 @@ class WaveletDetector(BaseDetector[WaveletSetting]):
         threshold: float = 0.5,
     ) -> Self:
         with open(yaml_path, "r") as f:
-            raw_data = yaml.safe_load(f)  # pyright: ignore[reportAny]
+            raw_data = yaml.safe_load(f)
             model_config = TypeAdapter(WaveletConfig).validate_python(raw_data)
 
         new_config = WaveletConfigParam(
@@ -71,7 +71,7 @@ class WaveletDetector(BaseDetector[WaveletSetting]):
         ).to(self.device)
         ckpt: dict[str, Any] = torch.load(
             self.config.model_path, map_location=self.device
-        )  # pyright: ignore[reportAny, reportExplicitAny]
+        )
         state_dict = {k.replace("module.", ""): v for k, v in ckpt.items()}
         _ = self.model.load_state_dict(state_dict, strict=True)
         _ = self.model.eval()
@@ -101,13 +101,13 @@ class WaveletDetector(BaseDetector[WaveletSetting]):
         gray = cv2.cvtColor(best_img_rgb, cv2.COLOR_RGB2GRAY)
         coeffs = pywt.dwt2(gray, "haar")
         _, (LH, HL, HH) = coeffs
-        energy_map = np.sqrt(LH**2 + HL**2 + HH**2)  # pyright: ignore[reportUnknownArgumentType]
-        energy_map: np.ndarray = cv2.normalize(  # pyright: ignore[reportUnknownMemberType, reportCallIssue]
+        energy_map = np.sqrt(LH**2 + HL**2 + HH**2)
+        energy_map: np.ndarray = cv2.normalize(  # pyright: ignore[reportUnknownMemberType, reportCallIssue, reportUnknownVariableType]
             energy_map,
-            None,
+            None,  # pyright: ignore[reportArgumentType]
             0,
             255,
-            cv2.NORM_MINMAX,  # pyright: ignore[reportArgumentType]
+            cv2.NORM_MINMAX,
         ).astype(np.uint8)
 
         fig, axes = plt.subplots(1, 2, figsize=(10, 5))
@@ -181,7 +181,7 @@ class WaveletDetector(BaseDetector[WaveletSetting]):
                         "image": img_tensor,
                         "label": torch.zeros(1).long().to(self.device),
                     }
-                    pred: PredDict = self.model(data_dict, inference=True)  # pyright: ignore[reportAny]
+                    pred: PredDict = self.model(data_dict, inference=True)
                     prob = pred["prob"].item()
                     all_probs.append(prob)
 
