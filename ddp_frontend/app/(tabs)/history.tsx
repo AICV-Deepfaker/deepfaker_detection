@@ -1,7 +1,8 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Image } from 'expo-image';
+import { router } from 'expo-router';
 import { useCallback } from 'react';
-import { FlatList, StyleSheet, View } from 'react-native';
+import { FlatList, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
@@ -20,7 +21,10 @@ export default function HistoryScreen() {
     const isFake = item.resultType === 'FAKE';
     const isReal = item.resultType === 'REAL';
     return (
-      <View style={styles.card}>
+      <TouchableOpacity
+        style={styles.card}
+        activeOpacity={0.85}
+        onPress={() => router.push({ pathname: '/history-report', params: { id: item.id } } as never)}>
         {/* 썸네일 이미지 */}
         {item.visualReport && (
           <Image
@@ -65,8 +69,12 @@ export default function HistoryScreen() {
               minute: '2-digit',
             })}
           </ThemedText>
+          <View style={styles.reportHint}>
+            <ThemedText style={styles.reportHintText}>리포트 보기</ThemedText>
+            <MaterialIcons name="chevron-right" size={20} color={ACCENT_GREEN} />
+          </View>
         </View>
-      </View>
+      </TouchableOpacity>
     );
   }, []);
 
@@ -123,6 +131,18 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: SECONDARY_TEXT_COLOR,
     marginTop: 4,
+  },
+  reportHint: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    marginTop: 12,
+    gap: 2,
+  },
+  reportHintText: {
+    fontSize: 13,
+    color: ACCENT_GREEN,
+    fontWeight: '600',
   },
   list: {
     padding: 16,

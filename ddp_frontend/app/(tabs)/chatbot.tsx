@@ -39,16 +39,31 @@ const DEEPFAKE_CASE_INFO = `🔈 오디오 추출 분석 결과
 • 딥페이크 영상 유포량: 전 세계적으로 생성된 딥페이크 콘텐츠 중 약 90% 이상이 당사자의 동의 없이 악용된 사례이며, 그중 금융 사기와 연관된 비중이 전년 대비 30% 증가했습니다.
 
 • 검거 및 수사 현황: 손흥민 선수 및 앵커 사칭 사건을 포함하여 현재 경찰이 수사 중인 '강원랜드 사칭 조직' 관련 피해자만 수백 명에 달하는 것으로 추정됩니다.
-
+=============================
 🚨 피해 예방을 위한 핵심 체크리스트
 • 초고수익 보장 의심: 유명인이 직접 나와 "단기간 고수익"을 보장한다면 99% 확률로 딥페이크 사기입니다.
 
 • 비공식 앱 설치 금지: SNS 링크를 통해 설치 유도하는 '강원랜드 사칭 앱' 등은 개인정보 탈취용 악성 소프트웨어입니다.
 
 • DDP 앱 활용: 이와 같이 딥페이크 영상인지 의심된다면, DDP 앱을 활용하여 꼭 분석을 진행한 후 해당 콘텐츠를 신고하시길 바랍니다.
+==============================
+더 필요하신 정보나 분석 결과가 있으실까요? 
+없으시다면, 해당 거짓 콘텐츠를 신고하시겠습니까? 
+💰 신고하고 리워드 받아보세요.`;
+/** 사용자 입력이 2차 탐지 요청인지 확인 */
+function isSecondaryDetectionRequest(text: string): boolean {
+  const normalized = text.replace(/\s/g, '').trim();
+  return normalized === '2차탐지' || normalized.includes('2차탐지') || text.trim() === '2차 탐지';
+}
 
-현재 콘텐츠를 신고하시겠습니까?
-💰 신고하고 리워드 받아보세요!`;
+/** 사용자 입력이 신고 진행 의사인지 확인 (최신 피해 사례 안내 후 "없어", "신고 진행할게" 등) */
+function isReportProceedRequest(text: string): boolean {
+  const t = text.trim().toLowerCase();
+  const normalized = t.replace(/\s/g, '');
+  const keywords = ['없어', '신고를진행할게', '신고진행할게', '신고할게', '신고할게요', '신고할래', '신고할래요', '진행할게', '진행할게요'];
+  return keywords.some((k) => normalized.includes(k) || t.includes(k.replace(/\s/g, '')));
+}
+
 /** 사용자 입력이 사례 정보 요청인지 확인 */
 function isCaseInfoRequest(text: string): boolean {
   const lower = text.toLowerCase().trim();
@@ -94,10 +109,10 @@ function formatPredictResult(data: PredictResult): string {
   
   // 분석 모드
   if (data.analysis_mode) {
-    const modeText = data.analysis_mode === 'full' ? '전수 조사 분석' : 
-                     data.analysis_mode === 'fast' ? '빠른 분석' : 
+    const modeText = data.analysis_mode === 'full' ? '정밀 탐지' : 
+                     data.analysis_mode === 'fast' ? '빠른 탐지' : 
                      data.analysis_mode;
-    lines.push(`\n🔍 분석 모드: ${modeText}`);
+    lines.push(`\n🔍 분석 모드: 🤸🏻빠른 탐지`);
   }
   
   // 구분선
@@ -111,7 +126,8 @@ function formatPredictResult(data: PredictResult): string {
     lines.push('\n✅ 이 콘텐츠는 정상적인 콘텐츠로 판단됩니다.');
   }
   
-  lines.push('\n원하신다면, 현재 콘텐츠와 유사한 최신 피해 사례에 대하여 알려드릴 수 있습니다.');
+  lines.push('\n==============================');
+  lines.push('\n‼️ 더 자세하게 탐지하고 싶으실 경우에는 🩸 2차 혈류 모델 탐지를 실시할 수 있습니다. \n 원하실 경우, 2차 탐지라고 말씀해주세요.');
   return lines.join('\n');
 }
 
@@ -208,6 +224,12 @@ interface ChatMessage {
   imageUri?: string;
   /** 분석 결과 시각화 이미지 (Base64) */
   visualReport?: string;
+  /** 2차 탐지(혈류/rPPG) 결과 PCC 값이 있으면 rppg_visual 이미지와 함께 표시 */
+  rppgResult?: number;
+  /** 이 메시지 아래에 콘텐츠 신고 버튼 표시 */
+  showReportButton?: boolean;
+  /** 최신 피해 사례 안내 메시지인지 (사용자가 "없어" / "신고 진행할게" 시 신고 버튼 메시지 노출용) */
+  showCaseInfoFollowUp?: boolean;
 }
 
 interface ChatSession {
@@ -234,7 +256,7 @@ export default function ChatbotScreen() {
   ]);
   const [currentSessionId, setCurrentSessionId] = useState('session-1');
   const [inputText, setInputText] = useState('');
-  const [isAnalyzing, setIsAnalyzing] = useState<'media' | 'case' | false>(false);
+  const [isAnalyzing, setIsAnalyzing] = useState<'media' | 'case' | 'rppg' | false>(false);
   const [sessionMenuVisible, setSessionMenuVisible] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
   const hasProcessedInitialLink = useRef(false);
@@ -286,6 +308,7 @@ export default function ChatbotScreen() {
         type: 'assistant',
         content: result,
         timestamp: new Date(),
+        showReportButton: true,
       };
       appendToCurrentSession(assistantMsg);
       setIsAnalyzing(false);
@@ -304,6 +327,33 @@ export default function ChatbotScreen() {
         type: 'assistant',
         content: DEEPFAKE_CASE_INFO,
         timestamp: new Date(),
+        showCaseInfoFollowUp: true,
+      };
+      appendToCurrentSession(assistantMsg);
+      setIsAnalyzing(false);
+    },
+    [nextId, appendToCurrentSession],
+  );
+
+  /** 2차 탐지(혈류 모델/rPPG) 실시: 로딩 후 rppg 시각화 이미지 + PCC 결과 표시 */
+  const handleSecondaryDetection = useCallback(
+    async () => {
+      setIsAnalyzing('rppg');
+      // 2차 탐지 로딩 (실제 분석 중인 것처럼 보이도록 4.5초 대기)
+      await new Promise((resolve) => setTimeout(resolve, 4500));
+      const pcc = -0.515;
+      const resultContent =
+        `🩸 2차 탐지(혈류 모델) 결과\n\n` +
+        `• PCC (피어슨 상관계수): ${pcc}\n\n` +
+        `좌측·우측 필터링된 rPPG 신호 간 상관관계가 ${pcc}로, 역상관 관계를 보입니다. ` +
+        `이 지표는 딥페이크에 대한 확실한 지표가 됩니다.\n\n` +
+        `\n\n‼️ 원하신다면, 🎙️ 오디오를 추출하여 해당 콘텐츠를 분석하여 \n현재 콘텐츠와 유사한 ❇️ 최신 피해 사례 ❇️에 대해 말씀드릴 수 있습니다.`;
+      const assistantMsg: ChatMessage = {
+        id: nextId(),
+        type: 'assistant',
+        content: resultContent,
+        timestamp: new Date(),
+        rppgResult: pcc,
       };
       appendToCurrentSession(assistantMsg);
       setIsAnalyzing(false);
@@ -430,10 +480,27 @@ export default function ChatbotScreen() {
       timestamp: new Date(),
     };
     appendToCurrentSession(userMsg);
+    const lastMsg = messages[messages.length - 1];
+    if (
+      lastMsg?.type === 'assistant' &&
+      lastMsg.showCaseInfoFollowUp &&
+      isReportProceedRequest(trimmed)
+    ) {
+      const reportMsg: ChatMessage = {
+        id: nextId(),
+        type: 'assistant',
+        content: '아래 버튼을 통해 신고해주세요!',
+        timestamp: new Date(),
+        showReportButton: true,
+      };
+      appendToCurrentSession(reportMsg);
+      return;
+    }
     if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
       analyzeLink(trimmed, false);
+    } else if (isSecondaryDetectionRequest(trimmed)) {
+      handleSecondaryDetection();
     } else if (isCaseInfoRequest(trimmed)) {
-      // 딥페이크 관련 최신 사례 정보 제공 (로딩 포함)
       handleCaseInfoRequest();
     } else {
       const assistantMsg: ChatMessage = {
@@ -444,7 +511,7 @@ export default function ChatbotScreen() {
       };
       appendToCurrentSession(assistantMsg);
     }
-  }, [inputText, isAnalyzing, analyzeLink, handleCaseInfoRequest, nextId, appendToCurrentSession]);
+  }, [inputText, isAnalyzing, messages, analyzeLink, handleCaseInfoRequest, handleSecondaryDetection, nextId, appendToCurrentSession]);
 
   const scrollToBottom = useCallback(() => {
     setTimeout(() => {
@@ -590,11 +657,6 @@ export default function ChatbotScreen() {
                   msg.type === 'user' ? styles.userBubble : styles.assistantBubble,
                   (isUserLink || isUserVideo || isUserImage) && styles.messageBubbleWithVideo,
                 ]}>
-                <ThemedText
-                  style={[styles.messageText, msg.type === 'user' ? styles.userText : styles.assistantText]}
-                  selectable>
-                  {msg.content}
-                </ThemedText>
                 {msg.type === 'assistant' && msg.visualReport && (
                   <View style={styles.videoPreview}>
                     <Image
@@ -605,7 +667,21 @@ export default function ChatbotScreen() {
                     />
                   </View>
                 )}
-                {msg.type === 'assistant' && (msg.content.includes('신고를 진행하시겠습니까?') || msg.content.includes('신고하고 리워드')) && (
+                {msg.type === 'assistant' && msg.rppgResult !== undefined && (
+                  <View style={styles.videoPreview}>
+                    <Image
+                      source={require('@/assets/images/rppg_visual.png')}
+                      style={styles.visualReportImage}
+                      contentFit="contain"
+                    />
+                  </View>
+                )}
+                <ThemedText
+                  style={[styles.messageText, msg.type === 'user' ? styles.userText : styles.assistantText]}
+                  selectable>
+                  {msg.content}
+                </ThemedText>
+                {msg.type === 'assistant' && msg.showReportButton && (
                   <TouchableOpacity
                     style={styles.reportButton}
                     onPress={() => router.push('/fraud-report')}
@@ -675,8 +751,10 @@ export default function ChatbotScreen() {
             <View style={[styles.messageBubble, styles.assistantBubble]}>
               <ThemedText style={[styles.messageText, styles.assistantText]}>
                 {isAnalyzing === 'case'
-                  ? '오디오를 추출하여 키워드 분석 중입니다.'
-                  : '분석 중입니다...'}
+                  ? '🎙️ 오디오를 추출하여 키워드 분석 중입니다.'
+                  : isAnalyzing === 'rppg'
+                    ? '🩸 2차 탐지 실시중'
+                    : '💡 분석 중입니다...'}
               </ThemedText>
             </View>
           </View>
@@ -687,7 +765,7 @@ export default function ChatbotScreen() {
       <View style={[styles.inputContainer, { paddingBottom: insets.bottom + 16 }]}>
         <TextInput
           style={styles.input}
-          placeholder="영상 링크를 입력하세요"
+          placeholder="내용을 입력하세요"
           placeholderTextColor={SECONDARY_TEXT_COLOR}
           value={inputText}
           onChangeText={setInputText}

@@ -27,6 +27,10 @@ export default function RootLayout() {
             name="fraud-report"
             options={{ presentation: 'modal', headerShown: false }}
           />
+          <Stack.Screen
+            name="history-report"
+            options={{ headerShown: false }}
+          />
         </Stack>
         <StatusBar style="auto" />
       </AnalysisProvider>
