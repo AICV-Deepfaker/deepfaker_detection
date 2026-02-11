@@ -1,4 +1,4 @@
-const API_BASE = 'https://waylon-unfancy-overidly.ngrok-free.dev';
+const API_BASE = 'https://cheri-unarbored-gaylord.ngrok-free.dev';
 
 export type PredictMode = 'fast' | 'deep';
 

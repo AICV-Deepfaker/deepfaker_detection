@@ -17,21 +17,21 @@ from pyngrok import ngrok
 from torchvision import transforms as T
 from insightface.app import FaceAnalysis
 
-try:
-    from wavelet_lib.detectors import DETECTOR
-except ImportError:
-    print("❌ 'detectors' 모듈을 찾을 수 없습니다.")
-    sys.exit(1)
+REPO_PATH = "/Users/sienna/deepfaker_detection/Wavelet-CLIP"
+if REPO_PATH not in sys.path:
+    sys.path.insert(0, REPO_PATH)
+
+from wavelet_lib.detectors import DETECTOR
 
 # 모델 및 환경 변수
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-DETECTOR_YAML = "./Wavelet-CLIP/wavelet_lib/config/detector/detector.yaml"
-CKPT_PATH = "./ckpt_best.pth"
+DETECTOR_YAML = "/Users/sienna/deepfaker_detection/Wavelet-CLIP/wavelet_lib/config/detector/detector.yaml"
+CKPT_PATH = "/Users/sienna/deepfaker_detection/ddp_backend/ckpt_best.pth"
 IMG_SIZE = 224
 
 # ⚠️ NGROK 토큰 설정 (직접 입력하거나 환경변수 사용)
 # 코랩 userdata 대신 직접 문자열로 넣거나 환경변수에서 가져오도록 수정
-NGROK_AUTH_TOKEN = os.environ.get("NGROK_AUTH_TOKEN", "여기에_본인의_NGROK_토큰을_입력하세요")
+NGROK_AUTH_TOKEN = "39Sv8MFHY7vDqEGP1vvcPZjTKZP_7e8CYwzs3hv6FUyh3iQMc"
 
 app = FastAPI()
 
@@ -184,12 +184,12 @@ async def predict_deepfake(file: UploadFile = File(...), mode: str = "full"):
 # ==========================================
 if __name__ == "__main__":
     # ngrok 설정
-    if NGROK_AUTH_TOKEN and NGROK_AUTH_TOKEN != "여기에_본인의_NGROK_토큰을_입력하세요":
-        ngrok.set_auth_token(NGROK_AUTH_TOKEN)
-        public_url = ngrok.connect(8000)
-        print(f"\n🚀 외부 접속 주소 (ngrok): {public_url}/predict")
-    else:
-        print("\n⚠️ NGROK 토큰이 설정되지 않았습니다. 로컬에서만 접속 가능합니다.")
+    #if NGROK_AUTH_TOKEN and NGROK_AUTH_TOKEN != "39Sv8MFHY7vDqEGP1vvcPZjTKZP_7e8CYwzs3hv6FUyh3iQMc":
+    ngrok.set_auth_token("39Sv8MFHY7vDqEGP1vvcPZjTKZP_7e8CYwzs3hv6FUyh3iQMc")
+    public_url = ngrok.connect(8000)
+    print(f"\n🚀 외부 접속 주소 (ngrok): {public_url}/predict")
+    #else:
+        #print("\n⚠️ NGROK 토큰이 설정되지 않았습니다. 로컬에서만 접속 가능합니다.")
 
     print("🚀 FastAPI 서버를 시작합니다 (Port: 8000)...")
     
