@@ -1,0 +1,1 @@
+uv tool install gdown && uvx gdown 1QeR4Pa0rych5bhKp3wJ01yqz27vBOCLR
