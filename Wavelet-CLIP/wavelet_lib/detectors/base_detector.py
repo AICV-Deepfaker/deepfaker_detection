@@ -1,11 +1,20 @@
 import abc
 import torch.nn as nn
+import torch
+from pathlib import Path
+from wavelet_lib.config_type import WaveletConfig
+from typing import TypedDict
+
+class PredDict(TypedDict):
+    cls: torch.Tensor
+    prob: torch.Tensor
+    feat: torch.Tensor
 
 class AbstractDetector(nn.Module, metaclass=abc.ABCMeta):
     """
     All deepfake detectors should subclass this class.
     """
-    def __init__(self, config=None, load_param=False):
+    def __init__(self, config:WaveletConfig|None=None, load_param:bool|Path=False):
         """
         config:   (dict)
             configurations for the model
@@ -22,7 +31,7 @@ class AbstractDetector(nn.Module, metaclass=abc.ABCMeta):
         pass
 
     @abc.abstractmethod
-    def forward(self, data_dict, inference=False):
+    def forward(self, data_dict, inference=False) -> PredDict:
         """
         Forward pass through the model, returning the prediction dictionary.
         """
