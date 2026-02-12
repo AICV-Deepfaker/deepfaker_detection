@@ -8,11 +8,13 @@ dependencies = []
 
 [tool.uv]
 build-constraint-dependencies = ["setuptools<82.0.0"]
+no-build-isolation-package = ["flash-attn"]
 
 [tool.uv.workspace]
 members=[
     "Wavelet-CLIP",
     "ddp_backend",
+    "unite_detection",
 ]
 
 [tool.uv.sources]
