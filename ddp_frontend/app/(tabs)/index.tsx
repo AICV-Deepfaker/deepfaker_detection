@@ -2,24 +2,30 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
+import React, { useMemo } from 'react';
 import { Alert, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { useAnalysis } from '@/contexts/analysis-context';
-import { setPendingImageUri, setPendingVideoUri } from '@/lib/pending-upload';
+import { setPendingVideoUri } from '@/lib/pending-upload';
 
-// 메인 액센트 색상 (#00CF90)
-const ACCENT_GREEN = '#00CF90';
-const ACCENT_GREEN_DARK = '#00B87A';
+const MINT_CARD = '#D6F6E4';
+const BLUE_CARD = '#D7ECFF';
+const ACCENT = '#00CF90';
+const TEXT = '#111';
+const SUB = '#687076';
 
-// 밝은 배경용 텍스트 색상
-const TEXT_COLOR = '#111';
-const SECONDARY_TEXT_COLOR = '#687076';
+type QuickAction = {
+  key: string;
+  label: string;
+  iconName: React.ComponentProps<typeof MaterialIcons>['name'];
+  onPress: () => void;
+};
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
-  const { totalPoints, reportCount } = useAnalysis();
+  const { totalPoints } = useAnalysis();
 
   const requestMediaPermission = async () => {
     const { granted } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -31,24 +37,6 @@ export default function HomeScreen() {
       return false;
     }
     return true;
-  };
-
-  const pickImage = async () => {
-    const hasPermission = await requestMediaPermission();
-    if (!hasPermission) return;
-
-    // 일부 기기에서 "Can't load some Photos"가 나와도 OK 누른 뒤 보이는 사진 선택 가능
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsEditing: false,
-      quality: 1,
-      allowsMultipleSelection: false,
-    });
-
-    if (!result.canceled && result.assets[0]) {
-      const uri = result.assets[0].uri;
-      router.push(`/(tabs)/chatbot?imageUri=${encodeURIComponent(uri)}`);
-    }
   };
 
   const pickVideo = async () => {
@@ -69,263 +57,146 @@ export default function HomeScreen() {
     }
   };
 
+  const quickActions: QuickAction[] = useMemo(
+    () => [
+      {
+        key: 'report',
+        label: '신고내역',
+        iconName: 'wifi', // ✅ 임시 아이콘 (나중에 png 생기면 교체)
+        onPress: () => router.push('/(tabs)/history'),
+      },
+      {
+        key: 'upload',
+        label: '업로드',
+        iconName: 'mail-outline', // ✅ 임시 아이콘
+        onPress: pickVideo, // 일단 업로드 = 영상 업로드로 연결
+      },
+      {
+        key: 'result',
+        label: '탐지결과',
+        iconName: 'pie-chart-outline', // ✅ 임시 아이콘
+        onPress: () => router.push('/(tabs)/history'),
+      },
+      {
+        key: 'news',
+        label: '피해뉴스',
+        iconName: 'image-outline', // ✅ 임시 아이콘
+        onPress: () => router.push('/(tabs)/chatbot'),
+      },
+    ],
+    [],
+  );
+
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 24 }]}
         showsVerticalScrollIndicator={false}>
-        {/* Green Header */}
-        <View style={[styles.greenHeader, { paddingTop: insets.top + 8 }]}>
-          <ThemedText style={styles.pointsText}>포인트 {totalPoints.toLocaleString()}</ThemedText>
-          <View style={styles.headerRow}>
-            <View style={styles.headerContent}>
-              <ThemedText style={styles.headerTitle}>
-                유명인 사칭{'\n'} 
-                딥페이크 금융사기{'\n'}
-                신고하고{'\n'}
-                보상받으세요!
-              </ThemedText>
-              <ThemedText style={styles.reportCountText}>신고 접수 {reportCount}건</ThemedText>
-            </View>
-            <Image
-              source={require('@/assets/images/ddp_logo.png')}
-              style={styles.logoImage}
-              contentFit="contain"
-            />
-          </View>
-        </View>
-
-        {/* White Content Area */}
-        <View style={styles.whiteContentWrapper}>
-          <View style={styles.whiteContent}>
-          <TouchableOpacity
-            style={styles.reportButton}
-            activeOpacity={0.8}
-            onPress={() => router.push('/fraud-report')}>
-            <View style={styles.reportButtonContent}>
-              <Image
-                source={require('@/assets/images/alarm.png')}
-                style={styles.reportButtonIcon}
-                contentFit="contain"
-              />
-              <View style={styles.reportButtonTextWrap}>
-                <ThemedText style={styles.reportButtonText}>딥페이크 금융사기 영상 신고</ThemedText>
-                <ThemedText style={styles.reportButtonSubtext}>신고하고 보상받기</ThemedText>
-              </View>
-            </View>
-          </TouchableOpacity>
-
-        {/* Link Analysis Section */}
-        <View style={styles.linkSection}>
-          <View style={styles.linkIconWrapper}>
-            <MaterialIcons name="link" size={48} color={ACCENT_GREEN} />
-          </View>
-          <ThemedText style={styles.linkSectionTitle}>링크로 바로 분석</ThemedText>
-          <ThemedText style={styles.linkSectionSubtitle}>
-            또는 소셜 미디어 앱에서 직접 공유
+        {/* Top: Points */}
+        <View style={styles.topRow}>
+          <ThemedText style={styles.pointsTitle}>
+            내 포인트 {totalPoints.toLocaleString()}P
           </ThemedText>
-          <TouchableOpacity
-            style={styles.pasteButton}
-            activeOpacity={0.8}
-            onPress={() => router.push('/link-paste')}>
-            <MaterialIcons name="description" size={20} color="#fff" />
-            <ThemedText style={styles.pasteButtonText}>링크 붙여넣기</ThemedText>
-            <MaterialIcons name="chevron-right" size={20} color="#fff" />
-          </TouchableOpacity>
         </View>
 
-        {/* Divider */}
-        <ThemedText style={styles.dividerText}>또는 직접 업로드</ThemedText>
+        {/* Quick Actions (원형 버튼 4개) */}
+        <View style={styles.quickRow}>
+          {quickActions.map((a) => (
+            <TouchableOpacity key={a.key} style={styles.quickItem} activeOpacity={0.85} onPress={a.onPress}>
+              <View style={styles.quickCircle}>
+                <MaterialIcons name={a.iconName} size={26} color={ACCENT} />
+              </View>
+              <ThemedText style={styles.quickLabel}>{a.label}</ThemedText>
+            </TouchableOpacity>
+          ))}
+        </View>
 
-        {/* Upload Section */}
-        <View style={styles.uploadSection}>
-          <TouchableOpacity style={styles.uploadButton} activeOpacity={0.8} onPress={pickImage}>
-            <View style={styles.uploadIconWrapper}>
-              <MaterialIcons name="image" size={32} color={ACCENT_GREEN} />
+        {/* Mint Card: 탐지해보기 */}
+        <TouchableOpacity
+          activeOpacity={0.9}
+          style={[styles.bigCard, { backgroundColor: MINT_CARD }]}
+          onPress={() => router.push('/link-paste')}>
+          <View style={styles.bigCardText}>
+            <ThemedText style={styles.bigTitle}>
+              이 콘텐츠가{'\n'}사기로 의심돼요
+            </ThemedText>
+            <View style={styles.linkRow}>
+              <ThemedText style={styles.bigLink}>탐지해보기</ThemedText>
+              <MaterialIcons name="chevron-right" size={18} color={ACCENT} />
             </View>
-            <ThemedText style={styles.uploadButtonText}>이미지 업로드</ThemedText>
-          </TouchableOpacity>
+          </View>
 
-          <TouchableOpacity style={styles.uploadButton} activeOpacity={0.8} onPress={pickVideo}>
-            <View style={styles.uploadIconWrapper}>
-              <MaterialIcons name="videocam" size={32} color={ACCENT_GREEN} />
+          <Image
+            source={require('/Users/sienna/deepfaker_detection/ddp_frontend/assets/images/glass.png')}
+            style={styles.bigCardImage}
+            contentFit="contain"
+          />
+        </TouchableOpacity>
+
+        {/* Blue Card: 신고하기 */}
+        <TouchableOpacity
+          activeOpacity={0.9}
+          style={[styles.bigCard, { backgroundColor: BLUE_CARD }]}
+          onPress={() => router.push('/fraud-report')}>
+          <View style={styles.bigCardText}>
+            <ThemedText style={styles.bigTitle}>신고하고 보상받으세요</ThemedText>
+            <View style={styles.linkRowBlue}>
+              <ThemedText style={styles.bigLinkBlue}>신고하기</ThemedText>
+              <MaterialIcons name="chevron-right" size={18} color={'#3A7BD5'} />
             </View>
-            <ThemedText style={styles.uploadButtonText}>영상 업로드</ThemedText>
-          </TouchableOpacity>
-        </View>
-        </View>
-        </View>
+          </View>
+
+          <Image
+            source={require('/Users/sienna/deepfaker_detection/ddp_frontend/assets/images/siren.png')}
+            style={styles.bigCardImage}
+            contentFit="contain"
+          />
+        </TouchableOpacity>
       </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F5F5F5',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingBottom: 24,
-  },
-  greenHeader: {
-    backgroundColor: ACCENT_GREEN_DARK,
-    paddingHorizontal: 20,
-    paddingBottom: 28,
-  },
-  pointsText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
-    marginBottom: 16,
-  },
-  headerRow: {
+  container: { flex: 1, backgroundColor: '#fff' },
+  content: { paddingHorizontal: 18 },
+
+  topRow: { paddingTop: 8, paddingBottom: 14 },
+  pointsTitle: { fontSize: 18, fontWeight: '700', color: TEXT },
+
+  quickRow: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
-  },
-  headerContent: {
-    flex: 1,
-  },
-  headerTitle: {
-    color: '#fff',
-    fontSize: 20,
-    fontWeight: '700',
-    lineHeight: 30,
-    marginBottom: 8,
-  },
-  headerSubtitle: {
-    color: 'rgba(255,255,255,0.95)',
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 12,
-  },
-  reportCountText: {
-    color: 'rgba(255,255,255,0.9)',
-    fontSize: 14,
-  },
-  logoImage: {
-    width: 230,
-    height: 230,
-    marginRight: -40,
-  },
-  whiteContentWrapper: {
-    flex: 1,
-    marginTop: -20,
-    borderRadius: 24,
-    backgroundColor: '#fff',
-    overflow: 'hidden',
-  },
-  whiteContent: {
-    flex: 1,
-    backgroundColor: '#fff',
-    paddingHorizontal: 20,
-    paddingTop: 24,
-    paddingBottom: 24,
-  },
-  linkSectionTitle: {
-    color: TEXT_COLOR,
-    fontSize: 20,
-    fontWeight: '700',
-    marginBottom: 2,
-    textAlign: 'center',
-  },
-  reportButton: {
-    marginBottom: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: '100%',
-    backgroundColor: ACCENT_GREEN,
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    borderRadius: 14,
-  },
-  reportButtonContent: {
-    alignItems: 'center',
-    gap: 8,
-  },
-  reportButtonIcon: {
-    width: 24,
-    height: 24,
-  },
-  reportButtonTextWrap: {
-    alignItems: 'center',
-  },
-  reportButtonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  reportButtonSubtext: {
-    color: 'rgba(255,255,255,0.9)',
-    fontSize: 13,
-    marginTop: 2,
-  },
-  linkSection: {
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    padding: 28,
-    alignItems: 'center',
-    marginBottom: 28,
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.06)',
-  },
-  linkIconWrapper: {
-    marginBottom: 16,
-  },
-  linkSectionSubtitle: {
-    color: SECONDARY_TEXT_COLOR,
-    fontSize: 14,
-    marginBottom: 20,
-  },
-  pasteButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: ACCENT_GREEN,
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-    borderRadius: 14,
-    width: '100%',
+    paddingBottom: 18,
     gap: 10,
   },
-  pasteButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  dividerText: {
-    textAlign: 'center',
-    fontSize: 15,
-    marginBottom: 20,
-    color: SECONDARY_TEXT_COLOR,
-  },
-  uploadSection: {
-    flexDirection: 'row',
-    gap: 16,
-  },
-  uploadButton: {
-    flex: 1,
-    borderRadius: 20,
-    padding: 24,
+  quickItem: { alignItems: 'center', flex: 1 },
+  quickCircle: {
+    width: 62,
+    height: 62,
+    borderRadius: 999,
+    backgroundColor: '#F3F5F7',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.06)',
-    backgroundColor: '#fff',
+    justifyContent: 'center',
   },
-  uploadIconWrapper: {
-    marginBottom: 12,
-    padding: 16,
-    backgroundColor: 'rgba(0, 207, 144, 0.15)',
-    borderRadius: 16,
+  quickLabel: { marginTop: 10, fontSize: 13, color: TEXT, fontWeight: '600' },
+
+  bigCard: {
+    borderRadius: 18,
+    padding: 18,
+    minHeight: 145,
+    marginBottom: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
-  uploadButtonText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: TEXT_COLOR,
-  },
+  bigCardText: { flex: 1, paddingRight: 10 },
+  bigTitle: { fontSize: 22, fontWeight: '800', color: TEXT, lineHeight: 30 },
+
+  linkRow: { flexDirection: 'row', alignItems: 'center', marginTop: 10, gap: 4 },
+  bigLink: { fontSize: 16, fontWeight: '700', color: ACCENT },
+
+  linkRowBlue: { flexDirection: 'row', alignItems: 'center', marginTop: 10, gap: 4 },
+  bigLinkBlue: { fontSize: 16, fontWeight: '700', color: '#3A7BD5' },
+
+  bigCardImage: { width: 110, height: 110 },
 });
