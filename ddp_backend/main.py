@@ -12,8 +12,8 @@ from detectors.wavelet_detector import WaveletDetector
 
 # 모델 및 환경 변수
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-DETECTOR_YAML = "./Wavelet-CLIP/wavelet_lib/config/detector/detector.yaml"
-CKPT_PATH = "./ckpt_best.pth"
+DETECTOR_YAML = "/Users/sienna/deepfaker_detection/Wavelet-CLIP/wavelet_lib/config/detector/detector.yaml"
+CKPT_PATH = "/Users/sienna/deepfaker_detection/ddp_backend/ckpt_best.pth"
 IMG_SIZE = 224
 
 # ⚠️ NGROK 토큰 설정 (직접 입력하거나 환경변수 사용)
