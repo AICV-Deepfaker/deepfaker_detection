@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 from wavelet_lib.metrics.base_metrics_class import calculate_metrics_for_train
 from .base_detector import AbstractDetector
-from wavelet_lib.detectors import DETECTOR
+from wavelet_lib.detectors.registry import DETECTOR
 from wavelet_lib.loss import LOSSFUNC
 from transformers import AutoProcessor, CLIPModel
 

@@ -1,6 +1,6 @@
 import torch.nn as nn
 from .abstract_loss_func import AbstractLossClass
-from wavelet_lib.metrics.registry import LOSSFUNC
+from wavelet_lib.loss.registry import LOSSFUNC
 
 
 @LOSSFUNC.register_module(module_name="cross_entropy")

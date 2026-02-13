@@ -4,7 +4,7 @@ import torch.nn as nn
 from wavelet_lib.metrics.base_metrics_class import calculate_metrics_for_train
 
 from .base_detector import AbstractDetector
-from wavelet_lib.detectors import DETECTOR
+from wavelet_lib.detectors.registry import DETECTOR
 from wavelet_lib.loss import LOSSFUNC
 from transformers import AutoProcessor, CLIPModel
 from pytorch_wavelets import DWT1DForward, DWT1DInverse
@@ -47,12 +47,12 @@ class CLIPDetectorWavelet(AbstractDetector):
         return loss_func
 
     # @torch.no_grad()
-    def features(self, data_dict: dict) -> torch.tensor:
+    def features(self, data_dict: dict) -> torch.Tensor:
         with torch.no_grad():
             feat = self.backbone(data_dict["image"])["pooler_output"]
         return feat
 
-    def classifier(self, features: torch.tensor) -> torch.tensor:
+    def classifier(self, features: torch.Tensor) -> torch.Tensor:
         yl, yh = self.dwt(features.unsqueeze(1))  # add channel dimension for DWT
         yl_new = self.slp(yl)
         x = self.idwt((yl_new, yh)).squeeze(1)  # remove channel dimension after IDWT

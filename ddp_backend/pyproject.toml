@@ -18,6 +18,7 @@ dependencies = [
     "pyyaml>=6.0.3",
     "torch>=2.10.0",
     "torchvision>=0.25.0",
+    "types-pyyaml>=6.0.12.20250915",
     "uvicorn>=0.40.0",
     "wavelet-clip",
 ]

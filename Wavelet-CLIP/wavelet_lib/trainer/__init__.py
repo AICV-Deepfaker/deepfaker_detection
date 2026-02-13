@@ -1,3 +1,3 @@
-from ..metrics.registry import TRAINER
+from .registry import TRAINER
 
 __all__ = ["TRAINER"]
