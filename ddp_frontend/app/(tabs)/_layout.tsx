@@ -32,12 +32,12 @@ function PillTabBar({ state, descriptors, navigation }: any) {
             if (route.name === 'index') {
               icon = require('@/assets/images/home.png');
               label = '홈';
-            } else if (route.name === 'chatbot') {
-              icon = require('@/assets/images/bot.png');
-              label = '챗봇';
             } else if (route.name === 'history') {
               icon = require('@/assets/images/recent.png');
               label = '히스토리';
+            } else if (route.name === 'mypage') {
+              icon = require('@/assets/images/setting.png');
+              label = 'My page';
             } else {
               return null;
             }
@@ -76,10 +76,11 @@ export default function TabLayout() {
       screenOptions={{ headerShown: false }}
     >
       <Tabs.Screen name="index" />
-      <Tabs.Screen name="chatbot" />
       <Tabs.Screen name="history" />
+      <Tabs.Screen name="mypage" />
 
-      {/* 나머지 숨김 */}
+      {/* 탭 바에 안 보이지만 라우트로 접근 가능 */}
+      <Tabs.Screen name="chatbot" options={{ href: null }} />
       <Tabs.Screen name="settings" options={{ href: null }} />
       <Tabs.Screen name="explore" options={{ href: null }} />
     </Tabs>
@@ -98,21 +99,21 @@ const styles = StyleSheet.create({
     width: '90%',
     borderRadius: 999,
     shadowColor: '#000',
-    shadowOpacity: 0.16,
-    shadowRadius: 22,
-    shadowOffset: { width: 0, height: 14 },
-    elevation: 18,
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 8,
   },
 
   pill: {
     height: 92,
     borderRadius: 999,
-    backgroundColor: 'rgba(255,255,255,0.96)',
+    backgroundColor: 'rgba(255,255,255,0.55)',
     flexDirection: 'row',
     alignItems: 'center',
     padding: 10,
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.06)',
+    borderColor: 'rgba(0,0,0,0.05)',
   },
 
   item: {
@@ -125,7 +126,7 @@ const styles = StyleSheet.create({
   },
 
   itemActive: {
-    backgroundColor: 'rgba(0,0,0,0.06)',
+    backgroundColor: 'rgba(0,0,0,0.04)',
   },
 
   icon: {

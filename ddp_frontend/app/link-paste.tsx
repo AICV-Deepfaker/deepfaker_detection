@@ -1,7 +1,10 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { Image } from 'expo-image';
+import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
+  Alert,
   ScrollView,
   StyleSheet,
   TextInput,
@@ -11,6 +14,12 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
+import {
+  peekPendingImageUri,
+  peekPendingVideoUri,
+  setPendingImageUri,
+  setPendingVideoUri,
+} from '@/lib/pending-upload';
 
 const ACCENT_GREEN = '#00CF90';
 const ACCENT_GREEN_DARK = '#00B87A';
@@ -19,13 +28,22 @@ const SECONDARY_TEXT_COLOR = '#687076';
 
 type PlatformId = 'twitter' | 'youtube' | 'instagram' | 'facebook' | 'tiktok' | 'direct';
 
-const PLATFORMS: { id: PlatformId; label: string; icon: string }[] = [
-  { id: 'twitter', label: 'Twitter/X', icon: 'tag' },
-  { id: 'youtube', label: 'YouTube', icon: 'play-circle-filled' },
-  { id: 'instagram', label: 'Instagram', icon: 'photo-camera' },
-  { id: 'facebook', label: 'Facebook', icon: 'people' },
-  { id: 'tiktok', label: 'TikTok', icon: 'music-note' },
-  { id: 'direct', label: '직접 링크', icon: 'link' },
+const PLATFORM_ICONS: Record<PlatformId, number> = {
+  twitter: require('@/assets/images/twitter.png'),
+  youtube: require('@/assets/images/youtube.png'),
+  instagram: require('@/assets/images/instagram.png'),
+  facebook: require('@/assets/images/facebook.png'),
+  tiktok: require('@/assets/images/tiktok.png'),
+  direct: require('@/assets/images/link.png'),
+};
+
+const PLATFORMS: { id: PlatformId; label: string }[] = [
+  { id: 'twitter', label: 'Twitter/X' },
+  { id: 'youtube', label: 'YouTube' },
+  { id: 'instagram', label: 'Instagram' },
+  { id: 'facebook', label: 'Facebook' },
+  { id: 'tiktok', label: 'TikTok' },
+  { id: 'direct', label: '직접 링크' },
 ];
 
 function detectPlatformFromUrl(url: string): PlatformId | null {
@@ -41,10 +59,23 @@ function detectPlatformFromUrl(url: string): PlatformId | null {
   return null;
 }
 
+type UploadedFile = { type: 'image' | 'video'; uri: string };
+
 export default function LinkPasteScreen() {
   const insets = useSafeAreaInsets();
   const [url, setUrl] = useState('');
   const [selectedPlatform, setSelectedPlatform] = useState<PlatformId | null>(null);
+  const [uploadedFile, setUploadedFile] = useState<UploadedFile | null>(null);
+  const [showModeButtons, setShowModeButtons] = useState(false);
+
+  const canAnalyze = Boolean(url.trim()) || Boolean(uploadedFile);
+
+  useEffect(() => {
+    const img = peekPendingImageUri();
+    const vid = peekPendingVideoUri();
+    if (img) setUploadedFile({ type: 'image', uri: img });
+    else if (vid) setUploadedFile({ type: 'video', uri: vid });
+  }, []);
 
   const handleUrlChange = useCallback(
     (text: string) => {
@@ -58,14 +89,71 @@ export default function LinkPasteScreen() {
   );
 
   const handleAnalyze = () => {
+    if (uploadedFile) {
+      setShowModeButtons(true);
+      return;
+    }
     const trimmed = url.trim();
     if (!trimmed) return;
     const encoded = encodeURIComponent(trimmed);
     router.replace(`/(tabs)/chatbot?link=${encoded}`);
   };
 
+  const handleModeSelect = (mode: 'fast' | 'deep') => {
+    if (!uploadedFile) return;
+    if (uploadedFile.type === 'image') {
+      setPendingImageUri(uploadedFile.uri);
+      router.replace(`/analysis-result?pendingImage=1&mode=${mode}`);
+    } else {
+      setPendingVideoUri(uploadedFile.uri);
+      router.replace(`/analysis-result?pendingVideo=1&mode=${mode}`);
+    }
+  };
+
   const handleCancel = () => {
     router.back();
+  };
+
+  const requestMediaPermission = async () => {
+    const { granted } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!granted) {
+      Alert.alert(
+        '권한 필요',
+        '갤러리에서 이미지와 영상을 선택하려면 권한이 필요합니다. 설정에서 권한을 허용해주세요.',
+      );
+      return false;
+    }
+    return true;
+  };
+
+  const pickImage = async () => {
+    const hasPermission = await requestMediaPermission();
+    if (!hasPermission) return;
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: false,
+      quality: 1,
+      allowsMultipleSelection: false,
+    });
+    if (!result.canceled && result.assets[0]) {
+      setUploadedFile({ type: 'image', uri: result.assets[0].uri });
+      setShowModeButtons(false);
+    }
+  };
+
+  const pickVideo = async () => {
+    const hasPermission = await requestMediaPermission();
+    if (!hasPermission) return;
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['videos'],
+      allowsEditing: false,
+      quality: 1,
+      allowsMultipleSelection: false,
+    });
+    if (!result.canceled && result.assets[0]) {
+      setUploadedFile({ type: 'video', uri: result.assets[0].uri });
+      setShowModeButtons(false);
+    }
   };
 
   return (
@@ -77,13 +165,40 @@ export default function LinkPasteScreen() {
         showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>
-          <ThemedText style={styles.headerTitle}>링크 붙여넣거나 공유하기</ThemedText>
+          <ThemedText style={styles.headerTitle}>링크 붙여넣거나 업로드하기</ThemedText>
           <TouchableOpacity onPress={handleCancel} style={styles.closeButton} hitSlop={12}>
             <MaterialIcons name="close" size={24} color={TEXT_COLOR} />
           </TouchableOpacity>
         </View>
 
-        {/* URL Input */}
+        {/* 이미지 / 영상 업로드 버튼 (앨범 연동) */}
+        <View style={styles.uploadRow}>
+          <TouchableOpacity style={styles.uploadButton} activeOpacity={0.8} onPress={pickImage}>
+            <Image
+              source={require('@/assets/images/image_icon.png')}
+              style={styles.uploadIconImage}
+              contentFit="contain"
+            />
+            <ThemedText style={styles.uploadLabel}>이미지 업로드</ThemedText>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.uploadButton} activeOpacity={0.8} onPress={pickVideo}>
+            <Image
+              source={require('@/assets/images/video_icon.png')}
+              style={styles.uploadIconImage}
+              contentFit="contain"
+            />
+            <ThemedText style={styles.uploadLabel}>영상 업로드</ThemedText>
+          </TouchableOpacity>
+        </View>
+
+        {uploadedFile && (
+          <View style={styles.uploadDoneWrap}>
+            <MaterialIcons name="check-circle" size={16} color={ACCENT_GREEN} />
+            <ThemedText style={styles.uploadDoneText}>업로드 완료</ThemedText>
+          </View>
+        )}
+
+        <ThemedText style={styles.linkSectionLabel}>링크 삽입</ThemedText>
         <View style={styles.inputWrapper}>
           <TextInput
             style={styles.input}
@@ -101,18 +216,7 @@ export default function LinkPasteScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Tip Section */}
-        <View style={styles.tipBox}>
-          <MaterialIcons name="lightbulb-outline" size={24} color={ACCENT_GREEN} />
-          <View style={styles.tipContent}>
-            <ThemedText style={styles.tipTitle}>팁: 링크 공유 또는 붙여넣기</ThemedText>
-            <ThemedText style={styles.tipText}>
-              Twitter, YouTube, Instagram, Facebook, TikTok에서 DDP로 직접 공유할 수 있습니다. 해당
-              앱에서 공유 버튼을 누르고 'DDP - 딥페이크 탐지'를 선택하세요.
-            </ThemedText>
-          </View>
-        </View>
-
+    
         {/* Supported Platforms */}
         <View style={styles.platformsSection}>
           <View style={styles.platformsHeader}>
@@ -128,10 +232,10 @@ export default function LinkPasteScreen() {
                   style={[styles.platformButton, isSelected && styles.platformButtonSelected]}
                   activeOpacity={0.8}
                   onPress={() => setSelectedPlatform(platform.id)}>
-                  <MaterialIcons
-                    name={platform.icon as any}
-                    size={28}
-                    color={isSelected ? ACCENT_GREEN : SECONDARY_TEXT_COLOR}
+                  <Image
+                    source={PLATFORM_ICONS[platform.id]}
+                    style={styles.platformIcon}
+                    contentFit="contain"
                   />
                   <ThemedText
                     style={[styles.platformLabel, isSelected && styles.platformLabelSelected]}>
@@ -143,16 +247,37 @@ export default function LinkPasteScreen() {
           </View>
         </View>
 
+        {/* 모드 선택 (업로드 후 분석하기 탭 시 표시) */}
+        {showModeButtons && uploadedFile && (
+          <View style={styles.modeSection}>
+            <ThemedText style={styles.modeSectionLabel}>분석 모드 선택</ThemedText>
+            <View style={styles.modeButtonsRow}>
+              <TouchableOpacity
+                style={styles.modeButton}
+                activeOpacity={0.8}
+                onPress={() => handleModeSelect('fast')}>
+                <ThemedText style={styles.modeButtonText}>증거수집모드</ThemedText>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.modeButton}
+                activeOpacity={0.8}
+                onPress={() => handleModeSelect('deep')}>
+                <ThemedText style={styles.modeButtonText}>정밀탐지모드</ThemedText>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
         {/* Action Buttons */}
         <View style={styles.actionButtons}>
           <TouchableOpacity style={styles.cancelButton} activeOpacity={0.8} onPress={handleCancel}>
             <ThemedText style={styles.cancelButtonText}>취소</ThemedText>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.analyzeButton, !url.trim() && styles.analyzeButtonDisabled]}
+            style={[styles.analyzeButton, !canAnalyze && styles.analyzeButtonDisabled]}
             activeOpacity={0.8}
             onPress={handleAnalyze}
-            disabled={!url.trim()}>
+            disabled={!canAnalyze}>
             <ThemedText style={styles.analyzeButtonText}>분석하기</ThemedText>
           </TouchableOpacity>
         </View>
@@ -186,6 +311,76 @@ const styles = StyleSheet.create({
   },
   closeButton: {
     padding: 4,
+  },
+  uploadRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 20,
+  },
+  uploadButton: {
+    flex: 1,
+    backgroundColor: '#fff',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.08)',
+    paddingVertical: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  uploadIconImage: {
+    width: 70,
+    height: 70,
+    marginBottom: 5,
+  },
+  uploadLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: TEXT_COLOR,
+  },
+  uploadDoneWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 16,
+  },
+  uploadDoneText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: ACCENT_GREEN,
+  },
+  modeSection: {
+    marginBottom: 20,
+  },
+  modeSectionLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: TEXT_COLOR,
+    marginBottom: 10,
+  },
+  modeButtonsRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  modeButton: {
+    flex: 1,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: ACCENT_GREEN,
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modeButtonText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: ACCENT_GREEN,
+  },
+  linkSectionLabel: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: TEXT_COLOR,
+    marginBottom: 10,
   },
   inputWrapper: {
     flexDirection: 'row',
@@ -259,6 +454,10 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(0,0,0,0.06)',
     padding: 14,
     gap: 10,
+  },
+  platformIcon: {
+    width: 28,
+    height: 28,
   },
   platformButtonSelected: {
     borderColor: ACCENT_GREEN,

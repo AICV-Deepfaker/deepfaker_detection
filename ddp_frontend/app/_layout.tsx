@@ -20,6 +20,10 @@ export default function RootLayout() {
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
           <Stack.Screen name="link-paste" options={{ presentation: 'modal', headerShown: false }} />
+          <Stack.Screen name="news" options={{ headerShown: false }} />
+          <Stack.Screen name="login" options={{ headerShown: false }} />
+          <Stack.Screen name="signup" options={{ headerShown: false }} />
+          <Stack.Screen name="analysis-result" options={{ headerShown: false }} />
         </Stack>
         <StatusBar style="auto" />
       </AnalysisProvider>

@@ -2,12 +2,13 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { Alert, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { useAnalysis } from '@/contexts/analysis-context';
+import { getAuth } from '@/lib/auth-storage';
 import { setPendingVideoUri } from '@/lib/pending-upload';
 
 const MINT_CARD = '#D6F6E4';
@@ -19,13 +20,21 @@ const SUB = '#687076';
 type QuickAction = {
   key: string;
   label: string;
-  iconName: React.ComponentProps<typeof MaterialIcons>['name'];
+  icon: number;
   onPress: () => void;
 };
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const { totalPoints } = useAnalysis();
+  const [nickname, setNickname] = React.useState<string | null>(null);
+
+  useEffect(() => {
+    getAuth().then((auth) => {
+      if (!auth) router.replace('/login');
+      else setNickname(auth.nickname ?? null);
+    });
+  }, []);
 
   const requestMediaPermission = async () => {
     const { granted } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -53,7 +62,7 @@ export default function HomeScreen() {
     if (!result.canceled && result.assets[0]) {
       const uri = result.assets[0].uri;
       setPendingVideoUri(uri);
-      router.push('/(tabs)/chatbot?pendingVideo=1');
+      router.push('/link-paste');
     }
   };
 
@@ -62,26 +71,26 @@ export default function HomeScreen() {
       {
         key: 'report',
         label: '신고내역',
-        iconName: 'wifi', // ✅ 임시 아이콘 (나중에 png 생기면 교체)
+        icon: require('@/assets/images/home_list.png'),
         onPress: () => router.push('/(tabs)/history'),
       },
       {
         key: 'upload',
         label: '업로드',
-        iconName: 'mail-outline', // ✅ 임시 아이콘
-        onPress: pickVideo, // 일단 업로드 = 영상 업로드로 연결
+        icon: require('@/assets/images/home_upload.png'),
+        onPress: pickVideo,
       },
       {
         key: 'result',
         label: '탐지결과',
-        iconName: 'pie-chart-outline', // ✅ 임시 아이콘
+        icon: require('@/assets/images/home_result.png'),
         onPress: () => router.push('/(tabs)/history'),
       },
       {
         key: 'news',
         label: '피해뉴스',
-        iconName: 'image-outline', // ✅ 임시 아이콘
-        onPress: () => router.push('/(tabs)/chatbot'),
+        icon: require('@/assets/images/home_news.png'),
+        onPress: () => router.push('/news' as const),
       },
     ],
     [],
@@ -92,11 +101,21 @@ export default function HomeScreen() {
       <ScrollView
         contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 24 }]}
         showsVerticalScrollIndicator={false}>
-        {/* Top: Points */}
+        {/* 인사말 + 포인트 + 로고 */}
         <View style={styles.topRow}>
-          <ThemedText style={styles.pointsTitle}>
-            내 포인트 {totalPoints.toLocaleString()}P
-          </ThemedText>
+          <View style={styles.topRowLeft}>
+            <ThemedText style={styles.greeting}>
+              {nickname ?? '회원'}님,{'\n'}딥페이크 금융사기{'\n'}신고하고 보상받으세요!
+            </ThemedText>
+            <ThemedText style={styles.pointsTitle}>
+              내 포인트 {totalPoints.toLocaleString()}P
+            </ThemedText>
+          </View>
+          <Image
+            source={require('@/assets/images/ddp_applogo.png')}
+            style={styles.topRowLogo}
+            contentFit="contain"
+          />
         </View>
 
         {/* Quick Actions (원형 버튼 4개) */}
@@ -104,7 +123,7 @@ export default function HomeScreen() {
           {quickActions.map((a) => (
             <TouchableOpacity key={a.key} style={styles.quickItem} activeOpacity={0.85} onPress={a.onPress}>
               <View style={styles.quickCircle}>
-                <MaterialIcons name={a.iconName} size={26} color={ACCENT} />
+                <Image source={a.icon} style={styles.quickIcon} contentFit="contain" />
               </View>
               <ThemedText style={styles.quickLabel}>{a.label}</ThemedText>
             </TouchableOpacity>
@@ -127,7 +146,7 @@ export default function HomeScreen() {
           </View>
 
           <Image
-            source={require('/Users/sienna/deepfaker_detection/ddp_frontend/assets/images/glass.png')}
+            source={require('@/assets/images/glass.png')}
             style={styles.bigCardImage}
             contentFit="contain"
           />
@@ -139,7 +158,7 @@ export default function HomeScreen() {
           style={[styles.bigCard, { backgroundColor: BLUE_CARD }]}
           onPress={() => router.push('/fraud-report')}>
           <View style={styles.bigCardText}>
-            <ThemedText style={styles.bigTitle}>신고하고 보상받으세요</ThemedText>
+            <ThemedText style={styles.bigTitle}>신고하고{'\n'}보상을 받아보세요</ThemedText>
             <View style={styles.linkRowBlue}>
               <ThemedText style={styles.bigLinkBlue}>신고하기</ThemedText>
               <MaterialIcons name="chevron-right" size={18} color={'#3A7BD5'} />
@@ -147,11 +166,36 @@ export default function HomeScreen() {
           </View>
 
           <Image
-            source={require('/Users/sienna/deepfaker_detection/ddp_frontend/assets/images/siren.png')}
-            style={styles.bigCardImage}
+            source={require('@/assets/images/siren.png')}
+            style={[styles.bigCardImage, styles.sirenFlipped]}
             contentFit="contain"
           />
         </TouchableOpacity>
+
+        {/* 뉴스 보기 칸 - 이미지 크게 */}
+        <View style={styles.newsSection}>
+          {/* <ThemedText style={styles.newsSectionTitle}>딥페이크 금융사기 피해 뉴스</ThemedText> */}
+          <TouchableOpacity
+            activeOpacity={0.95}
+            style={styles.newsCard}
+            onPress={() => router.push('/news' as const)}>
+            <Image
+              source={require('@/assets/images/news_image.png')}
+              style={styles.newsThumbnail}
+              contentFit="cover"
+            />
+            <View style={styles.newsCardFooter}>
+              <ThemedText style={styles.newsCardHeadline}>DDP에서 딥페이크·금융사기 뉴스를 확인해보세요!</ThemedText>
+              <ThemedText style={styles.newsCardSub}>
+                무심코 믿은 영상, 딥페이크 피해자가 됩니다.
+              </ThemedText>
+              <View style={styles.newsCardRow}>
+                <ThemedText style={styles.newsCardLink}>뉴스 보기</ThemedText>
+                <MaterialIcons name="chevron-right" size={20} color={ACCENT} />
+              </View>
+            </View>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
     </View>
   );
@@ -161,8 +205,24 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
   content: { paddingHorizontal: 18 },
 
-  topRow: { paddingTop: 8, paddingBottom: 14 },
-  pointsTitle: { fontSize: 18, fontWeight: '700', color: TEXT },
+  topRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: 8,
+    paddingBottom: 14,
+    gap: 12,
+  },
+  topRowLeft: { flex: 1 },
+  greeting: {
+    fontSize: 21,
+    fontWeight: '700',
+    color: TEXT,
+    marginBottom: 6,
+    lineHeight: 28,
+  },
+  pointsTitle: { fontSize: 16, fontWeight: '600', color: SUB },
+  topRowLogo: { width: 90, height: 120 },
 
   quickRow: {
     flexDirection: 'row',
@@ -179,6 +239,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  quickIcon: { width: 40, height: 40 },
   quickLabel: { marginTop: 10, fontSize: 13, color: TEXT, fontWeight: '600' },
 
   bigCard: {
@@ -199,4 +260,58 @@ const styles = StyleSheet.create({
   bigLinkBlue: { fontSize: 16, fontWeight: '700', color: '#3A7BD5' },
 
   bigCardImage: { width: 110, height: 110 },
+  sirenFlipped: {
+    width: 75,
+    height: 75,
+    marginRight: 20,
+    transform: [{ scaleX: -1 }],
+    marginBottom: -20
+  },
+  newsSection: {
+    marginBottom: 14,
+  },
+  newsSectionTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: TEXT,
+    marginBottom: 12,
+  },
+  newsCard: {
+    borderRadius: 18,
+    overflow: 'hidden',
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.06)',
+  },
+  newsThumbnail: {
+    width: '100%',
+    height: 220,
+    backgroundColor: '#E8E8E8',
+  },
+  newsCardFooter: {
+    padding: 16,
+    paddingTop: 14,
+  },
+  newsCardHeadline: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: TEXT,
+    marginBottom: 6,
+  },
+  newsCardSub: {
+    fontSize: 14,
+    color: SUB,
+    lineHeight: 20,
+    marginBottom: 12,
+  },
+  newsCardRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  newsCardLink: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: ACCENT,
+  },
 });

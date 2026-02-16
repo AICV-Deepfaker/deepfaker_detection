@@ -2,6 +2,23 @@ const API_BASE = 'https://cheri-unarbored-gaylord.ngrok-free.dev';
 
 export type PredictMode = 'fast' | 'deep';
 
+/** 증거수집모드(fast)용 세부 결과 - 백엔드 확장 시 사용 */
+export interface EvidenceSection {
+  result?: 'FAKE' | 'REAL';
+  probability?: number;
+  confidence_score?: string;
+  accuracy?: string;
+  visual_base64?: string;
+}
+
+/** 정밀탐지모드(deep)용 UNITE 결과 */
+export interface UniteSection {
+  result?: 'FAKE' | 'REAL';
+  probability?: number;
+  confidence_score?: string;
+  accuracy?: string;
+}
+
 export interface PredictResult {
   status: 'success' | 'error';
   result?: 'FAKE' | 'REAL';
@@ -10,6 +27,12 @@ export interface PredictResult {
   visual_report?: string; // Base64 이미지 데이터
   analysis_mode?: string;
   message?: string;
+  // 증거수집모드 확장 필드 (백엔드 지원 시)
+  frequency?: EvidenceSection;
+  rppg?: EvidenceSection;
+  stt_keywords?: { keyword: string; detected: boolean }[];
+  // 정밀탐지모드 확장 필드
+  unite?: UniteSection;
 }
 
 /**

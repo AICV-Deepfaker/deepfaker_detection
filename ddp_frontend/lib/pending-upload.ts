@@ -15,6 +15,16 @@ export function takePendingImageUri(): string | null {
   return u;
 }
 
+/** 소비하지 않고 현재 pending 이미지 URI 확인 (link-paste에서 초기 표시용) */
+export function peekPendingImageUri(): string | null {
+  return pendingImageUri;
+}
+
+/** 소비하지 않고 현재 pending 영상 URI 확인 (link-paste에서 초기 표시용) */
+export function peekPendingVideoUri(): string | null {
+  return pendingVideoUri;
+}
+
 export function setPendingVideoUri(uri: string) {
   pendingVideoUri = uri;
 }

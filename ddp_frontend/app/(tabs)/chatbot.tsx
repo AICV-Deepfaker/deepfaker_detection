@@ -247,7 +247,9 @@ export default function ChatbotScreen() {
     imageUri?: string;
     pendingVideo?: string;
     pendingImage?: string;
+    mode?: string;
   }>();
+  const predictMode = params.mode === 'fast' ? 'fast' : 'deep';
   const { addToHistory } = useAnalysis();
 
   const nextSessionIdRef = useRef(0);
@@ -379,7 +381,7 @@ export default function ChatbotScreen() {
       let visualReport: string | undefined;
       let resultType: 'FAKE' | 'REAL' | undefined;
       try {
-        const apiResult = await predictWithFile(videoUri, 'deep');
+        const apiResult = await predictWithFile(videoUri, predictMode);
         result = formatPredictResult(apiResult);
         visualReport = apiResult.visual_report;
         resultType = apiResult.result;
@@ -398,7 +400,7 @@ export default function ChatbotScreen() {
       appendToCurrentSession(assistantMsg);
       setIsAnalyzing(false);
     },
-    [addToHistory, nextId, appendToCurrentSession],
+    [addToHistory, nextId, appendToCurrentSession, predictMode],
   );
 
   useEffect(() => {
@@ -437,7 +439,7 @@ export default function ChatbotScreen() {
       let visualReport: string | undefined;
       let resultType: 'FAKE' | 'REAL' | undefined;
       try {
-        const apiResult = await predictWithImageFile(imageUri, 'deep');
+        const apiResult = await predictWithImageFile(imageUri, predictMode);
         result = formatPredictResult(apiResult);
         visualReport = apiResult.visual_report;
         resultType = apiResult.result;
@@ -456,7 +458,7 @@ export default function ChatbotScreen() {
       appendToCurrentSession(assistantMsg);
       setIsAnalyzing(false);
     },
-    [addToHistory, nextId, appendToCurrentSession],
+    [addToHistory, nextId, appendToCurrentSession, predictMode],
   );
 
   useEffect(() => {
