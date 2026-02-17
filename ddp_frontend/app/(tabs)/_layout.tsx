@@ -37,7 +37,7 @@ function PillTabBar({ state, descriptors, navigation }: any) {
               label = '히스토리';
             } else if (route.name === 'mypage') {
               icon = require('@/assets/images/setting.png');
-              label = 'My page';
+              label = '마이';
             } else {
               return null;
             }
@@ -83,6 +83,8 @@ export default function TabLayout() {
       <Tabs.Screen name="chatbot" options={{ href: null }} />
       <Tabs.Screen name="settings" options={{ href: null }} />
       <Tabs.Screen name="explore" options={{ href: null }} />
+      <Tabs.Screen name="report-history" options={{ href: null }} />
+      <Tabs.Screen name="inquiry" options={{ href: null }} />
     </Tabs>
   );
 }
@@ -106,13 +108,14 @@ const styles = StyleSheet.create({
   },
 
   pill: {
-    height: 92,
+    height: 64,
     borderRadius: 999,
     backgroundColor: 'rgba(255,255,255,0.55)',
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 10,
+    padding: 6,
     borderWidth: 1,
+    paddingVertical: 4,
     borderColor: 'rgba(0,0,0,0.05)',
   },
 
@@ -130,12 +133,12 @@ const styles = StyleSheet.create({
   },
 
   icon: {
-    width: 28,
-    height: 28,
+    width: 25,
+    height: 25,
   },
 
   label: {
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: '700',
     color: '#111',
   },

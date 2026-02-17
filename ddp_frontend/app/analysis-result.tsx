@@ -1,7 +1,7 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -19,12 +19,7 @@ import * as Sharing from 'expo-sharing';
 
 import { ThemedText } from '@/components/themed-text';
 import { useAnalysis } from '@/contexts/analysis-context';
-import {
-  predictWithFile,
-  predictWithImageFile,
-  type PredictResult,
-  type PredictMode,
-} from '@/lib/api';
+import { predictWithFile, predictWithImageFile, type PredictMode, type PredictResult } from '@/lib/api';
 import { takePendingImageUri, takePendingVideoUri } from '@/lib/pending-upload';
 
 const ACCENT_GREEN = '#00CF90';
@@ -68,7 +63,9 @@ function SectionCard({
   return (
     <View style={styles.sectionCard}>
       <ThemedText style={styles.sectionTitle}>{title}</ThemedText>
+
       {result != null && <ResultBadge result={result} />}
+
       <View style={styles.metricsRow}>
         {probability != null && (
           <View style={styles.metric}>
@@ -76,12 +73,14 @@ function SectionCard({
             <ThemedText style={styles.metricValue}>{(probability * 100).toFixed(2)}%</ThemedText>
           </View>
         )}
+
         {confidenceScore != null && (
           <View style={styles.metric}>
             <ThemedText style={styles.metricLabel}>Confidence</ThemedText>
             <ThemedText style={styles.metricValue}>{confidenceScore}</ThemedText>
           </View>
         )}
+
         {accuracy != null && (
           <View style={styles.metric}>
             <ThemedText style={styles.metricLabel}>정확도</ThemedText>
@@ -89,7 +88,8 @@ function SectionCard({
           </View>
         )}
       </View>
-      {visualBase64 && (
+
+      {visualBase64 ? (
         <View style={styles.visualWrap}>
           <Image
             source={{ uri: `data:image/png;base64,${visualBase64}` }}
@@ -97,7 +97,8 @@ function SectionCard({
             contentFit="contain"
           />
         </View>
-      )}
+      ) : null}
+
       {children}
     </View>
   );
@@ -105,6 +106,7 @@ function SectionCard({
 
 function SttKeywordsCard({ keywords }: { keywords: { keyword: string; detected: boolean }[] }) {
   const list = keywords.length ? keywords : STT_KEYWORDS.map((k) => ({ keyword: k, detected: false }));
+
   return (
     <View style={styles.sectionCard}>
       <ThemedText style={styles.sectionTitle}>STT 키워드</ThemedText>
@@ -124,20 +126,20 @@ function SttKeywordsCard({ keywords }: { keywords: { keyword: string; detected: 
 
 export default function AnalysisResultScreen() {
   const insets = useSafeAreaInsets();
-  const params = useLocalSearchParams<{
-    pendingImage?: string;
-    pendingVideo?: string;
-    mode?: string;
-  }>();
+
+  const params = useLocalSearchParams<{ mode?: string }>();
   const mode = (params.mode === 'fast' ? 'fast' : 'deep') as PredictMode;
   const isEvidence = mode === 'fast';
 
   const { addToHistory } = useAnalysis();
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<PredictResult | null>(null);
+
   const viewShotRef = useRef<ViewShot>(null);
 
+  // ✅ pending uri는 "한 번만" 가져오도록 ref에 고정 (렌더마다 바뀌면 꼬임)
   const initialMediaRef = useRef<{ uri: string; type: 'image' | 'video' } | null>(null);
   if (initialMediaRef.current === null) {
     const img = takePendingImageUri();
@@ -145,34 +147,53 @@ export default function AnalysisResultScreen() {
     if (img) initialMediaRef.current = { uri: img, type: 'image' };
     else if (vid) initialMediaRef.current = { uri: vid, type: 'video' };
   }
+
   const mediaUri = initialMediaRef.current?.uri ?? null;
   const mediaType = initialMediaRef.current?.type ?? 'video';
 
   const runAnalysis = useCallback(async () => {
     if (!mediaUri) {
-      setError('분석할 파일이 없습니다.');
+      setError('탐지 후 분석 기록이 있어야 신고할 수 있어요.');
       setLoading(false);
       return;
     }
+
     setLoading(true);
     setError(null);
+
     try {
       const res =
         mediaType === 'image'
           ? await predictWithImageFile(mediaUri, mode)
           : await predictWithFile(mediaUri, mode);
+
       if (res.status === 'error') {
         setError(res.message ?? '분석 실패');
         setData(null);
-      } else {
-        setData(res);
-        addToHistory(
-          mediaType === 'image' ? '이미지 파일' : '영상 파일',
-          formatResultText(res),
-          res.result,
-          res.visual_report
-        );
+        return;
       }
+
+      setData(res);
+
+      // ✅ 히스토리에 저장하고, 바로 상세로 이동
+      const newId = addToHistory(
+        mediaType === 'image' ? '이미지 파일' : '영상 파일',
+        formatResultText(res),
+        res.result,
+        res.visual_report
+      );
+
+      // 방어: 혹시라도 newId가 falsy면 이동하지 않음
+      if (!newId) return;
+
+      // ✅ expo-router 동적 라우팅 정석 방식
+      // (setTimeout 없어도 대체로 되지만, 상태 flush 타이밍 꼬임 방지로 유지)
+      setTimeout(() => {
+        router.replace({
+          pathname: '/history/[id]',
+          params: { id: newId },
+        });
+      }, 0);
     } catch (e) {
       const msg = e instanceof Error ? e.message : '네트워크 오류';
       setError(msg);
@@ -184,32 +205,32 @@ export default function AnalysisResultScreen() {
 
   useEffect(() => {
     runAnalysis();
-  }, []);
+  }, [runAnalysis]);
 
   const handleShare = useCallback(async () => {
     if (!data) return;
-    const message = formatResultText(data);
     try {
       await Share.share({
-        message,
+        message: formatResultText(data),
         title: 'DDP 딥페이크 분석 결과',
       });
     } catch (_) {}
   }, [data]);
 
-  const handleCopyLink = useCallback(async () => {
+  const handleCopy = useCallback(async () => {
     if (!data) return;
-    const text = formatResultText(data);
-    await Clipboard.setStringAsync(text);
+    await Clipboard.setStringAsync(formatResultText(data));
     Alert.alert('복사됨', '결과가 클립보드에 복사되었습니다.');
   }, [data]);
 
   const handleSavePng = useCallback(async () => {
     const ref = viewShotRef.current as { capture?: () => Promise<string> } | null;
     if (!ref?.capture) return;
+
     try {
       const uri = await ref.capture();
       const fileUri = uri.startsWith('file://') ? uri : `file://${uri}`;
+
       if (await Sharing.isAvailableAsync()) {
         await Sharing.shareAsync(fileUri, { mimeType: 'image/png' });
       } else {
@@ -224,10 +245,8 @@ export default function AnalysisResultScreen() {
     if (!data) return;
     try {
       const html = buildResultHtml(data, isEvidence);
-      const { uri } = await Print.printToFileAsync({
-        html,
-        baseUrl: '',
-      });
+      const { uri } = await Print.printToFileAsync({ html, baseUrl: '' });
+
       if (uri && (await Sharing.isAvailableAsync())) {
         await Sharing.shareAsync(uri, { mimeType: 'application/pdf' });
       }
@@ -236,6 +255,7 @@ export default function AnalysisResultScreen() {
     }
   }, [data, isEvidence]);
 
+  // ✅ 로딩/에러 UI (분석 페이지가 잠깐 보일 때만)
   if (loading) {
     return (
       <View style={[styles.centered, { paddingTop: insets.top + 60 }]}>
@@ -309,24 +329,28 @@ export default function AnalysisResultScreen() {
           )}
         </ViewShot>
 
-        {/* 공통: 공유 / 저장 */}
+        {/* 공유/저장 */}
         <View style={styles.actionsSection}>
           <ThemedText style={styles.actionsSectionTitle}>결과 공유 및 저장</ThemedText>
+
           <View style={styles.actionsRow}>
             <TouchableOpacity style={styles.actionButton} onPress={handleShare}>
               <MaterialIcons name="share" size={22} color={ACCENT_GREEN} />
               <ThemedText style={styles.actionLabel}>공유하기</ThemedText>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.actionButton} onPress={handleCopyLink}>
-              <MaterialIcons name="link" size={22} color={ACCENT_GREEN} />
-              <ThemedText style={styles.actionLabel}>링크복사</ThemedText>
+
+            <TouchableOpacity style={styles.actionButton} onPress={handleCopy}>
+              <MaterialIcons name="content-copy" size={22} color={ACCENT_GREEN} />
+              <ThemedText style={styles.actionLabel}>복사하기</ThemedText>
             </TouchableOpacity>
           </View>
+
           <View style={styles.actionsRow}>
             <TouchableOpacity style={styles.actionButton} onPress={handleSavePng}>
               <MaterialIcons name="image" size={22} color={ACCENT_GREEN} />
               <ThemedText style={styles.actionLabel}>PNG 저장</ThemedText>
             </TouchableOpacity>
+
             <TouchableOpacity style={styles.actionButton} onPress={handleSavePdf}>
               <MaterialIcons name="picture-as-pdf" size={22} color={ACCENT_GREEN} />
               <ThemedText style={styles.actionLabel}>PDF 저장</ThemedText>
@@ -349,12 +373,14 @@ function buildResultHtml(data: PredictResult, isEvidence: boolean): string {
   const r = data.result ?? '-';
   const p = data.average_fake_prob != null ? (data.average_fake_prob * 100).toFixed(2) : '-';
   const c = data.confidence_score ?? '-';
+
   const img = data.visual_report
     ? `<img src="data:image/png;base64,${data.visual_report}" style="max-width:100%;height:auto;" />`
     : '';
+
   const modeLabel = isEvidence ? '증거수집모드' : '정밀탐지모드';
-  return `
-<!DOCTYPE html>
+
+  return `<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><title>DDP 분석 결과</title></head>
 <body style="font-family:sans-serif;padding:20px;color:#111;">
@@ -366,10 +392,8 @@ function buildResultHtml(data: PredictResult, isEvidence: boolean): string {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
+  container: { flex: 1, backgroundColor: '#fff' },
+
   centered: {
     flex: 1,
     justifyContent: 'center',
@@ -377,8 +401,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     padding: 24,
   },
+
   loadingText: { marginTop: 12, fontSize: 16, color: SUB },
   errorText: { marginTop: 12, fontSize: 16, color: TEXT, textAlign: 'center' },
+
   backButton: {
     marginTop: 24,
     paddingVertical: 12,
@@ -411,12 +437,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: BORDER,
   },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: TEXT,
-    marginBottom: 10,
-  },
+
+  sectionTitle: { fontSize: 16, fontWeight: '700', color: TEXT, marginBottom: 10 },
+
   badge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -431,12 +454,7 @@ const styles = StyleSheet.create({
   badgeReal: { backgroundColor: REAL_GREEN },
   badgeText: { color: '#fff', fontWeight: '700', fontSize: 14 },
 
-  metricsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 16,
-    marginBottom: 12,
-  },
+  metricsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 16, marginBottom: 12 },
   metric: {},
   metricLabel: { fontSize: 12, color: SUB, marginBottom: 2 },
   metricValue: { fontSize: 15, fontWeight: '700', color: TEXT },
@@ -467,6 +485,7 @@ const styles = StyleSheet.create({
   actionsSection: { marginTop: 24, paddingTop: 20, borderTopWidth: 1, borderTopColor: BORDER },
   actionsSectionTitle: { fontSize: 15, fontWeight: '700', color: TEXT, marginBottom: 12 },
   actionsRow: { flexDirection: 'row', gap: 12, marginBottom: 12 },
+
   actionButton: {
     flex: 1,
     flexDirection: 'row',

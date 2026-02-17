@@ -1,17 +1,31 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Image } from 'expo-image';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { useAnalysis } from '@/contexts/analysis-context';
+import { POINTS_PER_REPORT } from '@/contexts/analysis-context';
+import { useCallback } from 'react';
 
 const ACCENT_GREEN = '#00CF90';
 const TEXT_COLOR = '#111';
 const SECONDARY_TEXT_COLOR = '#687076';
+
+const extractFakeProbPercent = (text?: string) => {
+  if (!text) return null;
+
+  // 예: "딥페이크 확률: 73.12%"
+  const m = text.match(/딥페이크\s*확률\s*:\s*([0-9]+(?:\.[0-9]+)?)\s*%/);
+  if (!m) return null;
+
+  const n = Number(m[1]);
+  if (!Number.isFinite(n)) return null;
+  return Math.min(100, Math.max(0, n));
+};
 
 const extractConfidencePercent = (text?: string) => {
   if (!text) return null;
@@ -66,35 +80,56 @@ const getContentLabel = (item: any) => {
 export default function HistoryDetailScreen() {
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { history } = useAnalysis();
+
+  // useAnalysis는 여기서 "한 번만" 꺼내기
+  const { history, addPoints, incrementReportCount } = useAnalysis();
+
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [showDone, setShowDone] = useState(false);
+  const [doneMessage, setDoneMessage] = useState('');
+  const [reported, setReported] = useState(false);
 
   const item = useMemo(() => history.find((h) => h.id === id), [history, id]);
 
   const isFake = item?.resultType === 'FAKE';
   const isReal = item?.resultType === 'REAL';
-  const percent = extractConfidencePercent(item?.result) ?? 0;
+  const percent = extractFakeProbPercent(item?.result) ?? 0;
 
-  // 신고 여부 로컬 저장
+  // ✅ 신고 여부 로컬 저장 키
   const storageKey = id ? `reported:${id}` : '';
-  const [reported, setReported] = useState(false);
 
-  useEffect(() => {
-    if (!storageKey) return;
-    (async () => {
-      const v = await AsyncStorage.getItem(storageKey);
-      setReported(v === '1');
-    })();
-  }, [storageKey]);
+  // ✅ 신고 confirm 처리(모달 "신고하기" 버튼에서 호출)
+  const onConfirmReport = useCallback(async () => {
+    if (!id) return;
 
-  const onPressReport = async () => {
-    if (!storageKey) return;
+    const key = `reported:${id}`;
+    const already = await AsyncStorage.getItem(key);
 
-    // ✅ fraud-report가 app/history/fraud-report.tsx 라면 이게 맞음
-    router.push('app/fraud-report');
+    if (already === '1') {
+      setReported(true);
+      return;
+    }
 
-    await AsyncStorage.setItem(storageKey, '1');
+    await AsyncStorage.setItem(key, '1');
     setReported(true);
-  };
+
+    addPoints(POINTS_PER_REPORT);
+    incrementReportCount();
+
+    setDoneMessage(`신고가 접수되었습니다.\n${POINTS_PER_REPORT}P가 지급되었습니다.`);
+    setShowDone(true);
+  }, [id, addPoints, incrementReportCount]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!storageKey) return;
+
+      (async () => {
+        const v = await AsyncStorage.getItem(storageKey);
+        setReported(v === '1');
+      })();
+    }, [storageKey]),
+  );
 
   if (!item) {
     return (
@@ -138,11 +173,7 @@ export default function HistoryDetailScreen() {
 
           <View style={styles.resultRow}>
             <View style={[styles.resultPill, isFake ? styles.pillFake : styles.pillReal]}>
-              <MaterialIcons
-                name={isFake ? 'warning' : 'check-circle'}
-                size={18}
-                color="#fff"
-              />
+              <MaterialIcons name={isFake ? 'warning' : 'check-circle'} size={18} color="#fff" />
               <ThemedText style={styles.pillText}>{isFake ? 'FAKE' : 'REAL'}</ThemedText>
             </View>
 
@@ -153,7 +184,10 @@ export default function HistoryDetailScreen() {
             <View
               style={[
                 styles.progressFill,
-                { width: `${Math.round(percent)}%`, backgroundColor: isFake ? '#FF6B6B' : '#7ED957' },
+                {
+                  width: `${Math.round(percent)}%`,
+                  backgroundColor: isFake ? '#FF6B6B' : '#7ED957',
+                },
               ]}
             />
           </View>
@@ -200,7 +234,7 @@ export default function HistoryDetailScreen() {
             <TouchableOpacity
               style={styles.reportButton}
               activeOpacity={0.85}
-              onPress={onPressReport}
+              onPress={() => setShowConfirm(true)}
             >
               <MaterialIcons name="report" size={20} color="#fff" />
               <ThemedText style={styles.reportButtonText}>신고하기</ThemedText>
@@ -208,9 +242,67 @@ export default function HistoryDetailScreen() {
           )}
         </View>
       </ScrollView>
+
+      {/* ✅ Confirm Modal */}
+      {showConfirm && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalIconWrap}>
+              <MaterialIcons name="warning" size={32} color="#FF4D4F" />
+            </View>
+
+            <ThemedText style={styles.modalTitle}>신고 확인</ThemedText>
+
+            <ThemedText style={styles.modalText}>이 콘텐츠를 신고하시겠습니까?</ThemedText>
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity style={styles.modalCancel} onPress={() => setShowConfirm(false)}>
+                <ThemedText style={styles.modalCancelText}>아니오</ThemedText>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.modalConfirm}
+                onPress={async () => {
+                  // 모달 닫고 신고 처리
+                  setShowConfirm(false);
+                  await onConfirmReport(); // ✅ Alert 없는 신고 처리 함수로 연결
+                }}
+              >
+                <ThemedText style={styles.modalConfirmText}>신고하기</ThemedText>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
+      {/* ✅ Done Modal */}
+      {showDone && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalIconWrap}>
+              <MaterialIcons name="check-circle" size={34} color={ACCENT_GREEN} />
+            </View>
+
+            <ThemedText style={styles.modalTitle}>신고 완료</ThemedText>
+
+            <ThemedText style={styles.modalText}>{doneMessage}</ThemedText>
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalConfirm, { flex: 1 }]}
+                onPress={() => setShowDone(false)}
+              >
+                <ThemedText style={styles.modalConfirmText}>확인</ThemedText>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
+
     </View>
   );
 }
+
+
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F5F5F5' },
@@ -314,4 +406,74 @@ const styles = StyleSheet.create({
   },
   reportDone: { backgroundColor: 'rgba(0,0,0,0.35)' },
   reportButtonText: { color: '#fff', fontSize: 15, fontWeight: '700' },
+  modalOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+
+  modalCard: {
+    width: '100%',
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 24,
+  },
+
+  modalIconWrap: {
+    alignItems: 'center',
+    marginBottom: 14,
+  },
+
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    textAlign: 'center',
+    color: '#111',
+    marginBottom: 8,
+  },
+
+  modalText: {
+    fontSize: 14,
+    textAlign: 'center',
+    color: '#687076',
+    marginBottom: 24,
+  },
+
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+
+  modalCancel: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    alignItems: 'center',
+  },
+
+  modalCancelText: {
+    fontWeight: '700',
+    color: '#687076',
+  },
+
+  modalConfirm: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 14,
+    backgroundColor: '#00CF90',
+    alignItems: 'center',
+  },
+
+  modalConfirmText: {
+    fontWeight: '800',
+    color: '#fff',
+  },
 });

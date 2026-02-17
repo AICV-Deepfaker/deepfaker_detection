@@ -38,7 +38,12 @@ interface AnalysisContextType {
   totalPoints: number;
   reportCount: number;
   history: HistoryItem[];
-  addToHistory: (link: string, result: string, resultType?: 'FAKE' | 'REAL', visualReport?: string) => void;
+  addToHistory: (
+      link: string,
+      result: string,
+      resultType?: 'FAKE' | 'REAL',
+      visualReport?: string
+    ) => string;
   addPoints: (amount: number) => void;
   incrementReportCount: () => void;
   getHistoryByLink: (link: string) => HistoryItem[];
@@ -70,9 +75,12 @@ export function AnalysisProvider({ children }: { children: React.ReactNode }) {
         visualReport,
         date: new Date().toISOString(),
       };
+
       setHistory((prev) => [newItem, ...prev]);
+
+      return newItem.id; // ✅ 이게 없으면 id가 undefined
     },
-    [],
+    []
   );
 
   const getHistoryByLink = useCallback(

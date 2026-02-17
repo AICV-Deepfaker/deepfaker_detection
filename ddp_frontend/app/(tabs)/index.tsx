@@ -72,7 +72,7 @@ export default function HomeScreen() {
         key: 'report',
         label: '신고내역',
         icon: require('@/assets/images/home_list.png'),
-        onPress: () => router.push('/(tabs)/history'),
+        onPress: () => router.push('/(tabs)/report'),
       },
       {
         key: 'upload',
@@ -112,9 +112,10 @@ export default function HomeScreen() {
             </ThemedText>
           </View>
           <Image
-            source={require('@/assets/images/ddp_applogo.png')}
+            source={require('@/assets/images/ddp_logo.gif')}
             style={styles.topRowLogo}
             contentFit="contain"
+            autoplay
           />
         </View>
 
@@ -156,7 +157,7 @@ export default function HomeScreen() {
         <TouchableOpacity
           activeOpacity={0.9}
           style={[styles.bigCard, { backgroundColor: BLUE_CARD }]}
-          onPress={() => router.push('/fraud-report')}>
+          onPress={() => router.push('/analysis-result?mode=fast')}>
           <View style={styles.bigCardText}>
             <ThemedText style={styles.bigTitle}>신고하고{'\n'}보상을 받아보세요</ThemedText>
             <View style={styles.linkRowBlue}>
@@ -211,6 +212,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingTop: 8,
     paddingBottom: 14,
+    paddingHorizontal: 10,
     gap: 12,
   },
   topRowLeft: { flex: 1 },

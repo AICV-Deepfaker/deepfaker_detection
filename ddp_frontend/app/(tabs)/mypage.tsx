@@ -70,14 +70,14 @@ export default function MypageScreen() {
           <RowItem
             icon="person-outline"
             label="회원 정보"
-            onPress={() => Alert.alert('회원 정보', '회원 정보 화면 연동 예정')}
+            onPress={() => router.push('/(tabs)/member-info')}
           />
         </View>
 
         {/* 포인트 내역 */}
         <SectionTitle title="포인트" />
         <View style={styles.card}>
-          <TouchableOpacity style={styles.row} activeOpacity={0.7} onPress={() => Alert.alert('포인트 내역', '포인트 내역 화면 연동 예정')}>
+          <TouchableOpacity style={styles.row} activeOpacity={0.7} onPress={() => router.push('/fraud-report')}>
             <MaterialIcons name="account-balance-wallet" size={22} color={TEXT_COLOR} />
             <ThemedText style={styles.rowLabel}>포인트 내역</ThemedText>
             <ThemedText style={styles.pointBadge}>{totalPoints.toLocaleString()}P</ThemedText>
@@ -91,7 +91,7 @@ export default function MypageScreen() {
           <RowItem
             icon="chat-bubble-outline"
             label="문의하기"
-            onPress={() => Alert.alert('문의하기', '문의하기 화면/이메일 연동 예정')}
+            onPress={() => router.push('/inquiry')}
           />
         </View>
 

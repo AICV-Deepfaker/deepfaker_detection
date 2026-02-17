@@ -1,8 +1,12 @@
+// npm i fast-xml-parser
+
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { router } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  ActivityIndicator,
   FlatList,
+  Linking,
   ScrollView,
   StyleSheet,
   TouchableOpacity,
@@ -11,6 +15,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
+import { fetchNewsByCategory, type NewsItem } from '@/lib/news';
 
 const ACCENT_GREEN = '#00CF90';
 const TEXT_COLOR = '#111';
@@ -27,56 +32,93 @@ const NEWS_CATEGORIES = [
 
 type CategoryId = (typeof NEWS_CATEGORIES)[number]['id'];
 
-/** 카테고리별 placeholder 뉴스 (추후 API 연동 시 교체) */
-const PLACEHOLDER_ITEMS: Record<CategoryId, { title: string; date: string; summary: string }[]> = {
-  invest: [
-    { title: '유명인 사칭 투자 사기, 1년간 1천200억 피해', date: '2025.02.10', summary: '딥페이크 영상을 이용한 투자 사기 사례가 급증하고 있습니다.' },
-    { title: '"고수익 보장" 메신저 사기 주의보', date: '2025.02.08', summary: '손흥민·연예인 사칭 영상으로 신뢰 유도 후 자금 편취.' },
-  ],
-  gamble: [
-    { title: '"강원랜드 사칭" 앱 피싱, 수백 명 피해', date: '2025.02.09', summary: '가짜 앱 설치 유도 후 개인정보·자금 탈취 수법.' },
-    { title: '도박 사이트 가입 권유 딥페이크 영상 주의', date: '2025.02.05', summary: '유명인 합성 영상으로 불법 도박 사이트 유도.' },
-  ],
-  coin: [
-    { title: '가상자산 투자 사기, 딥페이크로 신뢰도 부여', date: '2025.02.07', summary: '코인·NFT 투자 권유 시 합성 영상 활용 사례.' },
-    { title: '암호화폐 스캠 피해 30% 증가', date: '2025.02.03', summary: '유명인 사칭 영상을 통한 코인 사기 주의.' },
-  ],
-  loan: [
-    { title: '대출 사기, "무담보 즉시 대출" 딥페이크 광고', date: '2025.02.06', summary: '가짜 연예인·금융인 영상으로 대출 사이트 유도.' },
-    { title: '신용대출 사기 수법에 딥페이크 활용', date: '2025.02.01', summary: '합성 영상으로 정당한 대출처럼 보이게 유도.' },
-  ],
-  remit: [
-    { title: '송금 유도 사기, "긴급 송금" 딥페이크 영상', date: '2025.02.04', summary: '지인·공인 사칭 영상으로 즉시 송금 요구.' },
-    { title: '해외 송금 사기 피해 급증', date: '2025.01.28', summary: '유명인 목소리·얼굴 합성으로 송금 요청.' },
-  ],
-  refund: [
-    { title: '"환급·보상금" 사기, 딥페이크로 공식처럼 위장', date: '2025.02.02', summary: '가짜 고객센터·공인 영상으로 선입금 요구.' },
-    { title: '피해 환급 사칭 사기 주의보', date: '2025.01.25', summary: '경찰·금융당국 사칭 영상으로 추가 피해 유도.' },
-  ],
-};
+const PAGE_SIZE = 10;
 
 export default function NewsScreen() {
   const insets = useSafeAreaInsets();
   const [selectedCategory, setSelectedCategory] = useState<CategoryId>('invest');
 
-  const items = PLACEHOLDER_ITEMS[selectedCategory];
+  const [items, setItems] = useState<NewsItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // ✅ "더보기"용: 현재 화면에 보여줄 개수
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+
+  const load = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await fetchNewsByCategory(selectedCategory);
+      setItems(data);
+    } catch (e) {
+      setItems([]);
+      setError(e instanceof Error ? e.message : '뉴스 로드 실패');
+    } finally {
+      setLoading(false);
+    }
+  }, [selectedCategory]);
+
+  // ✅ 카테고리 바뀌면 다시 10개부터
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [selectedCategory]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  // ✅ 실제로 FlatList에 주는 데이터는 "보이는 만큼만"
+  const visibleItems = useMemo(() => items.slice(0, visibleCount), [items, visibleCount]);
 
   const renderItem = useCallback(
-    ({ item }: { item: (typeof items)[0] }) => (
-      <View style={styles.newsItem}>
-        <ThemedText style={styles.newsItemTitle} numberOfLines={2}>
-          {item.title}
-        </ThemedText>
-        <ThemedText style={styles.newsItemDate}>{item.date}</ThemedText>
-        <ThemedText style={styles.newsItemSummary} numberOfLines={2}>
-          {item.summary}
-        </ThemedText>
-      </View>
+    ({ item }: { item: NewsItem }) => (
+      <TouchableOpacity
+        activeOpacity={0.85}
+        onPress={() => {
+          if (item.link) Linking.openURL(item.link);
+        }}
+      >
+        <View style={styles.newsItem}>
+          <ThemedText style={styles.newsItemTitle} numberOfLines={2}>
+            {item.title}
+          </ThemedText>
+          <ThemedText style={styles.newsItemDate}>
+            {item.date}
+            {item.source ? ` · ${item.source}` : ''}
+          </ThemedText>
+          <ThemedText style={styles.newsItemSummary} numberOfLines={2}>
+            {item.summary}
+          </ThemedText>
+        </View>
+      </TouchableOpacity>
     ),
     [],
   );
 
-  const keyExtractor = useCallback((item: (typeof items)[0], index: number) => `${item.title}-${index}`, []);
+  const keyExtractor = useCallback(
+    (item: NewsItem, index: number) => `${item.link ?? item.title}-${index}`,
+    [],
+  );
+
+  // ✅ 더보기 버튼 (ListFooterComponent)
+  const ListFooter = useMemo(() => {
+    if (loading) return null;
+    if (items.length <= visibleCount) return null;
+
+    return (
+      <TouchableOpacity
+        activeOpacity={0.85}
+        onPress={() => setVisibleCount((c) => c + PAGE_SIZE)}
+        style={styles.loadMoreBtn}
+      >
+        <ThemedText style={styles.loadMoreText}>더보기</ThemedText>
+        <ThemedText style={styles.loadMoreSub}>
+          {visibleCount}/{items.length}
+        </ThemedText>
+      </TouchableOpacity>
+    );
+  }, [items.length, visibleCount, loading]);
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -94,7 +136,8 @@ export default function NewsScreen() {
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={[styles.categoryScroll, { paddingHorizontal: 18 }]}
-        style={styles.categoryScrollView}>
+        style={styles.categoryScrollView}
+      >
         {NEWS_CATEGORIES.map((cat) => {
           const isSelected = selectedCategory === cat.id;
           return (
@@ -102,7 +145,8 @@ export default function NewsScreen() {
               key={cat.id}
               style={[styles.categoryChip, isSelected && styles.categoryChipSelected]}
               activeOpacity={0.8}
-              onPress={() => setSelectedCategory(cat.id)}>
+              onPress={() => setSelectedCategory(cat.id)}
+            >
               <ThemedText style={[styles.categoryLabel, isSelected && styles.categoryLabelSelected]}>
                 {cat.label}
               </ThemedText>
@@ -111,28 +155,40 @@ export default function NewsScreen() {
         })}
       </ScrollView>
 
-      {/* News list */}
-      <FlatList
-        data={items}
-        renderItem={renderItem}
-        keyExtractor={keyExtractor}
-        contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 24 }]}
-        showsVerticalScrollIndicator={false}
-        ListEmptyComponent={
-          <View style={styles.empty}>
-            <ThemedText style={styles.emptyText}>해당 카테고리 뉴스가 없습니다.</ThemedText>
-          </View>
-        }
-      />
+      {/* Body */}
+      {loading ? (
+        <View style={{ padding: 24, alignItems: 'center' }}>
+          <ActivityIndicator size="large" color={ACCENT_GREEN} />
+          <ThemedText style={{ marginTop: 10, color: SECONDARY_TEXT_COLOR }}>
+            뉴스 불러오는 중...
+          </ThemedText>
+        </View>
+      ) : (
+        <FlatList
+          data={visibleItems}
+          renderItem={renderItem}
+          keyExtractor={keyExtractor}
+          contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 24 }]}
+          showsVerticalScrollIndicator={false}
+          onRefresh={load}
+          refreshing={loading}
+          ListFooterComponent={ListFooter}
+          ListEmptyComponent={
+            <View style={styles.empty}>
+              <ThemedText style={styles.emptyText}>
+                {error ? error : '해당 카테고리 뉴스가 없습니다.'}
+              </ThemedText>
+            </View>
+          }
+        />
+      )}
     </View>
   );
 }
 
+/* ✅ styles는 최대한 유지 + 더보기 버튼 스타일만 추가 */
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F5F5F5',
-  },
+  container: { flex: 1, backgroundColor: '#F5F5F5' },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -143,46 +199,31 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(0,0,0,0.06)',
   },
-  backButton: {
-    padding: 4,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: TEXT_COLOR,
-  },
-  headerRight: {
-    width: 32,
-  },
-  categoryScrollView: {
-    maxHeight: 52,
-    backgroundColor: '#fff',
-  },
-  categoryScroll: {
-    paddingVertical: 12,
-    gap: 10,
-    flexDirection: 'row',
-  },
+  backButton: { padding: 4 },
+  headerTitle: { fontSize: 18, fontWeight: '700', color: TEXT_COLOR },
+  headerRight: { width: 32 },
+
+  categoryScrollView: { paddingVertical: 10, backgroundColor: '#fff' },
+  categoryScroll: { paddingVertical: 8, gap: 10, flexDirection: 'row', alignItems: 'center' },
   categoryChip: {
-    paddingHorizontal: 18,
+    paddingHorizontal: 20,
     paddingVertical: 10,
-    borderRadius: 20,
+    borderRadius: 22,
+    minHeight: 36,
     backgroundColor: '#F0F0F0',
   },
-  categoryChipSelected: {
-    backgroundColor: ACCENT_GREEN,
-  },
+  categoryChipSelected: { backgroundColor: ACCENT_GREEN },
   categoryLabel: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 15,
+    lineHeight: 16,
+    fontWeight: '700',
     color: SECONDARY_TEXT_COLOR,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
-  categoryLabelSelected: {
-    color: '#fff',
-  },
-  listContent: {
-    padding: 18,
-  },
+  categoryLabelSelected: { color: '#fff' },
+
+  listContent: { padding: 18 },
   newsItem: {
     backgroundColor: '#fff',
     borderRadius: 14,
@@ -191,28 +232,35 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(0,0,0,0.06)',
   },
-  newsItemTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: TEXT_COLOR,
-    marginBottom: 8,
-  },
-  newsItemDate: {
-    fontSize: 12,
-    color: SECONDARY_TEXT_COLOR,
-    marginBottom: 8,
-  },
-  newsItemSummary: {
-    fontSize: 14,
-    color: SECONDARY_TEXT_COLOR,
-    lineHeight: 20,
-  },
-  empty: {
-    padding: 40,
+  newsItemTitle: { fontSize: 16, fontWeight: '700', color: TEXT_COLOR, marginBottom: 8 },
+  newsItemDate: { fontSize: 12, color: SECONDARY_TEXT_COLOR, marginBottom: 8 },
+  newsItemSummary: { fontSize: 14, color: SECONDARY_TEXT_COLOR, lineHeight: 20 },
+
+  empty: { padding: 40, alignItems: 'center' },
+  emptyText: { fontSize: 15, color: SECONDARY_TEXT_COLOR, textAlign: 'center' },
+
+  // ✅ 추가: 더보기 버튼
+  loadMoreBtn: {
+    marginTop: 8,
+    alignSelf: 'center',
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+    borderRadius: 14,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.08)',
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: 10,
   },
-  emptyText: {
+  loadMoreText: {
+    color: ACCENT_GREEN,
+    fontWeight: '800',
     fontSize: 15,
+  },
+  loadMoreSub: {
     color: SECONDARY_TEXT_COLOR,
+    fontWeight: '700',
+    fontSize: 12,
   },
 });

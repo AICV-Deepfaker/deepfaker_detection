@@ -24,6 +24,8 @@ import {
   GIFT_THRESHOLD,
 } from '@/contexts/analysis-context';
 
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 const ACCENT_GREEN = '#00CF90';
 const ACCENT_GREEN_DARK = '#00B87A';
 const TEXT_COLOR = '#111';
@@ -31,7 +33,7 @@ const SECONDARY_TEXT_COLOR = '#687076';
 
 export default function FraudReportScreen() {
   const insets = useSafeAreaInsets();
-  const params = useLocalSearchParams<{ link?: string }>();
+  const params = useLocalSearchParams<{ link?: string; historyId?: string }>();
   const { totalPoints, addPoints, incrementReportCount, getHistoryByLink } = useAnalysis();
   const { current: currentBadge, next: nextBadge } = getBadgeForPoints(totalPoints);
 
@@ -41,7 +43,13 @@ export default function FraudReportScreen() {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [successPoints, setSuccessPoints] = useState(0);
 
-  const handleSubmit = useCallback(() => {
+  const markReportedIfFromHistory = useCallback(async () => {
+    const historyId = params.historyId;
+    if (!historyId) return; // 상세화면에서 온게 아니면 저장 안 함
+    await AsyncStorage.setItem(`reported:${historyId}`, '1');
+  }, [params.historyId]);
+
+  const handleSubmit = useCallback(async () => {
     const trimmedLink = link.trim();
     if (!trimmedLink) {
       Alert.alert('입력 필요', '영상 링크를 입력해주세요.');
@@ -52,21 +60,24 @@ export default function FraudReportScreen() {
     if (existingHistory.length > 0) {
       setHistoryItems(existingHistory);
       setShowHistorySelect(true);
-    } else {
-      addPoints(POINTS_PER_REPORT);
-      incrementReportCount();
-      setSuccessPoints(POINTS_PER_REPORT);
-      setShowSuccessModal(true);
+      return;
     }
-  }, [link, getHistoryByLink, addPoints, incrementReportCount]);
+    await markReportedIfFromHistory();
 
-  const handleSelectHistory = (item: HistoryItem) => {
-    setShowHistorySelect(false);
     addPoints(POINTS_PER_REPORT);
     incrementReportCount();
     setSuccessPoints(POINTS_PER_REPORT);
     setShowSuccessModal(true);
-  };
+  }, [link, getHistoryByLink, addPoints, incrementReportCount]);
+
+  const handleSelectHistory = useCallback(async (item: HistoryItem) => {
+    setShowHistorySelect(false);
+    await markReportedIfFromHistory();
+    addPoints(POINTS_PER_REPORT);
+    incrementReportCount();
+    setSuccessPoints(POINTS_PER_REPORT);
+    setShowSuccessModal(true);
+  }, [markReportedIfFromHistory, addPoints, incrementReportCount]);
 
   const handleSuccessClose = () => {
     setShowSuccessModal(false);
@@ -95,7 +106,7 @@ export default function FraudReportScreen() {
         showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>
-          <ThemedText style={styles.headerTitle}>금융사기 영상 신고</ThemedText>
+          <ThemedText style={styles.headerTitle}>포인트 내역</ThemedText>
           <TouchableOpacity onPress={handleCancel} style={styles.closeButton} hitSlop={12}>
             <MaterialIcons name="close" size={24} color={TEXT_COLOR} />
           </TouchableOpacity>
@@ -147,24 +158,6 @@ export default function FraudReportScreen() {
           </View>
         </View>
 
-        {/* Link Input */}
-        <View style={styles.inputSection}>
-          <ThemedText style={styles.inputLabel}>영상 링크</ThemedText>
-          <View style={styles.inputWrapper}>
-            <TextInput
-              style={styles.input}
-              placeholder="영상 URL을 입력하거나 붙여넣어 주세요"
-              placeholderTextColor={SECONDARY_TEXT_COLOR}
-              value={link}
-              onChangeText={setLink}
-              multiline={false}
-              autoCapitalize="none"
-              autoCorrect={false}
-              keyboardType="url"
-            />
-          </View>
-        </View>
-
         {/* History Selection Modal */}
         {showHistorySelect && historyItems.length > 0 && (
           <View style={styles.historyOverlay}>
@@ -195,11 +188,6 @@ export default function FraudReportScreen() {
             </View>
           </View>
         )}
-
-        {/* Submit Button */}
-        <TouchableOpacity style={styles.submitButton} activeOpacity={0.8} onPress={handleSubmit}>
-          <ThemedText style={styles.submitButtonText}>제출하기</ThemedText>
-        </TouchableOpacity>
       </ScrollView>
 
       {/* Success Modal */}

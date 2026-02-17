@@ -1,23 +1,21 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Image } from 'expo-image';
 import { useCallback } from 'react';
-import { FlatList, StyleSheet, View } from 'react-native';
+import { FlatList, StyleSheet, View, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { TouchableOpacity } from 'react-native';
+
 import { ThemedText } from '@/components/themed-text';
 import { useAnalysis } from '@/contexts/analysis-context';
 
 const ACCENT_GREEN = '#00CF90';
-const ACCENT_GREEN_DARK = '#00B87A';
 const TEXT_COLOR = '#111';
 const SECONDARY_TEXT_COLOR = '#687076';
 
-// ✅ "🎯 분석 신뢰도: 95.78%" 에서 95.78 추출
-const extractConfidencePercent = (text?: string) => {
+const extractFakeProbPercent = (text?: string) => {
   if (!text) return null;
 
-  const m = text.match(/분석\s*신뢰도\s*:\s*([0-9]+(?:\.[0-9]+)?)\s*%/);
+  const m = text.match(/딥페이크\s*확률\s*:\s*([0-9]+(?:\.[0-9]+)?)\s*%/);
   if (!m) return null;
 
   const n = Number(m[1]);
@@ -34,28 +32,18 @@ export default function HistoryScreen() {
       const isFake = item.resultType === 'FAKE';
       const isReal = item.resultType === 'REAL';
 
-      // 결과 문자열에서 신뢰도 % 추출
-      const extractConfidencePercent = (text?: string) => {
-        if (!text) return 0;
-        const m = text.match(/분석\s*신뢰도\s*:\s*([0-9]+(?:\.[0-9]+)?)\s*%/);
-        if (!m) return 0;
-        const n = Number(m[1]);
-        if (!Number.isFinite(n)) return 0;
-        return Math.min(100, Math.max(0, n));
-      };
-
-      const percent = extractConfidencePercent(item.result);
+      // ✅ 딥페이크 확률 % 추출 (없으면 0)
+      const percent = extractFakeProbPercent(item.result) ?? 0;
 
       return (
         <TouchableOpacity
           activeOpacity={0.85}
           onPress={() => {
-            // ✅ 카드 클릭 → 상세 화면 이동
             router.push(`/history/${item.id}`);
           }}
         >
           <View style={styles.cardRow}>
-            {/* 왼쪽 썸네일 (visualReport 왼쪽 절반) */}
+            {/* 왼쪽 썸네일 */}
             <View style={styles.thumbCropBox}>
               {item.visualReport ? (
                 <Image
@@ -83,7 +71,7 @@ export default function HistoryScreen() {
                 </View>
               )}
 
-              {/* 신뢰도 바 */}
+              {/* ✅ 딥페이크 확률 바 */}
               <View style={styles.confRow}>
                 <View style={styles.barTrack}>
                   <View
@@ -96,9 +84,7 @@ export default function HistoryScreen() {
                     ]}
                   />
                 </View>
-                <ThemedText style={styles.percentText}>
-                  {percent.toFixed(0)}%
-                </ThemedText>
+                <ThemedText style={styles.percentText}>{percent.toFixed(0)}%</ThemedText>
               </View>
 
               {/* 날짜 */}
@@ -144,10 +130,8 @@ export default function HistoryScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F5F5F5',
-  },
+  container: { flex: 1, backgroundColor: '#F5F5F5' },
+
   header: {
     paddingHorizontal: 20,
     paddingVertical: 20,
@@ -155,19 +139,10 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(0,0,0,0.06)',
   },
-  headerTitle: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: TEXT_COLOR,
-  },
-  headerSubtitle: {
-    fontSize: 14,
-    color: SECONDARY_TEXT_COLOR,
-    marginTop: 4,
-  },
-  list: {
-    padding: 16,
-  },
+  headerTitle: { fontSize: 22, fontWeight: '700', color: TEXT_COLOR },
+  headerSubtitle: { fontSize: 14, color: SECONDARY_TEXT_COLOR, marginTop: 4 },
+
+  list: { padding: 16 },
 
   cardRow: {
     backgroundColor: '#fff',
@@ -194,29 +169,17 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.05)',
   },
 
-  // ✅ visualReport 이미지를 “가로 2배로 늘려서” 왼쪽 절반만 보이게
   thumbCroppedImage: {
     width: '200%',
     height: '100%',
-    transform: [{ translateX: 0 }], // 왼쪽 절반 / 오른쪽을 보고 싶으면 음수로
+    transform: [{ translateX: 0 }],
   },
 
-  thumbFallback: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.05)',
-  },
+  thumbFallback: { flex: 1, backgroundColor: 'rgba(0,0,0,0.05)' },
 
-  rightContent: {
-    flex: 1,
-    justifyContent: 'center',
-    gap: 10,
-  },
+  rightContent: { flex: 1, justifyContent: 'center', gap: 10 },
 
-  confRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
+  confRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
 
   barTrack: {
     flex: 1,
@@ -226,10 +189,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
 
-  barFill: {
-    height: '100%',
-    borderRadius: 999,
-  },
+  barFill: { height: '100%', borderRadius: 999 },
 
   percentText: {
     width: 44,
@@ -247,44 +207,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 20,
   },
+  badgeFake: { backgroundColor: '#FF4444' },
+  badgeReal: { backgroundColor: ACCENT_GREEN },
+  badgeText: { color: '#fff', fontSize: 13, fontWeight: '700' },
 
-  badgeFake: {
-    backgroundColor: '#FF4444',
-  },
+  itemDate: { fontSize: 12, color: SECONDARY_TEXT_COLOR },
 
-  badgeReal: {
-    backgroundColor: ACCENT_GREEN,
-  },
-
-  badgeText: {
-    color: '#fff',
-    fontSize: 13,
-    fontWeight: '700',
-  },
-
-  itemDate: {
-    fontSize: 12,
-    color: SECONDARY_TEXT_COLOR,
-  },
-
-  empty: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 40,
-  },
-
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: TEXT_COLOR,
-    marginTop: 16,
-  },
-
-  emptySubtitle: {
-    fontSize: 14,
-    color: SECONDARY_TEXT_COLOR,
-    marginTop: 8,
-    textAlign: 'center',
-  },
+  empty: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40 },
+  emptyTitle: { fontSize: 18, fontWeight: '600', color: TEXT_COLOR, marginTop: 16 },
+  emptySubtitle: { fontSize: 14, color: SECONDARY_TEXT_COLOR, marginTop: 8, textAlign: 'center' },
 });
