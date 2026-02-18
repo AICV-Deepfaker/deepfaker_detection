@@ -1,3 +1,6 @@
+# env
+python-dotenv
+
 # Web Server & Tunneling
 fastapi
 uvicorn
