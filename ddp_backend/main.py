@@ -8,7 +8,13 @@ import uvicorn
 from fastapi import FastAPI, File, UploadFile
 from pyngrok import ngrok
 
+from core.database import engine
+from models.models import Base
+
 from detectors.wavelet_detector import WaveletDetector
+
+# 서버가 시작될 때 테이블이 없으면 자동 생성 (JPA의 ddl-auto 같은 역할)
+Base.metadata.create_all(bind=engine)
 
 # 모델 및 환경 변수
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
