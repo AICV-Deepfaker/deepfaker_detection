@@ -1,4 +1,4 @@
-const API_BASE = 'https://cheri-unarbored-gaylord.ngrok-free.dev';
+const API_BASE = 'https://waylon-unfancy-overidly.ngrok-free.dev';
 
 export type PredictMode = 'fast' | 'deep';
 
@@ -19,6 +19,13 @@ export interface UniteSection {
   accuracy?: string;
 }
 
+export interface SttSearchResult {
+  keyword: string;
+  title: string;
+  url: string;
+  content: string;
+}
+
 export interface PredictResult {
   status: 'success' | 'error';
   result?: 'FAKE' | 'REAL';
@@ -31,6 +38,11 @@ export interface PredictResult {
   frequency?: EvidenceSection;
   rppg?: EvidenceSection;
   stt_keywords?: { keyword: string; detected: boolean }[];
+  // STT 파이프라인 결과 (증거수집모드 + 동영상일 때)
+  stt_risk_level?: 'high' | 'medium' | 'low' | 'none';
+  stt_risk_reason?: string;
+  stt_transcript?: string;
+  stt_search_results?: SttSearchResult[];
   // 정밀탐지모드 확장 필드
   unite?: UniteSection;
 }

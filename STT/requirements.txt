@@ -1,0 +1,4 @@
+faster-whisper
+groq
+tavily-python
+python-dotenv
