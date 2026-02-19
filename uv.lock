@@ -18,6 +18,7 @@ resolution-markers = [
 conflicts = [[
     { package = "unite-detection", extra = "cpu" },
     { package = "unite-detection", extra = "gpu" },
+    { package = "unite-detection", extra = "gpu-no-flash-attn" },
 ]]
 
 [manifest]
@@ -30,6 +31,7 @@ members = [
 overrides = [
     { name = "torch", marker = "sys_platform != 'linux'", specifier = ">=2.10.0" },
     { name = "torch", marker = "sys_platform == 'linux'", specifier = ">=2.10.0", index = "https://download.pytorch.org/whl/cu128" },
+    { name = "torchcodec", specifier = "==0.10.0" },
     { name = "torchvision", marker = "sys_platform != 'linux'", specifier = ">=0.25.0" },
     { name = "torchvision", marker = "sys_platform == 'linux'", specifier = ">=0.25.0", index = "https://download.pytorch.org/whl/cu128" },
 ]
@@ -55,8 +57,8 @@ dependencies = [
     { name = "psutil" },
     { name = "pyyaml" },
     { name = "safetensors" },
-    { name = "torch", version = "2.10.0", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
-    { name = "torch", version = "2.10.0+cu128", source = { registry = "https://download.pytorch.org/whl/cu128" }, marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
+    { name = "torch", version = "2.10.0", source = { registry = "https://pypi.org/simple" }, marker = "(sys_platform != 'linux' and extra == 'extra-15-unite-detection-cpu') or (sys_platform != 'linux' and extra == 'extra-15-unite-detection-gpu') or (sys_platform != 'linux' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
+    { name = "torch", version = "2.10.0+cu128", source = { registry = "https://download.pytorch.org/whl/cu128" }, marker = "(sys_platform == 'linux' and extra == 'extra-15-unite-detection-cpu') or (sys_platform == 'linux' and extra == 'extra-15-unite-detection-gpu') or (sys_platform == 'linux' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/4a/8e/ac2a9566747a93f8be36ee08532eb0160558b07630a081a6056a9f89bf1d/accelerate-1.12.0.tar.gz", hash = "sha256:70988c352feb481887077d2ab845125024b2a137a5090d6d7a32b57d03a45df6", size = 398399, upload-time = "2025-11-21T11:27:46.973Z" }
 wheels = [
@@ -163,7 +165,7 @@ version = "1.4.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "frozenlist" },
-    { name = "typing-extensions", marker = "python_full_version < '3.13' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
+    { name = "typing-extensions", marker = "python_full_version < '3.13'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/61/62/06741b579156360248d1ec624842ad0edf697050bbaf7c3e46394e106ad1/aiosignal-1.4.0.tar.gz", hash = "sha256:f47eecd9468083c2029cc99945502cb7708b082c232f9aca65da147157b251c7", size = 25007, upload-time = "2025-07-03T22:54:43.528Z" }
 wheels = [
@@ -226,7 +228,7 @@ version = "4.12.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "idna" },
-    { name = "typing-extensions", marker = "python_full_version < '3.13' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
+    { name = "typing-extensions", marker = "python_full_version < '3.13' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/96/f0/5eb65b2bb0d09ac6776f2eb54adee6abe8228ea05b20a5ad0e4945de8aac/anyio-4.12.1.tar.gz", hash = "sha256:41cfcc3a4c85d3f05c932da7c26d0201ac36f72abd4435ba90d0464a3ffed703", size = 228685, upload-time = "2026-01-06T11:45:21.246Z" }
 wheels = [
@@ -369,7 +371,7 @@ name = "click"
 version = "8.3.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "colorama", marker = "sys_platform == 'win32' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
+    { name = "colorama", marker = "sys_platform == 'win32' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/3d/fa/656b739db8587d7b5dfa22e22ed02566950fbfbcdc20311993483657a5c0/click-8.3.1.tar.gz", hash = "sha256:12ff4785d337a1bb490bb7e9c2b1ee5da3112e94a8622f26a6c77f5d2fc6842a", size = 295065, upload-time = "2025-11-15T20:45:42.706Z" }
 wheels = [
@@ -384,10 +386,10 @@ dependencies = [
     { name = "ftfy" },
     { name = "packaging" },
     { name = "regex" },
-    { name = "torch", version = "2.10.0", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
-    { name = "torch", version = "2.10.0+cu128", source = { registry = "https://download.pytorch.org/whl/cu128" }, marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
-    { name = "torchvision", version = "0.25.0", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
-    { name = "torchvision", version = "0.25.0+cu128", source = { registry = "https://download.pytorch.org/whl/cu128" }, marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
+    { name = "torch", version = "2.10.0", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
+    { name = "torch", version = "2.10.0+cu128", source = { registry = "https://download.pytorch.org/whl/cu128" }, marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
+    { name = "torchvision", version = "0.25.0", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
+    { name = "torchvision", version = "0.25.0+cu128", source = { registry = "https://download.pytorch.org/whl/cu128" }, marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
     { name = "tqdm" },
 ]
 
@@ -471,7 +473,7 @@ name = "cuda-bindings"
 version = "12.9.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "cuda-pathfinder", marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
+    { name = "cuda-pathfinder", marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/0c/c2/65bfd79292b8ff18be4dd7f7442cea37bcbc1a228c1886f1dea515c45b67/cuda_bindings-12.9.4-cp312-cp312-manylinux_2_24_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:694ba35023846625ef471257e6b5a4bc8af690f961d197d77d34b1d1db393f56", size = 11760260, upload-time = "2025-10-21T14:51:40.79Z" },
@@ -548,6 +550,7 @@ dependencies = [
     { name = "matplotlib" },
     { name = "nest-asyncio" },
     { name = "numpy" },
+    { name = "onnxconverter-common" },
     { name = "onnxruntime-gpu" },
     { name = "opencv-python" },
     { name = "pillow" },
@@ -555,12 +558,13 @@ dependencies = [
     { name = "pywavelets" },
     { name = "pyyaml" },
     { name = "sqlalchemy" },
-    { name = "torch", version = "2.10.0", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
-    { name = "torch", version = "2.10.0+cu128", source = { registry = "https://download.pytorch.org/whl/cu128" }, marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
-    { name = "torchvision", version = "0.25.0", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
-    { name = "torchvision", version = "0.25.0+cu128", source = { registry = "https://download.pytorch.org/whl/cu128" }, marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
+    { name = "torch", version = "2.10.0", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
+    { name = "torch", version = "2.10.0+cu128", source = { registry = "https://download.pytorch.org/whl/cu128" }, marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
+    { name = "torchvision", version = "0.25.0", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
+    { name = "torchvision", version = "0.25.0+cu128", source = { registry = "https://download.pytorch.org/whl/cu128" }, marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
     { name = "types-pyyaml" },
-    { name = "unite-detection", extra = ["gpu-no-flash-attn"] },
+    { name = "unite-detection" },
+    { name = "unite-detection", extra = ["gpu-no-flash-attn"], marker = "(extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra != 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra != 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
     { name = "uvicorn" },
     { name = "wavelet-clip" },
 ]
@@ -572,6 +576,7 @@ requires-dist = [
     { name = "matplotlib", specifier = ">=3.10.8" },
     { name = "nest-asyncio", specifier = ">=1.6.0" },
     { name = "numpy", specifier = ">=2.4.2" },
+    { name = "onnxconverter-common", specifier = ">=1.16.0" },
     { name = "onnxruntime-gpu", specifier = ">=1.24.1" },
     { name = "opencv-python", specifier = ">=4.13.0.92" },
     { name = "pillow", specifier = ">=12.1.0" },
@@ -595,10 +600,29 @@ version = "0.1.0"
 source = { virtual = "." }
 
 [[package]]
-name = "dlib"
+name = "dlib-bin"
 version = "20.0.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/28/f4/f8949b18ec1df2ef05fc2ea1d1dd82ff2d050b8704b7d0d088017315c221/dlib-20.0.0.tar.gz", hash = "sha256:9ab6a6fe113cc36a20c3f611c57fa6a07f18d1169bd04efb85c32e21b23b7d2b", size = 3310015, upload-time = "2025-05-28T01:22:16.141Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a4/fe/82a53a3b9b2dd15a6f5a9b1677720e436fe73911a859a8fb576dc6a2e099/dlib_bin-20.0.0-cp312-cp312-macosx_14_0_arm64.whl", hash = "sha256:68063c45b3ae971b0b11dd308b82390d3036561bac658d792858e0ebe398d950", size = 3045829, upload-time = "2025-10-19T14:37:02.529Z" },
+    { url = "https://files.pythonhosted.org/packages/63/89/421ea90456bcec313eaf2ee4607786958abf6440b0ca35cffa8759c5cd40/dlib_bin-20.0.0-cp312-cp312-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:64ab5076a306042d88a8a69da7a76d4c37f33700fc561a0480bceb57c0690eb2", size = 3561812, upload-time = "2025-10-19T14:37:03.901Z" },
+    { url = "https://files.pythonhosted.org/packages/44/16/f7aa5f6b707166e4af02c928dfda390122bb860d891344cebf3b4a98cb7f/dlib_bin-20.0.0-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:74c83cf59758ba86ecbb00ec9f87a385a7a1fffc092487254182940384e5d256", size = 4191026, upload-time = "2025-10-19T14:37:05.433Z" },
+    { url = "https://files.pythonhosted.org/packages/d3/96/9f01cd6e000f666c8ba2a6147b9dbf511890213eba35e7c3895e199a365e/dlib_bin-20.0.0-cp312-cp312-musllinux_1_2_aarch64.whl", hash = "sha256:826f6c9f1fac4837e479b87dee86ea73e9d879c6822900da107df555ce7d9927", size = 4721101, upload-time = "2025-10-19T14:37:07.116Z" },
+    { url = "https://files.pythonhosted.org/packages/7f/f7/8ed41b2efaf4790bd5fa7cc9843bcebb40fa45d6cbd43340fc2d29fd176e/dlib_bin-20.0.0-cp312-cp312-musllinux_1_2_x86_64.whl", hash = "sha256:6f815af21dee9c30047396bfd4656c2212af7beb47117ef969155b65b8303978", size = 5377360, upload-time = "2025-10-19T14:37:08.527Z" },
+    { url = "https://files.pythonhosted.org/packages/b9/2d/c3c6fb33cadd55df28de06079d99ea6b9328bde35eb3f86ff23c38b81663/dlib_bin-20.0.0-cp312-cp312-win_amd64.whl", hash = "sha256:670936c485dfaf5842e16f5ba98e3add538f8a4676fb0b4594c6884c04017aaa", size = 2805159, upload-time = "2025-10-19T14:37:09.921Z" },
+    { url = "https://files.pythonhosted.org/packages/e3/94/1784e2fd15cc9c08a45d10e5b869f61f256cb75f1cbaa92ff53e20893ac3/dlib_bin-20.0.0-cp313-cp313-macosx_14_0_arm64.whl", hash = "sha256:39c3f0b21b52050a55059660ac490e6fd760b5aee560f4ad972c133b7bcc05d7", size = 3045677, upload-time = "2025-10-19T14:37:11.829Z" },
+    { url = "https://files.pythonhosted.org/packages/e7/ea/5ea71d63e39bf7a8a3b9e8eb67a1eb906e9d566bbcc249fab27a8cf323ae/dlib_bin-20.0.0-cp313-cp313-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:0a9ffd33430ad00b3e69369a08f70ea81a0bb6fe3772f1296386db799fae734e", size = 3561470, upload-time = "2025-10-19T14:37:13.587Z" },
+    { url = "https://files.pythonhosted.org/packages/61/38/4dd7186a5d973575948c85a4688ceffe76647c1647c34b6d267e81fcb69b/dlib_bin-20.0.0-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:601f69a2c1d830757dbe83232db9f9d37b0835bc6d6f84e57ca7dc1c7d1a6d90", size = 4191079, upload-time = "2025-10-19T14:37:14.906Z" },
+    { url = "https://files.pythonhosted.org/packages/4b/ed/eb23bfa3b99b1f7cb389f218ac54da197f93a4992b0a607b78a7d5b0397d/dlib_bin-20.0.0-cp313-cp313-musllinux_1_2_aarch64.whl", hash = "sha256:af545e409bc4865a63745d024f4958a080b3d55439fd9298d1a7c85bba5f349d", size = 4721141, upload-time = "2025-10-19T14:37:16.308Z" },
+    { url = "https://files.pythonhosted.org/packages/d2/85/ce807c977785a622c15314e21cad7146161c6d1fe0ec0adf77f03036e024/dlib_bin-20.0.0-cp313-cp313-musllinux_1_2_x86_64.whl", hash = "sha256:c28c8cba3fdd626c60f17ab1cda5c6c35dbc6183a958bb41422793d5c33f3c62", size = 5377866, upload-time = "2025-10-19T14:37:17.619Z" },
+    { url = "https://files.pythonhosted.org/packages/6f/3b/a20a97df56390fcf72a6174c3e43917651dbc96645d8ddfdb4663d70a7dd/dlib_bin-20.0.0-cp313-cp313-win_amd64.whl", hash = "sha256:5960f707c9be196be6578d691d601fa10e03b370fb2b50ba1a5d28119cf41178", size = 2805172, upload-time = "2025-10-19T14:37:19.033Z" },
+    { url = "https://files.pythonhosted.org/packages/e9/09/200c37577f8ab67b237123a637a65e44a4d05b86578f5fad04f6e6c28171/dlib_bin-20.0.0-cp314-cp314-macosx_14_0_arm64.whl", hash = "sha256:af65c57cfca2967e8e394bbba27c2a53140bfc9d5cb6ecbade3483513d31c7ab", size = 3046951, upload-time = "2025-10-19T14:37:20.393Z" },
+    { url = "https://files.pythonhosted.org/packages/ea/0f/5558f979652e45662b1aaaf9a0886606504d9c23315cc42dda7419339625/dlib_bin-20.0.0-cp314-cp314-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:7c2c5bb0b85ff363948a91e004ad0139594a7d22e5c414fbcd24df7b58989c6a", size = 3566207, upload-time = "2025-10-19T14:37:21.747Z" },
+    { url = "https://files.pythonhosted.org/packages/9a/59/44603c67c4bde5a5293cc4b9c49f5ad309ef539d2a8103ffac5f284863c5/dlib_bin-20.0.0-cp314-cp314-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:a3b58e15d1fba2850518373a4602bf28e004074e3f41e189ca250e1b6fb9dd29", size = 4191460, upload-time = "2025-10-19T14:37:23.152Z" },
+    { url = "https://files.pythonhosted.org/packages/72/aa/5672362407c07bfe1b55bd920975f52b917e110df7b423d9578c85e68ee8/dlib_bin-20.0.0-cp314-cp314-musllinux_1_2_aarch64.whl", hash = "sha256:973ecc7c29e2e63ff40854b4a80e22ac36ca65056c6185314868b39bfe7d5e69", size = 4726862, upload-time = "2025-10-19T14:37:24.767Z" },
+    { url = "https://files.pythonhosted.org/packages/38/31/770a0821e06723730aa630f3cc68358d8c82e818a814262aded73cb40411/dlib_bin-20.0.0-cp314-cp314-musllinux_1_2_x86_64.whl", hash = "sha256:240ced13b8bacf959434b0ef1b548e52fdd974e425b3bf2d7322ab6cf0b17fac", size = 5382694, upload-time = "2025-10-19T14:37:26.246Z" },
+    { url = "https://files.pythonhosted.org/packages/7f/d7/380970d719abd218dffbea0f513059f7ecb87418c758f76a80c365dedbd5/dlib_bin-20.0.0-cp314-cp314-win_amd64.whl", hash = "sha256:627c233375745ed685586716900ef3e946d16886ff84b098dd558e1ded427389", size = 2882414, upload-time = "2025-10-19T14:37:27.666Z" },
+]
 
 [[package]]
 name = "dnspython"
@@ -623,8 +647,8 @@ name = "efficientnet-pytorch"
 version = "0.7.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "torch", version = "2.10.0", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
-    { name = "torch", version = "2.10.0+cu128", source = { registry = "https://download.pytorch.org/whl/cu128" }, marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
+    { name = "torch", version = "2.10.0", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
+    { name = "torch", version = "2.10.0+cu128", source = { registry = "https://download.pytorch.org/whl/cu128" }, marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/2e/a0/dd40b50aebf0028054b6b35062948da01123d7be38d08b6b1e5435df6363/efficientnet_pytorch-0.7.1.tar.gz", hash = "sha256:00b9b261effce59d2d47aae2ad238c29a2a65175470f41ada7ecac439b7c1ee1", size = 21012, upload-time = "2021-04-15T15:17:23.111Z" }
 
@@ -811,8 +835,8 @@ version = "2.8.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "einops" },
-    { name = "torch", version = "2.10.0", source = { registry = "https://pypi.org/simple" }, marker = "(sys_platform != 'linux' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
-    { name = "torch", version = "2.10.0+cu128", source = { registry = "https://download.pytorch.org/whl/cu128" }, marker = "(sys_platform == 'linux' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
+    { name = "torch", version = "2.10.0", source = { registry = "https://pypi.org/simple" }, marker = "(sys_platform != 'linux' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
+    { name = "torch", version = "2.10.0+cu128", source = { registry = "https://download.pytorch.org/whl/cu128" }, marker = "(sys_platform == 'linux' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/3b/b2/8d76c41ad7974ee264754709c22963447f7f8134613fd9ce80984ed0dab7/flash_attn-2.8.3.tar.gz", hash = "sha256:1e71dd64a9e0280e0447b8a0c2541bad4bf6ac65bdeaa2f90e51a9e57de0370d", size = 8447812, upload-time = "2025-08-15T08:28:12.911Z" }
 
@@ -1221,7 +1245,7 @@ source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "filelock" },
     { name = "fsspec" },
-    { name = "hf-xet", marker = "platform_machine == 'AMD64' or platform_machine == 'aarch64' or platform_machine == 'amd64' or platform_machine == 'arm64' or platform_machine == 'x86_64' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
+    { name = "hf-xet", marker = "platform_machine == 'AMD64' or platform_machine == 'aarch64' or platform_machine == 'amd64' or platform_machine == 'arm64' or platform_machine == 'x86_64' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
     { name = "httpx" },
     { name = "packaging" },
     { name = "pyyaml" },
@@ -1456,8 +1480,8 @@ source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "kornia-rs" },
     { name = "packaging" },
-    { name = "torch", version = "2.10.0", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
-    { name = "torch", version = "2.10.0+cu128", source = { registry = "https://download.pytorch.org/whl/cu128" }, marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
+    { name = "torch", version = "2.10.0", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
+    { name = "torch", version = "2.10.0+cu128", source = { registry = "https://download.pytorch.org/whl/cu128" }, marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/c6/e6/45e757d4924176e4d4e111e10effaab7db382313243e0188a06805010073/kornia-0.8.2.tar.gz", hash = "sha256:5411b2ce0dd909d1608016308cd68faeef90f88c47f47e8ecd40553fd4d8b937", size = 667151, upload-time = "2025-11-08T12:10:03.042Z" }
 wheels = [
@@ -1514,13 +1538,13 @@ name = "lightning"
 version = "2.6.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "fsspec", extra = ["http"] },
+    { name = "fsspec", extra = ["http"], marker = "extra == 'extra-15-unite-detection-cpu' or extra == 'extra-15-unite-detection-gpu' or extra == 'extra-15-unite-detection-gpu-no-flash-attn'" },
     { name = "lightning-utilities" },
     { name = "packaging" },
     { name = "pytorch-lightning" },
     { name = "pyyaml" },
-    { name = "torch", version = "2.10.0", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
-    { name = "torch", version = "2.10.0+cu128", source = { registry = "https://download.pytorch.org/whl/cu128" }, marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
+    { name = "torch", version = "2.10.0", source = { registry = "https://pypi.org/simple" }, marker = "(sys_platform != 'linux' and extra == 'extra-15-unite-detection-cpu') or (sys_platform != 'linux' and extra == 'extra-15-unite-detection-gpu') or (sys_platform != 'linux' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
+    { name = "torch", version = "2.10.0+cu128", source = { registry = "https://download.pytorch.org/whl/cu128" }, marker = "(sys_platform == 'linux' and extra == 'extra-15-unite-detection-cpu') or (sys_platform == 'linux' and extra == 'extra-15-unite-detection-gpu') or (sys_platform == 'linux' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
     { name = "torchmetrics" },
     { name = "tqdm" },
     { name = "typing-extensions" },
@@ -2022,7 +2046,7 @@ name = "nvidia-cudnn-cu12"
 version = "9.10.2.21"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "nvidia-cublas-cu12", marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
+    { name = "nvidia-cublas-cu12", marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/fa/41/e79269ce215c857c935fd86bcfe91a451a584dfc27f1e068f568b9ad1ab7/nvidia_cudnn_cu12-9.10.2.21-py3-none-manylinux_2_27_aarch64.whl", hash = "sha256:c9132cc3f8958447b4910a1720036d9eff5928cc3179b0a51fb6d167c6cc87d8", size = 705026878, upload-time = "2025-06-06T21:52:51.348Z" },
@@ -2035,7 +2059,7 @@ name = "nvidia-cufft-cu12"
 version = "11.3.3.83"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "nvidia-nvjitlink-cu12", marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
+    { name = "nvidia-nvjitlink-cu12", marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/60/bc/7771846d3a0272026c416fbb7e5f4c1f146d6d80704534d0b187dd6f4800/nvidia_cufft_cu12-11.3.3.83-py3-none-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:848ef7224d6305cdb2a4df928759dca7b1201874787083b6e7550dd6765ce69a", size = 193109211, upload-time = "2025-03-07T01:44:56.873Z" },
@@ -2067,9 +2091,9 @@ name = "nvidia-cusolver-cu12"
 version = "11.7.3.90"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "nvidia-cublas-cu12", marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
-    { name = "nvidia-cusparse-cu12", marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
-    { name = "nvidia-nvjitlink-cu12", marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
+    { name = "nvidia-cublas-cu12", marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
+    { name = "nvidia-cusparse-cu12", marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
+    { name = "nvidia-nvjitlink-cu12", marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/c8/32/f7cd6ce8a7690544d084ea21c26e910a97e077c9b7f07bf5de623ee19981/nvidia_cusolver_cu12-11.7.3.90-py3-none-manylinux_2_27_aarch64.whl", hash = "sha256:db9ed69dbef9715071232caa9b69c52ac7de3a95773c2db65bdba85916e4e5c0", size = 267229841, upload-time = "2025-03-07T01:46:54.356Z" },
@@ -2082,7 +2106,7 @@ name = "nvidia-cusparse-cu12"
 version = "12.5.8.93"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "nvidia-nvjitlink-cu12", marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
+    { name = "nvidia-nvjitlink-cu12", marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/bc/f7/cd777c4109681367721b00a106f491e0d0d15cfa1fd59672ce580ce42a97/nvidia_cusparse_cu12-12.5.8.93-py3-none-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:9b6c161cb130be1a07a27ea6923df8141f3c295852f4b260c65f18f3e0a091dc", size = 288117129, upload-time = "2025-03-07T01:47:40.407Z" },
@@ -2179,6 +2203,20 @@ wheels = [
 ]
 
 [[package]]
+name = "onnxconverter-common"
+version = "1.16.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "numpy" },
+    { name = "onnx" },
+    { name = "packaging" },
+    { name = "protobuf" },
+]
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/4a/67/8dca1868a6e226f8d3f7d666cb6a48b79a60aad5267b16b24627cd8d9eb8/onnxconverter_common-1.16.0-py2.py3-none-any.whl", hash = "sha256:df39ee96f17fff119dff10dd245467651b60b9e8a96020eb93402239794852f7", size = 89511, upload-time = "2025-08-28T19:37:46.988Z" },
+]
+
+[[package]]
 name = "onnxruntime-gpu"
 version = "1.24.1"
 source = { registry = "https://pypi.org/simple" }
@@ -2269,7 +2307,7 @@ source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "numpy" },
     { name = "python-dateutil" },
-    { name = "tzdata", marker = "sys_platform == 'emscripten' or sys_platform == 'win32' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
+    { name = "tzdata", marker = "sys_platform == 'emscripten' or sys_platform == 'win32' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/de/da/b1dc0481ab8d55d0f46e343cfe67d4551a0e14fcee52bd38ca1bd73258d8/pandas-3.0.0.tar.gz", hash = "sha256:0facf7e87d38f721f0af46fe70d97373a37701b1c09f7ed7aeeb292ade5c050f", size = 4633005, upload-time = "2026-01-21T15:52:04.726Z" }
 wheels = [
@@ -2431,7 +2469,7 @@ name = "portalocker"
 version = "3.2.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "pywin32", marker = "sys_platform == 'win32' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
+    { name = "pywin32", marker = "sys_platform == 'win32' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/5e/77/65b857a69ed876e1951e88aaba60f5ce6120c33703f7cb61a3c894b8c1b6/portalocker-3.2.0.tar.gz", hash = "sha256:1f3002956a54a8c3730586c5c77bf18fae4149e07eaf1c29fc3faf4d5a3f89ac", size = 95644, upload-time = "2025-06-14T13:20:40.03Z" }
 wheels = [
@@ -2812,12 +2850,12 @@ name = "pytorch-lightning"
 version = "2.6.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "fsspec", extra = ["http"] },
+    { name = "fsspec", extra = ["http"], marker = "extra == 'extra-15-unite-detection-cpu' or extra == 'extra-15-unite-detection-gpu' or extra == 'extra-15-unite-detection-gpu-no-flash-attn'" },
     { name = "lightning-utilities" },
     { name = "packaging" },
     { name = "pyyaml" },
-    { name = "torch", version = "2.10.0", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
-    { name = "torch", version = "2.10.0+cu128", source = { registry = "https://download.pytorch.org/whl/cu128" }, marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
+    { name = "torch", version = "2.10.0", source = { registry = "https://pypi.org/simple" }, marker = "(sys_platform != 'linux' and extra == 'extra-15-unite-detection-cpu') or (sys_platform != 'linux' and extra == 'extra-15-unite-detection-gpu') or (sys_platform != 'linux' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
+    { name = "torch", version = "2.10.0+cu128", source = { registry = "https://download.pytorch.org/whl/cu128" }, marker = "(sys_platform == 'linux' and extra == 'extra-15-unite-detection-cpu') or (sys_platform == 'linux' and extra == 'extra-15-unite-detection-gpu') or (sys_platform == 'linux' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
     { name = "torchmetrics" },
     { name = "tqdm" },
     { name = "typing-extensions" },
@@ -2834,8 +2872,8 @@ source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "numpy" },
     { name = "six" },
-    { name = "torch", version = "2.10.0", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
-    { name = "torch", version = "2.10.0+cu128", source = { registry = "https://download.pytorch.org/whl/cu128" }, marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
+    { name = "torch", version = "2.10.0", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
+    { name = "torch", version = "2.10.0+cu128", source = { registry = "https://download.pytorch.org/whl/cu128" }, marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/3f/e3/1553046e97926b859edcab05d74b5b7543327c92b37c58919a3e49ff6151/pytorch_wavelets-1.3.0.tar.gz", hash = "sha256:8b5c63f87c2bb36e6b342a7bb294926bda5cd974614fb4848deab6ec2792f56f", size = 1029927, upload-time = "2023-04-13T06:26:52.086Z" }
 wheels = [
@@ -3380,10 +3418,10 @@ dependencies = [
     { name = "pillow" },
     { name = "safetensors" },
     { name = "timm" },
-    { name = "torch", version = "2.10.0", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
-    { name = "torch", version = "2.10.0+cu128", source = { registry = "https://download.pytorch.org/whl/cu128" }, marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
-    { name = "torchvision", version = "0.25.0", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
-    { name = "torchvision", version = "0.25.0+cu128", source = { registry = "https://download.pytorch.org/whl/cu128" }, marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
+    { name = "torch", version = "2.10.0", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
+    { name = "torch", version = "2.10.0+cu128", source = { registry = "https://download.pytorch.org/whl/cu128" }, marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
+    { name = "torchvision", version = "0.25.0", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
+    { name = "torchvision", version = "0.25.0+cu128", source = { registry = "https://download.pytorch.org/whl/cu128" }, marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
     { name = "tqdm" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/15/fa/d5a29d49240fb10bdead608b4d0c6805684a8f63b1f65863502be65b1ca4/segmentation_models_pytorch-0.5.0.tar.gz", hash = "sha256:cabba8aced6ef7bdcd6288dd9e1dc2840848aa819d539c455bd07aeceb2fdf96", size = 105150, upload-time = "2025-04-17T10:43:45.755Z" }
@@ -3666,7 +3704,7 @@ name = "sqlalchemy"
 version = "2.0.46"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "greenlet", marker = "platform_machine == 'AMD64' or platform_machine == 'WIN32' or platform_machine == 'aarch64' or platform_machine == 'amd64' or platform_machine == 'ppc64le' or platform_machine == 'win32' or platform_machine == 'x86_64' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
+    { name = "greenlet", marker = "platform_machine == 'AMD64' or platform_machine == 'WIN32' or platform_machine == 'aarch64' or platform_machine == 'amd64' or platform_machine == 'ppc64le' or platform_machine == 'win32' or platform_machine == 'x86_64' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
     { name = "typing-extensions" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/06/aa/9ce0f3e7a9829ead5c8ce549392f33a12c4555a6c0609bb27d882e9c7ddf/sqlalchemy-2.0.46.tar.gz", hash = "sha256:cf36851ee7219c170bb0793dbc3da3e80c582e04a5437bc601bfe8c85c9216d7", size = 9865393, upload-time = "2026-01-21T18:03:45.119Z" }
@@ -3709,7 +3747,7 @@ version = "0.52.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "anyio" },
-    { name = "typing-extensions", marker = "python_full_version < '3.13' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
+    { name = "typing-extensions", marker = "python_full_version < '3.13' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/c4/68/79977123bb7be889ad680d79a40f339082c1978b5cfcf62c2d8d196873ac/starlette-0.52.1.tar.gz", hash = "sha256:834edd1b0a23167694292e94f597773bc3f89f362be6effee198165a35d62933", size = 2653702, upload-time = "2026-01-18T13:34:11.062Z" }
 wheels = [
@@ -3845,10 +3883,10 @@ dependencies = [
     { name = "huggingface-hub" },
     { name = "pyyaml" },
     { name = "safetensors" },
-    { name = "torch", version = "2.10.0", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
-    { name = "torch", version = "2.10.0+cu128", source = { registry = "https://download.pytorch.org/whl/cu128" }, marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
-    { name = "torchvision", version = "0.25.0", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
-    { name = "torchvision", version = "0.25.0+cu128", source = { registry = "https://download.pytorch.org/whl/cu128" }, marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
+    { name = "torch", version = "2.10.0", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
+    { name = "torch", version = "2.10.0+cu128", source = { registry = "https://download.pytorch.org/whl/cu128" }, marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
+    { name = "torchvision", version = "0.25.0", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
+    { name = "torchvision", version = "0.25.0+cu128", source = { registry = "https://download.pytorch.org/whl/cu128" }, marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/f4/9d/0ea45640be447445c8664ce2b10c74f763b0b0b9ed11620d41a4d4baa10c/timm-1.0.24.tar.gz", hash = "sha256:c7b909f43fe2ef8fe62c505e270cd4f1af230dfbc37f2ee93e3608492b9d9a40", size = 2412239, upload-time = "2026-01-07T00:26:17.541Z" }
 wheels = [
@@ -3897,13 +3935,13 @@ resolution-markers = [
     "python_full_version < '3.13' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32'",
 ]
 dependencies = [
-    { name = "filelock", marker = "sys_platform != 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
-    { name = "fsspec", marker = "sys_platform != 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
-    { name = "jinja2", marker = "sys_platform != 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
-    { name = "networkx", marker = "sys_platform != 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
-    { name = "setuptools", marker = "sys_platform != 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
-    { name = "sympy", marker = "sys_platform != 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
-    { name = "typing-extensions", marker = "sys_platform != 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
+    { name = "filelock", marker = "sys_platform != 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
+    { name = "fsspec", marker = "sys_platform != 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
+    { name = "jinja2", marker = "sys_platform != 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
+    { name = "networkx", marker = "sys_platform != 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
+    { name = "setuptools", marker = "sys_platform != 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
+    { name = "sympy", marker = "sys_platform != 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
+    { name = "typing-extensions", marker = "sys_platform != 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/d3/54/a2ba279afcca44bbd320d4e73675b282fcee3d81400ea1b53934efca6462/torch-2.10.0-2-cp312-none-macosx_11_0_arm64.whl", hash = "sha256:13ec4add8c3faaed8d13e0574f5cd4a323c11655546f91fbe6afa77b57423574", size = 79498202, upload-time = "2026-02-10T21:44:52.603Z" },
@@ -3940,30 +3978,30 @@ resolution-markers = [
     "python_full_version < '3.13' and sys_platform == 'linux'",
 ]
 dependencies = [
-    { name = "cuda-bindings", marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
-    { name = "filelock", marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
-    { name = "fsspec", marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
-    { name = "jinja2", marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
-    { name = "networkx", marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
-    { name = "nvidia-cublas-cu12", marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
-    { name = "nvidia-cuda-cupti-cu12", marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
-    { name = "nvidia-cuda-nvrtc-cu12", marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
-    { name = "nvidia-cuda-runtime-cu12", marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
-    { name = "nvidia-cudnn-cu12", marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
-    { name = "nvidia-cufft-cu12", marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
-    { name = "nvidia-cufile-cu12", marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
-    { name = "nvidia-curand-cu12", marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
-    { name = "nvidia-cusolver-cu12", marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
-    { name = "nvidia-cusparse-cu12", marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
-    { name = "nvidia-cusparselt-cu12", marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
-    { name = "nvidia-nccl-cu12", marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
-    { name = "nvidia-nvjitlink-cu12", marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
-    { name = "nvidia-nvshmem-cu12", marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
-    { name = "nvidia-nvtx-cu12", marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
-    { name = "setuptools", marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
-    { name = "sympy", marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
-    { name = "triton", marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
-    { name = "typing-extensions", marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
+    { name = "cuda-bindings", marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
+    { name = "filelock", marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
+    { name = "fsspec", marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
+    { name = "jinja2", marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
+    { name = "networkx", marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
+    { name = "nvidia-cublas-cu12", marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
+    { name = "nvidia-cuda-cupti-cu12", marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
+    { name = "nvidia-cuda-nvrtc-cu12", marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
+    { name = "nvidia-cuda-runtime-cu12", marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
+    { name = "nvidia-cudnn-cu12", marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
+    { name = "nvidia-cufft-cu12", marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
+    { name = "nvidia-cufile-cu12", marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
+    { name = "nvidia-curand-cu12", marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
+    { name = "nvidia-cusolver-cu12", marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
+    { name = "nvidia-cusparse-cu12", marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
+    { name = "nvidia-cusparselt-cu12", marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
+    { name = "nvidia-nccl-cu12", marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
+    { name = "nvidia-nvjitlink-cu12", marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
+    { name = "nvidia-nvshmem-cu12", marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
+    { name = "nvidia-nvtx-cu12", marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
+    { name = "setuptools", marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
+    { name = "sympy", marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
+    { name = "triton", marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
+    { name = "typing-extensions", marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
 ]
 wheels = [
     { url = "https://download.pytorch.org/whl/cu128/torch-2.10.0%2Bcu128-cp312-cp312-manylinux_2_28_aarch64.whl", hash = "sha256:6f09cdf2415516be028ae82e6b985bcfc3eac37bc52ab401142689f6224516ca" },
@@ -3988,8 +4026,8 @@ name = "torchaudio"
 version = "2.10.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "torch", version = "2.10.0", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
-    { name = "torch", version = "2.10.0+cu128", source = { registry = "https://download.pytorch.org/whl/cu128" }, marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
+    { name = "torch", version = "2.10.0", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
+    { name = "torch", version = "2.10.0+cu128", source = { registry = "https://download.pytorch.org/whl/cu128" }, marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/0f/36/28a6f3e857616cf7576bdbf8170e483b8c5d0a1f8d349ecb2b75921236aa/torchaudio-2.10.0-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:9d0fbdbfd2f621c51d28571050d6d0c7287791034e5c7303b31480af1258f33f", size = 737144, upload-time = "2026-01-21T16:28:44.189Z" },
@@ -4016,18 +4054,18 @@ wheels = [
 
 [[package]]
 name = "torchcodec"
-version = "0.9.0"
+version = "0.10.0"
 source = { registry = "https://pypi.org/simple" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/60/88/dc4a7928ee80823913b1ec9d6433458b32d5510288030b122c9b3d58b484/torchcodec-0.9.0-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:30d031eafbe287a2a54b90b35109f7e0711b393bbb263cf90487f533b8ac92d4", size = 4063923, upload-time = "2025-12-04T14:16:35.491Z" },
-    { url = "https://files.pythonhosted.org/packages/42/10/742531478a71585bcb901913a9a806dc6b8c4097f39e6e82213a129cbaf1/torchcodec-0.9.0-cp312-cp312-manylinux_2_28_x86_64.whl", hash = "sha256:c4b5964e85e616097b35db6927561bbac1cbf227e1a8d4dffb0acf00a7e94725", size = 2061634, upload-time = "2025-12-04T14:16:28.386Z" },
-    { url = "https://files.pythonhosted.org/packages/c1/5b/1f712dc3cbf26e0eaab90dccf75aee468d63ce340c51beccbdfc426400c1/torchcodec-0.9.0-cp312-cp312-win_amd64.whl", hash = "sha256:30cf3053ddd54d993b7b28613beab4ffa1199339160c4f489a87bd5bb3c0062b", size = 2186861, upload-time = "2025-12-04T14:16:42.743Z" },
-    { url = "https://files.pythonhosted.org/packages/b7/d5/0be5d2be7c787bf4cefe793bf99bd09fe1f174e8827ddb29d210ae267b58/torchcodec-0.9.0-cp313-cp313-macosx_12_0_arm64.whl", hash = "sha256:f47f03335a373cdfe32b2c9f9f515a408c64ea9c6efdf616ca6d3c487e1b34b1", size = 4030400, upload-time = "2025-12-04T14:16:36.958Z" },
-    { url = "https://files.pythonhosted.org/packages/a8/81/db06e824616da3b40772a9ca8db9f49e0790e323ee160520ddd67fce19ed/torchcodec-0.9.0-cp313-cp313-manylinux_2_28_x86_64.whl", hash = "sha256:0791fafa73eab4d12001b256d22c94b244e2dea28214ba0bb1dee0f2bfb87b13", size = 2067419, upload-time = "2025-12-04T14:16:29.845Z" },
-    { url = "https://files.pythonhosted.org/packages/74/c7/91ed7d78d934c7decee30eaf6f783e92b9d7d7e1c05ffaf9db5d8a26b7c7/torchcodec-0.9.0-cp313-cp313-win_amd64.whl", hash = "sha256:0f6e4a37181820b90a2aadc827d95f119b11a59095252175add3fa22584f5614", size = 2186497, upload-time = "2025-12-04T14:16:44.229Z" },
-    { url = "https://files.pythonhosted.org/packages/ec/8d/243a7a828131a874493c122aaecacc04553ed5c81e4ff8f2e0730f414e6f/torchcodec-0.9.0-cp314-cp314-macosx_11_0_arm64.whl", hash = "sha256:6ed000612a1a8a403f52129e63022b885092d245fde9323447580024a722e01b", size = 3811912, upload-time = "2025-12-04T14:16:38.176Z" },
-    { url = "https://files.pythonhosted.org/packages/b1/3d/ea1f5f09c9c4cc76b76699bd38d5dd7ae4c9efade0a3f010f52bcf49bbb5/torchcodec-0.9.0-cp314-cp314-manylinux_2_28_x86_64.whl", hash = "sha256:bf866ae94f45546c43a2781508f9bfdb6d3557330065b5ac1b8e31ff2f61a005", size = 2068111, upload-time = "2025-12-04T14:16:30.898Z" },
-    { url = "https://files.pythonhosted.org/packages/22/d9/0f0bedc25a3ccfa1f2347444359a4e5808cca2e72a2e34bb867547c8211c/torchcodec-0.9.0-cp314-cp314-win_amd64.whl", hash = "sha256:e6813c055eb6cbead0de4b281a9d265b05c68a9701b95a2725b21ae7a2f13a68", size = 2188009, upload-time = "2025-12-04T14:16:45.252Z" },
+    { url = "https://files.pythonhosted.org/packages/52/ff/2b27797e039673156710e5a0febe87cafc203722acafa3d34db283b40cf9/torchcodec-0.10.0-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:b35fa4061c5757f8d714187c040a90a11669de6470a644bb04e3cd335ff1c110", size = 4073213, upload-time = "2026-01-22T15:41:45.485Z" },
+    { url = "https://files.pythonhosted.org/packages/29/34/ccc711b6dc581e43b8d8d227e4173a8826994ee7b68d6b3d82291f307325/torchcodec-0.10.0-cp312-cp312-manylinux_2_28_x86_64.whl", hash = "sha256:6e43184d83ccced965b31cad5bb6200c779646fee2ec153a6d784b4def40c91b", size = 2083121, upload-time = "2026-01-22T15:41:37.947Z" },
+    { url = "https://files.pythonhosted.org/packages/cf/6c/9af3bd945a610d6c757d898aa4624e0f5135cc8a6992d0a1d846f1084576/torchcodec-0.10.0-cp312-cp312-win_amd64.whl", hash = "sha256:e4f022fa53d91b414b4177fe87b0afc40a806092da4595d24de4b245d6fb0fba", size = 2225338, upload-time = "2026-01-22T15:41:52.094Z" },
+    { url = "https://files.pythonhosted.org/packages/d2/b6/b1041c8ccb175b08779b3e2d3e60f838bbcbfe2398d49e3673b6a66f0649/torchcodec-0.10.0-cp313-cp313-macosx_12_0_arm64.whl", hash = "sha256:be3ce7cc667effecd06da9d0d6c5e9e347c5f376b705934e7b82378a65cf6eef", size = 4043681, upload-time = "2026-01-22T15:41:47.236Z" },
+    { url = "https://files.pythonhosted.org/packages/fd/85/fc44f6d702dfd344e6859a9a4d713aaaa991578eb74677a80297d9ae8a07/torchcodec-0.10.0-cp313-cp313-manylinux_2_28_x86_64.whl", hash = "sha256:71f25caf9ab89a434ae2008b1374fd98557a6864b8313b103bae53af3e6fd17f", size = 2088572, upload-time = "2026-01-22T15:41:39.203Z" },
+    { url = "https://files.pythonhosted.org/packages/df/9d/b73a0f47e11b66a1d23c7d867f12f8bb41b1b5e707d7e23d8f54793e3267/torchcodec-0.10.0-cp313-cp313-win_amd64.whl", hash = "sha256:9e077146e894f373b805972da96aee42ff8bb87b1a3f3fb64d26925cd9e64184", size = 2225208, upload-time = "2026-01-22T15:41:53.233Z" },
+    { url = "https://files.pythonhosted.org/packages/90/c9/4b6242e3456bae148f4086337d3e43d98c4e79c04091de3462db9f5eb67a/torchcodec-0.10.0-cp314-cp314-macosx_11_0_arm64.whl", hash = "sha256:bb882c12ca07dcf6d82833db67e6b565693a4bccfeab6696697620e43e465556", size = 3821202, upload-time = "2026-01-22T15:41:48.627Z" },
+    { url = "https://files.pythonhosted.org/packages/96/a2/5fe0e62b208a367f741361881321c1b25de487318a44f870f326747585a1/torchcodec-0.10.0-cp314-cp314-manylinux_2_28_x86_64.whl", hash = "sha256:bec2b938ad4b294bd71d0b0ab4976037c740be0c80be79e67803ebed4eff270e", size = 2089647, upload-time = "2026-01-22T15:41:40.711Z" },
+    { url = "https://files.pythonhosted.org/packages/93/71/0fc10230965e319552e064d66f1c8675b471d1b98c4a94c529e771b3c165/torchcodec-0.10.0-cp314-cp314-win_amd64.whl", hash = "sha256:4734eb82146516049e1070152eb3013d7b9689159ef35db7c0894d130d4e335d", size = 2226749, upload-time = "2026-01-22T15:41:54.393Z" },
 ]
 
 [[package]]
@@ -4038,8 +4076,8 @@ dependencies = [
     { name = "lightning-utilities" },
     { name = "numpy" },
     { name = "packaging" },
-    { name = "torch", version = "2.10.0", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
-    { name = "torch", version = "2.10.0+cu128", source = { registry = "https://download.pytorch.org/whl/cu128" }, marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
+    { name = "torch", version = "2.10.0", source = { registry = "https://pypi.org/simple" }, marker = "(sys_platform != 'linux' and extra == 'extra-15-unite-detection-cpu') or (sys_platform != 'linux' and extra == 'extra-15-unite-detection-gpu') or (sys_platform != 'linux' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
+    { name = "torch", version = "2.10.0+cu128", source = { registry = "https://download.pytorch.org/whl/cu128" }, marker = "(sys_platform == 'linux' and extra == 'extra-15-unite-detection-cpu') or (sys_platform == 'linux' and extra == 'extra-15-unite-detection-gpu') or (sys_platform == 'linux' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/85/2e/48a887a59ecc4a10ce9e8b35b3e3c5cef29d902c4eac143378526e7485cb/torchmetrics-1.8.2.tar.gz", hash = "sha256:cf64a901036bf107f17a524009eea7781c9c5315d130713aeca5747a686fe7a5", size = 580679, upload-time = "2025-09-03T14:00:54.077Z" }
 wheels = [
@@ -4085,9 +4123,9 @@ resolution-markers = [
     "python_full_version < '3.13' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32'",
 ]
 dependencies = [
-    { name = "numpy", marker = "sys_platform != 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
-    { name = "pillow", marker = "sys_platform != 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
-    { name = "torch", version = "2.10.0", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
+    { name = "numpy", marker = "sys_platform != 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
+    { name = "pillow", marker = "sys_platform != 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
+    { name = "torch", version = "2.10.0", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/56/3a/6ea0d73f49a9bef38a1b3a92e8dd455cea58470985d25635beab93841748/torchvision-0.25.0-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:c2abe430c90b1d5e552680037d68da4eb80a5852ebb1c811b2b89d299b10573b", size = 1874920, upload-time = "2026-01-21T16:27:45.348Z" },
@@ -4122,9 +4160,9 @@ resolution-markers = [
     "python_full_version < '3.13' and sys_platform == 'linux'",
 ]
 dependencies = [
-    { name = "numpy", marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
-    { name = "pillow", marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
-    { name = "torch", version = "2.10.0+cu128", source = { registry = "https://download.pytorch.org/whl/cu128" }, marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
+    { name = "numpy", marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
+    { name = "pillow", marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
+    { name = "torch", version = "2.10.0+cu128", source = { registry = "https://download.pytorch.org/whl/cu128" }, marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
 ]
 wheels = [
     { url = "https://download.pytorch.org/whl/cu128/torchvision-0.25.0%2Bcu128-cp312-cp312-manylinux_2_28_aarch64.whl", hash = "sha256:8623e534ef6a815bd6407d4b52dd70c7154e2eda626ad4b9cb895d36c5a3305b" },
@@ -4149,7 +4187,7 @@ name = "tqdm"
 version = "4.67.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "colorama", marker = "sys_platform == 'win32' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
+    { name = "colorama", marker = "sys_platform == 'win32' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/09/a9/6ba95a270c6f1fbcd8dac228323f2777d886cb206987444e4bce66338dd4/tqdm-4.67.3.tar.gz", hash = "sha256:7d825f03f89244ef73f1d4ce193cb1774a8179fd96f31d7e1dcde62092b960bb", size = 169598, upload-time = "2026-02-03T17:35:53.048Z" }
 wheels = [
@@ -4346,28 +4384,28 @@ dependencies = [
 [package.optional-dependencies]
 cpu = [
     { name = "lightning" },
-    { name = "torch", version = "2.10.0", source = { registry = "https://pypi.org/simple" }, marker = "(sys_platform != 'linux' and extra == 'extra-15-unite-detection-cpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
-    { name = "torch", version = "2.10.0+cu128", source = { registry = "https://download.pytorch.org/whl/cu128" }, marker = "(sys_platform == 'linux' and extra == 'extra-15-unite-detection-cpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
-    { name = "torchvision", version = "0.25.0", source = { registry = "https://pypi.org/simple" }, marker = "(sys_platform != 'linux' and extra == 'extra-15-unite-detection-cpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
-    { name = "torchvision", version = "0.25.0+cu128", source = { registry = "https://download.pytorch.org/whl/cu128" }, marker = "(sys_platform == 'linux' and extra == 'extra-15-unite-detection-cpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
-    { name = "transformers", extra = ["accelerate", "sentencepiece"], marker = "extra == 'extra-15-unite-detection-cpu'" },
+    { name = "torch", version = "2.10.0", source = { registry = "https://pypi.org/simple" }, marker = "(sys_platform != 'linux' and extra == 'extra-15-unite-detection-cpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
+    { name = "torch", version = "2.10.0+cu128", source = { registry = "https://download.pytorch.org/whl/cu128" }, marker = "(sys_platform == 'linux' and extra == 'extra-15-unite-detection-cpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
+    { name = "torchvision", version = "0.25.0", source = { registry = "https://pypi.org/simple" }, marker = "(sys_platform != 'linux' and extra == 'extra-15-unite-detection-cpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
+    { name = "torchvision", version = "0.25.0+cu128", source = { registry = "https://download.pytorch.org/whl/cu128" }, marker = "(sys_platform == 'linux' and extra == 'extra-15-unite-detection-cpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
+    { name = "transformers", extra = ["accelerate", "sentencepiece"], marker = "extra == 'extra-15-unite-detection-cpu' or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
 ]
 gpu = [
     { name = "flash-attn" },
     { name = "lightning" },
-    { name = "torch", version = "2.10.0", source = { registry = "https://pypi.org/simple" }, marker = "(sys_platform != 'linux' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
-    { name = "torch", version = "2.10.0+cu128", source = { registry = "https://download.pytorch.org/whl/cu128" }, marker = "(sys_platform == 'linux' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
-    { name = "torchvision", version = "0.25.0", source = { registry = "https://pypi.org/simple" }, marker = "(sys_platform != 'linux' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
-    { name = "torchvision", version = "0.25.0+cu128", source = { registry = "https://download.pytorch.org/whl/cu128" }, marker = "(sys_platform == 'linux' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
-    { name = "transformers", extra = ["accelerate", "sentencepiece"], marker = "extra == 'extra-15-unite-detection-gpu'" },
+    { name = "torch", version = "2.10.0", source = { registry = "https://pypi.org/simple" }, marker = "(sys_platform != 'linux' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
+    { name = "torch", version = "2.10.0+cu128", source = { registry = "https://download.pytorch.org/whl/cu128" }, marker = "(sys_platform == 'linux' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
+    { name = "torchvision", version = "0.25.0", source = { registry = "https://pypi.org/simple" }, marker = "(sys_platform != 'linux' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
+    { name = "torchvision", version = "0.25.0+cu128", source = { registry = "https://download.pytorch.org/whl/cu128" }, marker = "(sys_platform == 'linux' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
+    { name = "transformers", extra = ["accelerate", "sentencepiece"], marker = "extra == 'extra-15-unite-detection-gpu' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
 ]
 gpu-no-flash-attn = [
     { name = "lightning" },
-    { name = "torch", version = "2.10.0", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
-    { name = "torch", version = "2.10.0+cu128", source = { registry = "https://download.pytorch.org/whl/cu128" }, marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
-    { name = "torchvision", version = "0.25.0", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
-    { name = "torchvision", version = "0.25.0+cu128", source = { registry = "https://download.pytorch.org/whl/cu128" }, marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
-    { name = "transformers", extra = ["accelerate", "sentencepiece"] },
+    { name = "torch", version = "2.10.0", source = { registry = "https://pypi.org/simple" }, marker = "(sys_platform != 'linux' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
+    { name = "torch", version = "2.10.0+cu128", source = { registry = "https://download.pytorch.org/whl/cu128" }, marker = "(sys_platform == 'linux' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
+    { name = "torchvision", version = "0.25.0", source = { registry = "https://pypi.org/simple" }, marker = "(sys_platform != 'linux' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
+    { name = "torchvision", version = "0.25.0+cu128", source = { registry = "https://download.pytorch.org/whl/cu128" }, marker = "(sys_platform == 'linux' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
+    { name = "transformers", extra = ["accelerate", "sentencepiece"], marker = "(extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra != 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra != 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
 ]
 
 [package.metadata]
@@ -4434,11 +4472,11 @@ wheels = [
 
 [package.optional-dependencies]
 standard = [
-    { name = "colorama", marker = "sys_platform == 'win32' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
+    { name = "colorama", marker = "sys_platform == 'win32' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
     { name = "httptools" },
     { name = "python-dotenv" },
     { name = "pyyaml" },
-    { name = "uvloop", marker = "(platform_python_implementation != 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32') or (platform_python_implementation == 'PyPy' and extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (sys_platform == 'cygwin' and extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (sys_platform == 'win32' and extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
+    { name = "uvloop", marker = "(platform_python_implementation != 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32') or (platform_python_implementation == 'PyPy' and extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (platform_python_implementation == 'PyPy' and extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (platform_python_implementation == 'PyPy' and extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (sys_platform == 'cygwin' and extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (sys_platform == 'cygwin' and extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (sys_platform == 'cygwin' and extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (sys_platform == 'win32' and extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (sys_platform == 'win32' and extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (sys_platform == 'win32' and extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
     { name = "watchfiles" },
     { name = "websockets" },
 ]
@@ -4590,7 +4628,7 @@ source = { editable = "Wavelet-CLIP" }
 dependencies = [
     { name = "albumentations" },
     { name = "clip" },
-    { name = "dlib" },
+    { name = "dlib-bin" },
     { name = "efficientnet-pytorch" },
     { name = "einops" },
     { name = "filterpy" },
@@ -4617,12 +4655,12 @@ dependencies = [
     { name = "simplejson" },
     { name = "tensorboard" },
     { name = "timm" },
-    { name = "torch", version = "2.10.0", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
-    { name = "torch", version = "2.10.0+cu128", source = { registry = "https://download.pytorch.org/whl/cu128" }, marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
+    { name = "torch", version = "2.10.0", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
+    { name = "torch", version = "2.10.0+cu128", source = { registry = "https://download.pytorch.org/whl/cu128" }, marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
     { name = "torchaudio" },
     { name = "torchtoolbox" },
-    { name = "torchvision", version = "0.25.0", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
-    { name = "torchvision", version = "0.25.0+cu128", source = { registry = "https://download.pytorch.org/whl/cu128" }, marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu')" },
+    { name = "torchvision", version = "0.25.0", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
+    { name = "torchvision", version = "0.25.0+cu128", source = { registry = "https://download.pytorch.org/whl/cu128" }, marker = "sys_platform == 'linux' or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra == 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
     { name = "tqdm" },
     { name = "transformers" },
     { name = "wheel" },
@@ -4632,7 +4670,7 @@ dependencies = [
 requires-dist = [
     { name = "albumentations", specifier = ">=2.0.8" },
     { name = "clip", git = "https://github.com/openai/CLIP.git" },
-    { name = "dlib", specifier = ">=20.0.0" },
+    { name = "dlib-bin", specifier = ">=20.0.0" },
     { name = "efficientnet-pytorch", specifier = ">=0.7.1" },
     { name = "einops", specifier = ">=0.8.2" },
     { name = "filterpy", specifier = ">=1.4.5" },
