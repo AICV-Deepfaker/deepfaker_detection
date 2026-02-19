@@ -29,16 +29,15 @@ class UniteDetector(BaseDetector[BaseSetting]):
     def analyze(self, vid_path: str | Path) -> tuple[float, str]:
         vid_dataset = CustomVideoDataset([vid_path])
         loader = DataLoader(vid_dataset, batch_size=1, num_workers=0)
-        results: list[np.ndarray] = []
+        result_prob: list[float] = []
         for batch in loader:
             x, _ = cast(tuple[Tensor, Tensor], batch)
             input_np: np.ndarray = x.detach().cpu().numpy()
             output: list[np.ndarray] = self.session.run(
                 [self.output_name], {self.input_name: input_np}
             )
-            results.append(output[0])
-        res_concat = np.concatenate(results, axis=0)
-        res_mean: np.ndarray = np.mean(res_concat, axis=0)
-        prob: float = self.softmax(res_mean)[1].item()
+            cur_prob: float = self.softmax(output[0])[0][1].item()
+            result_prob.append(cur_prob)
+        max_prob = max(result_prob)
         # currently no visual output
-        return prob, ""
+        return max_prob, ""
