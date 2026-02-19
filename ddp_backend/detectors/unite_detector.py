@@ -36,7 +36,7 @@ class UniteDetector(BaseDetector[BaseSetting]):
             output: list[np.ndarray] = self.session.run(
                 [self.output_name], {self.input_name: input_np}
             )
-            cur_prob: float = self.softmax(output)[1].item()
+            cur_prob: float = self.softmax(output[0])[1].item()
             result_prob.append(cur_prob)
         max_prob = max(result_prob)
         # currently no visual output
