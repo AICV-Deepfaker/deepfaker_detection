@@ -19,9 +19,11 @@ dependencies = [
     "torch>=2.10.0",
     "torchvision>=0.25.0",
     "types-pyyaml>=6.0.12.20250915",
+    "unite-detection[gpu-no-flash-attn]",
     "uvicorn>=0.40.0",
     "wavelet-clip",
 ]
 
 [tool.uv.sources]
 wavelet-clip = { workspace = true, editable = true }
+unite-detection = { workspace = true }
