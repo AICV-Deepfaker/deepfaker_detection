@@ -37,9 +37,8 @@ class UniteDetector(BaseDetector[BaseSetting]):
                 [self.output_name], {self.input_name: input_np}
             )
             results.append(output[0])
-        print(results)
         res_concat = np.concatenate(results, axis=0)
         res_mean: np.ndarray = np.mean(res_concat, axis=0)
-        prob: list[float] = self.softmax(res_mean).item()
+        prob: float = self.softmax(res_mean)[1].item()
         # currently no visual output
-        return prob[1], ""
+        return prob, ""
