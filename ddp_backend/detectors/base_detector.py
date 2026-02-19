@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from contextlib import contextmanager
+from collections.abc import Generator
 from pathlib import Path
 import torch
 
@@ -13,7 +14,7 @@ class Config[S: BaseSetting](BaseModel):
     model_path: str | Path
     img_config: ImageConfig
     threshold: float = 0.5
-    specific_config: S
+    specific_config: S | None = None
 
 
 class BaseSetting(BaseModel):
@@ -40,7 +41,7 @@ class BaseDetector[S: BaseSetting](ABC):
         pass
 
     @contextmanager
-    def _load_video(self, vid_path: str | Path):
+    def _load_video(self, vid_path: str | Path) -> Generator[cv2.VideoCapture, None, None]:
         cap = None
         try:
             cap = cv2.VideoCapture(vid_path)
