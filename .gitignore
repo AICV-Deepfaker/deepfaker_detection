@@ -31,4 +31,8 @@ node_modules/
 # 대용량 데이터·모델 (필요시 주석 해제)
 *.pth
 # *.ckpt
+*.onnx
+*.onnx.*
 # datasets/
+
+.expo/

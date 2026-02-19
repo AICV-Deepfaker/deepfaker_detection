@@ -1,6 +1,13 @@
 # env
 python-dotenv
 
+# Security
+pydantic-settings
+passlib[bcrypt]
+bcrypt==4.0.1
+python-jose[cryptography]
+python-multipart
+
 # Web Server & Tunneling
 fastapi
 uvicorn

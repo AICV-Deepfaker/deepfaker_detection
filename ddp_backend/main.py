@@ -8,13 +8,15 @@ import uvicorn
 from fastapi import FastAPI, File, UploadFile
 from pyngrok import ngrok
 
-from core.database import engine
-from models.models import Base
+# from core.database import engine
+# from models.models import Base
 
 from detectors.wavelet_detector import WaveletDetector
+from detectors.unite_detector import UniteDetector
+from detectors.base_detector import Config, ImageConfig
 
 # 서버가 시작될 때 테이블이 없으면 자동 생성 (JPA의 ddl-auto 같은 역할)
-Base.metadata.create_all(bind=engine)
+# Base.metadata.create_all(bind=engine)
 
 # 모델 및 환경 변수
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -28,7 +30,11 @@ NGROK_AUTH_TOKEN = os.environ.get(
     "NGROK_AUTH_TOKEN", "여기에_본인의_NGROK_토큰을_입력하세요"
 )
 
-detector = WaveletDetector.from_yaml(DETECTOR_YAML, IMG_SIZE, CKPT_PATH)
+# detector = WaveletDetector.from_yaml(DETECTOR_YAML, IMG_SIZE, CKPT_PATH)
+detector = UniteDetector(Config(
+    model_path="./unite_baseline.onnx",
+    img_config=ImageConfig(img_size=384)
+))
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):  # pyright: ignore[reportUnusedParameter]

@@ -1,8 +1,21 @@
 import os 
-from dotenv import load_dotenv 
+from dotenv import load_dotenv
+
+from pydantic_settings import BaseSettings
 
 # .env 파일의 내용을 환경 변수로 부르기 
 load_dotenv() 
 
 # 환경 변수에서 URL을 가져와 DB 엔진 만들기 
 DATABASE_URL = os.getenv("DATABASE_URL")
+
+# JWT 토큰 생성을 위한 환경 설정
+class Settings(BaseSettings):
+    SECRET_KEY: str
+    ALGORITHM: str
+    ACCESS_TOKEN_EXPIRE_MINUTES: int
+
+    class Config:
+        env_file = ".env"
+
+settings = Settings()
