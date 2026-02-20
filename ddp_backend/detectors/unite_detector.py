@@ -13,6 +13,8 @@ from .base_detector import BaseVideoConfig, BaseVideoDetector, ImageInferenceRes
 
 
 class UniteDetector(BaseVideoDetector[BaseVideoConfig]):
+    model_name = "UNITE"
+
     @override
     def load_model(self):
         self.session = ort.InferenceSession(

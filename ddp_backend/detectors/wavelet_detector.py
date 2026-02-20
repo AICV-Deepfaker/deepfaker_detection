@@ -18,7 +18,12 @@ from wavelet_lib.config_type import WaveletConfig
 from wavelet_lib.detectors import DETECTOR
 from wavelet_lib.detectors.base_detector import AbstractDetector, PredDict
 
-from .base_detector import BaseVideoConfig, BaseVideoDetector, HasNormalize, ImageInferenceResult
+from .base_detector import (
+    BaseVideoConfig,
+    BaseVideoDetector,
+    HasNormalize,
+    ImageInferenceResult,
+)
 
 
 class WaveletConfigParam(BaseVideoConfig, HasNormalize):
@@ -27,6 +32,8 @@ class WaveletConfigParam(BaseVideoConfig, HasNormalize):
 
 
 class WaveletDetector(BaseVideoDetector[WaveletConfigParam]):
+    model_name = "wavelet"
+
     @classmethod
     def from_yaml(
         cls,

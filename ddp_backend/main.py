@@ -1,29 +1,28 @@
-from pydantic import BaseModel
-from typing import Literal
-from contextlib import asynccontextmanager
 import os
 import shutil
 import sys
+from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 import torch
 import uvicorn
-from fastapi import FastAPI, File, Form, UploadFile
-from pyngrok import ngrok
+from detectors.base_detector import BaseDetector, BaseVideoConfig, Scorable
+from detectors.stt_detector import STTDetector
+from detectors.unite_detector import UniteDetector
 
 # from core.database import engine
 # from models.models import Base
-
 from detectors.wavelet_detector import WaveletDetector
-from detectors.unite_detector import UniteDetector
-from detectors.base_detector import BaseVideoConfig, BaseDetector, Scorable
-from detectors.stt_detector import STTDetector
 
 # ==========================================
 # .env 로드
 # ==========================================
 from dotenv import load_dotenv
+from fastapi import FastAPI, File, Form, UploadFile
+from pydantic import BaseModel
+from pyngrok import ngrok
+from schemas import APIOutput, BaseReport, STTReport, VideoReport
 
 _BACKEND_DIR = Path(__file__).parent
 load_dotenv(_BACKEND_DIR / ".env")
@@ -66,7 +65,7 @@ unite_detector = UniteDetector(
 # WaveletDetector (증거수집모드 / fast)
 wavelet_detector = WaveletDetector.from_yaml(DETECTOR_YAML, IMG_SIZE, CKPT_PATH)
 
-detectors: dict[str, BaseDetector[Any, BaseModel]] = {
+detectors: dict[str, BaseDetector[Any, BaseReport]] = {
     "UNITE": unite_detector,
     "wavelet": wavelet_detector,
     "STT": STTDetector(),
@@ -108,38 +107,42 @@ app = FastAPI(lifespan=lifespan)
 @app.post("/predict/{mode}")
 async def predict_deepfake(
     file: Annotated[UploadFile, File(...)], mode: Literal["deep", "fast"] = "fast"
-):
+) -> APIOutput:
     temp_path = f"temp_{file.filename}"
     model_names: dict[str, list[str]] = {"deep": ["UNITE"], "fast": ["wavelet", "STT"]}
     probs: list[float] = []
+    reports: dict[str, BaseReport | VideoReport | STTReport] = {}
     try:
-        total_response: dict[str, str | float | dict] = {}
         with open(temp_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
         for next_model in model_names[mode]:
             model = detectors[next_model]
 
             report = await model.analyze(temp_path)
-            response = report.model_dump()
+            reports[next_model] = report
             if isinstance(report, Scorable):
                 probs.append(report.prob)
-            response["status"] = "success"
-            response["model_name"] = next_model
-            total_response[next_model] = response
-        
-        avg_prob = sum(probs) / len(probs)
-        confidence = (
-            avg_prob if avg_prob > 0.5 else 1 - avg_prob
-        )
-        total_response["status"] = "success"
-        total_response["result"] = "FAKE" if avg_prob > 0.5 else "REAL"
-        total_response["avg_fake_prob"] = round(avg_prob, 4)
-        total_response["confidence_score"] = f"{round(confidence * 100, 2)}%"
-        total_response["analysis_mode"] = mode
 
-        return total_response
+        avg_prob = sum(probs) / len(probs)
+        confidence = avg_prob if avg_prob > 0.5 else 1 - avg_prob
+        return APIOutput(
+            status="success",
+            result="FAKE" if avg_prob > 0.5 else "REAL",
+            average_fake_prob=round(avg_prob, 4),
+            confidence_score=f"{round(confidence * 100, 2)}%",
+            analysis_mode=mode,
+            reports=reports,
+        )
     except Exception as e:
-        return {"status": "error", "message": str(e)}
+        return APIOutput(
+            status="error",
+            error_msg=str(e),
+            result="FAKE",
+            average_fake_prob=0,
+            confidence_score="",
+            analysis_mode=mode,
+            reports={},
+        )
     finally:
         if os.path.exists(temp_path):
             os.remove(temp_path)

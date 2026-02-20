@@ -4,11 +4,13 @@ from abc import ABC, abstractmethod
 from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Protocol, runtime_checkable, cast
+from typing import Protocol, cast, runtime_checkable
 
 import cv2
 import torch
 from pydantic import BaseModel
+
+from ddp_backend.schemas import BaseReport, VideoReport
 
 
 class HasPath(BaseModel):
@@ -28,22 +30,19 @@ class ImageInferenceResult(BaseModel):
     prob: float
     base64_report: str
 
-class VideoReport(BaseModel):
-    result: str
-    average_fake_prob: float
-    confidence_score: str
-    visual_report: str
 
 class BaseVideoConfig(HasPath, HasThreshold):
     img_size: int
-    
+
 
 @runtime_checkable
 class Scorable(Protocol):
     prob: float
 
 
-class BaseDetector[Config: BaseModel, Report: BaseModel](ABC):
+class BaseDetector[Config: BaseModel, Report: BaseReport](ABC):
+    model_name: str
+
     def __init__(self, config: Config):
         self.config = config
 
@@ -81,6 +80,11 @@ class BaseVideoDetector[C: BaseVideoConfig](BaseDetector[C, VideoReport]):
             if cap is not None:
                 cap.release()
 
+    def set_fps(self, vid_src: str | Path, vid_dest: str | Path, target_fps: int = 30):
+        with self._load_video(vid_src) as cap:
+            cap.get(cv2.CAP_PROP_FPS)
+            pass
+
     async def analyze(self, vid_path: str | Path) -> VideoReport:
         analyze_res = cast(ImageInferenceResult, await self._analyze(vid_path))
 
@@ -90,6 +94,8 @@ class BaseVideoDetector[C: BaseVideoConfig](BaseDetector[C, VideoReport]):
         )
 
         return VideoReport(
+            status="success",
+            model_name=self.model_name,
             result=res,
             average_fake_prob=round(analyze_res.prob, 4),
             confidence_score=f"{round(confidence * 100, 2)}",
