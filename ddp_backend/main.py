@@ -19,17 +19,21 @@ from detectors.unite_detector import UniteDetector
 from detectors.base_detector import Config, ImageConfig
 
 # ==========================================
+# .env 로드
+# ==========================================
+from dotenv import load_dotenv
+
+_BACKEND_DIR = Path(__file__).parent
+load_dotenv(_BACKEND_DIR / ".env")
+
+# ==========================================
 # STT 파이프라인 설정
 # ==========================================
 _STT_DIR = Path(__file__).parent.parent / "STT"
 sys.path.insert(0, str(_STT_DIR))
 
-# STT .env 로드 (GROQ_API_KEY, TAVILY_API_KEY)
-try:
-    from dotenv import load_dotenv as _load_dotenv
-    _load_dotenv(_STT_DIR / ".env")
-except Exception:
-    pass
+# STT .env도 추가 로드 (GROQ_API_KEY, TAVILY_API_KEY가 backend .env에 없을 경우 대비)
+load_dotenv(_STT_DIR / ".env")
 
 try:
     from pipeline import run_pipeline as _run_pipeline, SCAM_SEED_KEYWORDS as _SCAM_SEED_KEYWORDS
@@ -74,27 +78,27 @@ async def _run_stt(video_path: str) -> dict:
 # 모델 및 환경 변수
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 DETECTOR_YAML = "Wavelet-CLIP/wavelet_lib/config/detector/detector.yaml"
-CKPT_PATH = "/Users/sienna/deepfaker_detection/ddp_backend/ckpt_best.pth"
+CKPT_PATH = "ddp_backend/ckpt_best.pth"
 IMG_SIZE = 224
 
-# ⚠️ NGROK 토큰 설정 (직접 입력하거나 환경변수 사용)
-# 코랩 userdata 대신 직접 문자열로 넣거나 환경변수에서 가져오도록 수정
-NGROK_AUTH_TOKEN = os.environ.get(
-    "NGROK_AUTH_TOKEN", "여기에_본인의_NGROK_토큰을_입력하세요"
-)
+NGROK_AUTH_TOKEN = os.environ.get("NGROK_AUTH_TOKEN", "")
 
-# detector = WaveletDetector.from_yaml(DETECTOR_YAML, IMG_SIZE, CKPT_PATH)
+# UniteDetector (정밀탐지모드 / deep)
 detector = UniteDetector(Config(
     model_path="./unite_baseline.onnx",
     img_config=ImageConfig(img_size=384)
 ))
 
+# WaveletDetector (증거수집모드 / fast)
+wavelet_detector = WaveletDetector.from_yaml(DETECTOR_YAML, IMG_SIZE, CKPT_PATH)
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):  # pyright: ignore[reportUnusedParameter]
     detector.load_model()
+    wavelet_detector.load_model()
     public_url = None
 
-    if NGROK_AUTH_TOKEN and NGROK_AUTH_TOKEN != "여기에_본인의_NGROK_토큰을_입력하세요":
+    if NGROK_AUTH_TOKEN:
         ngrok.set_auth_token(NGROK_AUTH_TOKEN)
         tunnel = ngrok.connect("8000")
         public_url = tunnel.public_url
@@ -127,19 +131,54 @@ async def predict_deepfake(file: Annotated[UploadFile, File(...)], mode: str = "
     try:
         with open(temp_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
-        avg_prob, visual_report = detector.analyze(temp_path)
 
-        res = "FAKE" if avg_prob > 0.5 else "REAL"
-        confidence = avg_prob if avg_prob > 0.5 else 1 - avg_prob
+        if mode == "fast":
+            # ── 증거수집모드: WaveletDetector ──────────────────────
+            avg_prob, visual_report = wavelet_detector.analyze(temp_path)
+            res = "FAKE" if avg_prob > 0.5 else "REAL"
+            confidence = avg_prob if avg_prob > 0.5 else 1 - avg_prob
 
-        return {
-            "status": "success",
-            "result": res,
-            "average_fake_prob": round(avg_prob, 4),
-            "confidence_score": f"{round(confidence * 100, 2)}%",
-            "visual_report": visual_report,
-            "analysis_mode": mode,
-        }
+            response: dict = {
+                "status": "success",
+                "result": res,
+                "average_fake_prob": round(avg_prob, 4),
+                "confidence_score": f"{round(confidence * 100, 2)}%",
+                "visual_report": visual_report,
+                "analysis_mode": mode,
+                "frequency": {
+                    "result": res,
+                    "probability": round(avg_prob, 4),
+                    "confidence_score": f"{round(confidence * 100, 2)}%",
+                    "visual_base64": visual_report,
+                },
+            }
+
+            # STT 파이프라인: 동영상일 때만 실행
+            if STT_AVAILABLE and _is_video(file.filename or ""):
+                stt_data = await _run_stt(temp_path)
+                response.update(stt_data)
+
+        else:
+            # ── 정밀탐지모드(deep): UniteDetector ─────────────────
+            avg_prob, visual_report = detector.analyze(temp_path)
+            res = "FAKE" if avg_prob > 0.5 else "REAL"
+            confidence = avg_prob if avg_prob > 0.5 else 1 - avg_prob
+
+            response = {
+                "status": "success",
+                "result": res,
+                "average_fake_prob": round(avg_prob, 4),
+                "confidence_score": f"{round(confidence * 100, 2)}%",
+                "visual_report": visual_report,
+                "analysis_mode": mode,
+                "unite": {
+                    "result": res,
+                    "probability": round(avg_prob, 4),
+                    "confidence_score": f"{round(confidence * 100, 2)}%",
+                },
+            }
+
+        return response
     except Exception as e:
         return {"status": "error", "message": str(e)}
     finally:
