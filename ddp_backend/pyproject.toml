@@ -18,6 +18,7 @@ dependencies = [
     "pywavelets>=1.9.0",
     "pyyaml>=6.0.3",
     "sqlalchemy>=2.0.46",
+    "stt",
     "torch>=2.10.0",
     "torchvision>=0.25.0",
     "types-pyyaml>=6.0.12.20250915",
@@ -25,7 +26,3 @@ dependencies = [
     "uvicorn>=0.40.0",
     "wavelet-clip",
 ]
-
-[tool.uv.sources]
-wavelet-clip = { workspace = true, editable = true }
-unite-detection = { workspace = true }

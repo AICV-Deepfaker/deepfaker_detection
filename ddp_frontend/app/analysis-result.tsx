@@ -19,7 +19,7 @@ import * as Sharing from 'expo-sharing';
 
 import { ThemedText } from '@/components/themed-text';
 import { useAnalysis } from '@/contexts/analysis-context';
-import { predictWithFile, predictWithImageFile, type PredictMode, type PredictResult } from '@/lib/api';
+import { predictWithFile, predictWithImageFile, type PredictMode, type PredictResult, type SttSearchResult } from '@/lib/api';
 import { takePendingImageUri, takePendingVideoUri } from '@/lib/pending-upload';
 
 const ACCENT_GREEN = '#00CF90';
@@ -120,6 +120,74 @@ function SttKeywordsCard({ keywords }: { keywords: { keyword: string; detected: 
           </View>
         ))}
       </View>
+    </View>
+  );
+}
+
+const RISK_COLOR: Record<string, string> = {
+  high: '#E53935',
+  medium: '#FB8C00',
+  low: '#43A047',
+  none: '#90A4AE',
+};
+const RISK_LABEL: Record<string, string> = {
+  high: '위험',
+  medium: '주의',
+  low: '낮음',
+  none: '해당없음',
+};
+
+function SttAnalysisCard({
+  riskLevel,
+  riskReason,
+  transcript,
+  searchResults,
+}: {
+  riskLevel?: string;
+  riskReason?: string;
+  transcript?: string;
+  searchResults?: SttSearchResult[];
+}) {
+  if (!riskLevel && !transcript) return null;
+
+  const color = RISK_COLOR[riskLevel ?? 'none'] ?? '#90A4AE';
+  const label = RISK_LABEL[riskLevel ?? 'none'] ?? riskLevel;
+
+  return (
+    <View style={styles.sectionCard}>
+      <ThemedText style={styles.sectionTitle}>STT 사기 분석</ThemedText>
+
+      {riskLevel && (
+        <View style={[styles.riskBadge, { backgroundColor: color }]}>
+          <ThemedText style={styles.riskBadgeText}>위험도: {label?.toUpperCase()}</ThemedText>
+        </View>
+      )}
+
+      {riskReason ? (
+        <ThemedText style={styles.riskReason}>{riskReason}</ThemedText>
+      ) : null}
+
+      {transcript ? (
+        <View style={styles.transcriptBox}>
+          <ThemedText style={styles.transcriptLabel}>전사 텍스트</ThemedText>
+          <ThemedText style={styles.transcriptText}>{transcript}</ThemedText>
+        </View>
+      ) : null}
+
+      {searchResults && searchResults.length > 0 ? (
+        <View style={styles.searchSection}>
+          <ThemedText style={styles.transcriptLabel}>관련 최신 사례</ThemedText>
+          {searchResults.map((item, i) => (
+            <View key={i} style={styles.searchItem}>
+              <ThemedText style={styles.searchKeyword}>[{item.keyword}]</ThemedText>
+              <ThemedText style={styles.searchTitle}>{item.title}</ThemedText>
+              <ThemedText style={styles.searchContent} numberOfLines={3}>
+                {item.content}
+              </ThemedText>
+            </View>
+          ))}
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -245,7 +313,7 @@ export default function AnalysisResultScreen() {
     if (!data) return;
     try {
       const html = buildResultHtml(data, isEvidence);
-      const { uri } = await Print.printToFileAsync({ html, baseUrl: '' });
+      const { uri } = await Print.printToFileAsync({ html });
 
       if (uri && (await Sharing.isAvailableAsync())) {
         await Sharing.shareAsync(uri, { mimeType: 'application/pdf' });
@@ -317,6 +385,12 @@ export default function AnalysisResultScreen() {
                 visualBase64={data.rppg?.visual_base64}
               />
               <SttKeywordsCard keywords={data.stt_keywords ?? []} />
+              <SttAnalysisCard
+                riskLevel={data.stt_risk_level}
+                riskReason={data.stt_risk_reason}
+                transcript={data.stt_transcript}
+                searchResults={data.stt_search_results}
+              />
             </>
           ) : (
             <SectionCard
@@ -481,6 +555,40 @@ const styles = StyleSheet.create({
   keywordText: { fontSize: 14, fontWeight: '600', color: TEXT },
   keywordTextDetected: { color: ACCENT_GREEN_DARK },
   keywordStatus: { fontSize: 11, color: SUB, marginTop: 2 },
+
+  riskBadge: {
+    alignSelf: 'flex-start',
+    paddingVertical: 5,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    marginBottom: 10,
+  },
+  riskBadgeText: { color: '#fff', fontWeight: '700', fontSize: 13 },
+  riskReason: { fontSize: 14, color: TEXT, marginBottom: 10, lineHeight: 20 },
+
+  transcriptBox: {
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: BORDER,
+    marginBottom: 12,
+  },
+  transcriptLabel: { fontSize: 12, fontWeight: '700', color: SUB, marginBottom: 6 },
+  transcriptText: { fontSize: 13, color: TEXT, lineHeight: 20 },
+
+  searchSection: { marginTop: 4 },
+  searchItem: {
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: BORDER,
+    marginTop: 8,
+  },
+  searchKeyword: { fontSize: 11, fontWeight: '700', color: ACCENT_GREEN_DARK, marginBottom: 2 },
+  searchTitle: { fontSize: 13, fontWeight: '600', color: TEXT, marginBottom: 4 },
+  searchContent: { fontSize: 12, color: SUB, lineHeight: 18 },
 
   actionsSection: { marginTop: 24, paddingTop: 20, borderTopWidth: 1, borderTopColor: BORDER },
   actionsSectionTitle: { fontSize: 15, fontWeight: '700', color: TEXT, marginBottom: 12 },

@@ -1,6 +1,6 @@
 # 테이블이 4개 정도이므로 하나의 파일로 테이블 구성
 
-from sqlalchemy import Column, BigInteger, String, DateTime, ForeignKey, Enum, Boolean, Float, Text
+from sqlalchemy import Column, BigInteger, String, DateTime, ForeignKey, Enum, Boolean, Float, Date
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from core.database import Base
@@ -9,8 +9,13 @@ import enum
 
 # 1. Definition of Enum 
 class LoginMethod(str, enum.Enum):
-    Local = "Local"
-    Google = "Google"
+    local = "Local"
+    google = "Google"
+
+class Affiliation(str, enum.Enum):
+    ind = "개인"
+    org = "기관"
+    com = "회사"
 
 class VideoStatus(str, enum.Enum): # 필요하지 않을 경우 삭제
     pending = "pending"
@@ -19,27 +24,27 @@ class VideoStatus(str, enum.Enum): # 필요하지 않을 경우 삭제
     failed = "failed"
 
 class OriginPath(str, enum.Enum):
-    Link = "Link"
-    upload = "upload"
+    link = "Link"
+    upload = "Upload"
 
 class DetectionResult(str, enum.Enum):
-    Real = "Real"
-    Fake = "Fake"
-    Unknown = "Unknown" # 필요하지 않을 경우 삭제
+    real = "Real"
+    fake = "Fake"
+    unknown = "Unknown" # 필요하지 않을 경우 삭제
 
 
 # 2. User table
 class User(Base):
     __tablename__ = "users"
     user_id = Column(BigInteger, primary_key=True, index=True, autoincrement=True) # 효율성을 위해 user만 index=True
-    local_id = Column(String(50), unique=True, index=True)
-    google_id = Column(String(255), unique=True, index=True)
-    login_method = Column(Enum(LoginMethod), nullable=False)
     email = Column(String(255), unique=True, nullable=False)
+    login_method = Column(Enum(LoginMethod), nullable=True)
     hashed_password = Column(String(255)) # 자체 로그인 시에만 사용
     name = Column(String(100), nullable=False)
+    nickname = Column(String(100), nullable=False)
+    birth = Column(Date, nullable=False)
     profile_image = Column(String(500)) # 필요 없을 경우 삭제
-    phone = Column(String(50))
+    affiliation = Column(Enum(Affiliation), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 
@@ -61,10 +66,10 @@ class Video(Base):
     video_id = Column(BigInteger, primary_key=True, autoincrement=True)
     user_id = Column(BigInteger, ForeignKey("users.user_id", ondelete="CASCADE"))
     result_id = Column(BigInteger, ForeignKey("results.result_id"))
-    origin_path = Column(Enum(OriginPath))
+    origin_path = Column(Enum(OriginPath), nullable=False)
     source_url = Column(String(500))
     s3_path = Column(String(500), nullable=False)
-    status = Column(Enum(VideoStatus), default=VideoStatus.pending)
+    status = Column(Enum(VideoStatus), server_default=VideoStatus.pending.value)
     expires_at = Column(DateTime) # 12시간 후 만료 (서버에서 입력)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
