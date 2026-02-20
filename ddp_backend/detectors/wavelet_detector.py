@@ -18,18 +18,15 @@ from wavelet_lib.config_type import WaveletConfig
 from wavelet_lib.detectors import DETECTOR
 from wavelet_lib.detectors.base_detector import AbstractDetector, PredDict
 
-from .base_detector import BaseDetector, BaseSetting, Config, ImageConfig
+from .base_detector import BaseVideoConfig, BaseVideoDetector, HasNormalize, ImageInferenceResult
 
 
-class WaveletSetting(BaseSetting):
+class WaveletConfigParam(BaseVideoConfig, HasNormalize):
     model_name: str
     loss_func: str
 
 
-WaveletConfigParam = Config[WaveletSetting]
-
-
-class WaveletDetector(BaseDetector[WaveletSetting]):
+class WaveletDetector(BaseVideoDetector[WaveletConfigParam]):
     @classmethod
     def from_yaml(
         cls,
@@ -44,29 +41,25 @@ class WaveletDetector(BaseDetector[WaveletSetting]):
 
         new_config = WaveletConfigParam(
             model_path=ckpt_path,
-            img_config=ImageConfig(
-                img_size=img_size, mean=model_config["mean"], std=model_config["std"]
-            ),
+            img_size=img_size,
+            mean=model_config["mean"],
+            std=model_config["std"],
             threshold=threshold,
-            specific_config=WaveletSetting(
-                model_name=model_config["model_name"],
-                loss_func=model_config["loss_func"],
-            ),
+            model_name=model_config["model_name"],
+            loss_func=model_config["loss_func"],
         )
         return cls(new_config)
 
     @override
     def load_model(self):
         print(f"Loading on device: {self.device}...")
-        assert self.config.img_config.mean is not None
-        assert self.config.img_config.std is not None
         wavelet_config: WaveletConfig = {
-            "mean": self.config.img_config.mean,
-            "std": self.config.img_config.std,
-            "model_name": self.config.specific_config.model_name,
-            "loss_func": self.config.specific_config.loss_func,
+            "mean": self.config.mean,
+            "std": self.config.std,
+            "model_name": self.config.model_name,
+            "loss_func": self.config.loss_func,
         }
-        self.model: AbstractDetector = DETECTOR[self.config.specific_config.model_name](
+        self.model: AbstractDetector = DETECTOR[self.config.model_name](
             config=wavelet_config
         ).to(self.device)
         ckpt: dict[str, Any] = torch.load(
@@ -127,20 +120,16 @@ class WaveletDetector(BaseDetector[WaveletSetting]):
         return base64.b64encode(buf.read()).decode("utf-8")
 
     @override
-    def analyze(self, vid_path: str | Path) -> tuple[float, str]:
+    async def _analyze(self, vid_path: str | Path) -> ImageInferenceResult:
         all_probs: list[float] = []
         max_prob: float = -1.0
         best_img_for_viz = None
 
-        assert self.config.img_config.mean is not None
-        assert self.config.img_config.std is not None
         transform = v2.Compose(
             [
                 v2.ToImage(),
                 v2.ToDtype(torch.float32),
-                v2.Normalize(
-                    mean=self.config.img_config.mean, std=self.config.img_config.std
-                ),
+                v2.Normalize(mean=self.config.mean, std=self.config.std),
             ]
         )
         print("Starting analyze (wavelet)...")
@@ -167,7 +156,7 @@ class WaveletDetector(BaseDetector[WaveletSetting]):
 
                 resized = cv2.resize(
                     face_crop,
-                    (self.config.img_config.img_size, self.config.img_config.img_size),
+                    (self.config.img_size, self.config.img_size),
                 )
                 processed_img = self.apply_ycbcr_preprocess(resized)
 
@@ -195,4 +184,4 @@ class WaveletDetector(BaseDetector[WaveletSetting]):
         if best_img_for_viz is not None:
             visual_report = self.generate_visual_report(best_img_for_viz, max_prob)
 
-        return float(avg_prob), visual_report
+        return ImageInferenceResult(prob=float(avg_prob), base64_report=visual_report)

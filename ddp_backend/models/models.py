@@ -41,7 +41,7 @@ class User(Base):
     login_method = Column(Enum(LoginMethod), nullable=True)
     hashed_password = Column(String(255)) # 자체 로그인 시에만 사용
     name = Column(String(100), nullable=False)
-    nickname = Column(String(100), nullable=False)
+    nickname = Column(String(100), unique=True, nullable=False)
     birth = Column(Date, nullable=False)
     profile_image = Column(String(500)) # 필요 없을 경우 삭제
     affiliation = Column(Enum(Affiliation), nullable=True)
