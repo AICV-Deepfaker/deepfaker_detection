@@ -1,12 +1,14 @@
+from typing import Literal, Annotated
 import os
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"  # macOS Conda OpenMP 충돌 방지
 
 import subprocess
-import json
 import tempfile
 from pathlib import Path
-from dataclasses import dataclass, field
+from dataclasses import field
 
+import instructor
+from pydantic import BaseModel, Field
 from faster_whisper import WhisperModel
 from groq import Groq
 from tavily import TavilyClient
@@ -22,23 +24,22 @@ SCAM_SEED_KEYWORDS = [
 ]
 
 
-@dataclass
-class PipelineResult:
+class PipelineResult(BaseModel):
     video_path: str
     transcript: str
     detected_keywords: list[str]
-    risk_level: str  # "high" | "medium" | "low" | "none"
+    risk_level: Literal["high", "medium", "low", "none"]  # "high" | "medium" | "low" | "none"
     risk_reason: str
     search_results: list[dict] = field(default_factory=list)
 
 
-def extract_audio(video_path: str) -> str:
+def extract_audio(video_path: str | Path) -> str:
     """ffmpeg으로 비디오에서 오디오(WAV) 추출. 임시파일 경로 반환."""
     tmp = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
     tmp.close()
     subprocess.run(
         [
-            "ffmpeg", "-i", video_path,
+            "ffmpeg", "-i", str(video_path),
             "-vn",                    # 비디오 스트림 제외
             "-acodec", "pcm_s16le",   # 16-bit PCM
             "-ar", "16000",           # 16kHz (Whisper 권장)
@@ -52,17 +53,22 @@ def extract_audio(video_path: str) -> str:
     return tmp.name
 
 
-def transcribe(audio_path: str, model_size: str = "base") -> str:
+def transcribe(audio_path: str | Path, model_size: str = "base") -> str:
     """Faster-Whisper로 음성 → 텍스트 변환 (한국어 우선 감지)."""
     print(f"  [STT] Whisper 모델 로드 중 ({model_size})...")
     model = WhisperModel(model_size, device="cpu", compute_type="int8")
-    segments, info = model.transcribe(audio_path, language="ko", beam_size=5)
+    segments, info = model.transcribe(str(audio_path), language="ko", beam_size=5)
     text = " ".join(seg.text.strip() for seg in segments)
     print(f"  [STT] 언어: {info.language}, 확률: {info.language_probability:.2f}")
     return text
 
+class Keywords(BaseModel):
+    detected_keywords: Annotated[list[str], Field(description="List of detected keywords")]
+    risk_level: Literal['high', 'medium', 'low', 'none']
+    reason: Annotated[str, Field(description="위험 판단 근거 한 줄 설명")]
 
-def extract_keywords_with_groq(transcript: str, client: Groq, model: str = "llama-3.3-70b-versatile") -> dict:
+
+def extract_keywords_with_groq(transcript: str, client: Groq, model: str = "llama-3.3-70b-versatile") -> Keywords:
     """Groq LLM으로 텍스트에서 사기 관련 키워드 및 위험도 추출."""
     seed_str = ", ".join(SCAM_SEED_KEYWORDS)
 
@@ -71,25 +77,17 @@ def extract_keywords_with_groq(transcript: str, client: Groq, model: str = "llam
         "키워드를 추출하고 위험도를 평가해주세요.\n\n"
         f"참고 키워드 목록: {seed_str}\n\n"
         f"분석할 텍스트:\n{transcript}\n\n"
-        "아래 JSON 형식으로만 응답해주세요 (설명 없이 JSON만):\n"
-        "{\n"
-        '  "detected_keywords": ["키워드1", "키워드2"],\n'
-        '  "risk_level": "high|medium|low|none",\n'
-        '  "reason": "위험 판단 근거 한 줄 설명"\n'
-        "}"
     )
+    instruct_client = instructor.from_provider(f'groq/{model}', async_client=False, api_key=client.api_key)
 
-    completion = client.chat.completions.create(
-        model=model,
+    completion = instruct_client.create(
         messages=[{"role": "user", "content": prompt}],
+        response_model=Keywords
     )
-    raw = completion.choices[0].message.content
-    start = raw.find("{")
-    end = raw.rfind("}") + 1
-    return json.loads(raw[start:end])
+    return completion
 
 
-def search_latest_cases(keywords: list[str], tavily_client: TavilyClient) -> list[dict]:
+def search_latest_cases(keywords: list[str], tavily_client: TavilyClient) -> list[dict[str, str]]:
     """Tavily로 키워드별 최신 사기 사례 검색."""
     results = []
     for kw in keywords[:3]:  # 상위 3개 키워드만 검색
@@ -131,13 +129,13 @@ def run_pipeline(video_path: str, whisper_model: str = "base") -> PipelineResult
 
         print("[3/4] Groq로 키워드 및 위험도 분석")
         kw_result = extract_keywords_with_groq(transcript, groq_client)
-        print(f"  감지 키워드: {kw_result['detected_keywords']}")
-        print(f"  위험도: {kw_result['risk_level']} — {kw_result['reason']}")
+        print(f"  감지 키워드: {kw_result.detected_keywords}")
+        print(f"  위험도: {kw_result.risk_level} — {kw_result.reason}")
 
         search_results = []
-        if kw_result["detected_keywords"] and kw_result["risk_level"] != "none":
+        if kw_result.detected_keywords and kw_result.risk_level != "none":
             print("[4/4] Tavily로 최신 사례 검색")
-            search_results = search_latest_cases(kw_result["detected_keywords"], tavily)
+            search_results = search_latest_cases(kw_result.detected_keywords, tavily)
         else:
             print("[4/4] 사기 관련 키워드 없음 → 검색 생략")
 
@@ -147,8 +145,8 @@ def run_pipeline(video_path: str, whisper_model: str = "base") -> PipelineResult
     return PipelineResult(
         video_path=video_path,
         transcript=transcript,
-        detected_keywords=kw_result["detected_keywords"],
-        risk_level=kw_result["risk_level"],
-        risk_reason=kw_result["reason"],
+        detected_keywords=kw_result.detected_keywords,
+        risk_level=kw_result.risk_level,
+        risk_reason=kw_result.reason,
         search_results=search_results,
     )
