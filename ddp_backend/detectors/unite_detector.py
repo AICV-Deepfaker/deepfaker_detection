@@ -9,7 +9,7 @@ from torch.utils.data import DataLoader
 from unite_detection.dataset import CustomVideoDataset
 from unite_detection.schemas import ArchSchema, DatasetConfig
 
-from .base_detector import BaseVideoConfig, BaseVideoDetector, ImageResult
+from .base_detector import BaseVideoConfig, BaseVideoDetector, ImageInferenceResult
 
 
 class UniteDetector(BaseVideoDetector[BaseVideoConfig]):
@@ -28,7 +28,7 @@ class UniteDetector(BaseVideoDetector[BaseVideoConfig]):
         return e_x / e_x.sum()
 
     @override
-    async def _analyze(self, vid_path: str | Path) -> ImageResult:
+    async def _analyze(self, vid_path: str | Path) -> ImageInferenceResult:
         vid_dataset = CustomVideoDataset(
             [vid_path],
             config=DatasetConfig(arch=ArchSchema(img_size=self.config.img_size)),
@@ -37,11 +37,11 @@ class UniteDetector(BaseVideoDetector[BaseVideoConfig]):
         result_prob: list[float] = []
         for batch in loader:
             x, _ = cast(tuple[Tensor, Tensor], batch)
-            input_np: np.ndarray = cast(np.ndarray, x.detach().cpu().numpy())
+            input_np: np.ndarray = x.detach().cpu().numpy()
             output = self.session.run([self.output_name], {self.input_name: input_np})
             output = cast(Sequence[np.ndarray], output)
             cur_prob: float = self.softmax(output[0])[0][1].item()
             result_prob.append(cur_prob)
         max_prob = max(result_prob)
         # currently no visual output
-        return ImageResult(prob=max_prob, base64_report="")
+        return ImageInferenceResult(prob=max_prob, base64_report="")

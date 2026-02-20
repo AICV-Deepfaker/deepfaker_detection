@@ -17,18 +17,18 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # 사기 관련 탐지 키워드 seed
-SCAM_SEED_KEYWORDS = [
+SCAM_SEED_KEYWORDS:list[str] = [
     "투자", "도박", "코인", "대출", "송금", "수익", "이자", "원금 보장",
     "비트코인", "이더리움", "선물", "레버리지", "리딩방", "고수익",
     "불법", "사기", "피싱", "보이스피싱", "로또", "환전", "계좌이체",
 ]
 
-
+type RiskLevel = Literal['high', 'medium', 'low', 'none']
 class STTPipelineResult(BaseModel):
     video_path: str
     transcript: str
     detected_keywords: list[str]
-    risk_level: Literal["high", "medium", "low", "none"]  # "high" | "medium" | "low" | "none"
+    risk_level: RiskLevel
     risk_reason: str
     search_results: list[dict[str, str]] = field(default_factory=list)
 
@@ -64,7 +64,7 @@ def transcribe(audio_path: str | Path, model_size: str = "base") -> str:
 
 class Keywords(BaseModel):
     detected_keywords: Annotated[list[str], Field(description="List of detected keywords")]
-    risk_level: Literal['high', 'medium', 'low', 'none']
+    risk_level: RiskLevel
     reason: Annotated[str, Field(description="위험 판단 근거 한 줄 설명")]
 
 

@@ -4,6 +4,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
+from typing import Protocol, runtime_checkable, cast
 
 import cv2
 import torch
@@ -23,16 +24,26 @@ class HasNormalize(BaseModel):
     std: tuple[float, float, float]
 
 
-class ImageResult(BaseModel):
+class ImageInferenceResult(BaseModel):
     prob: float
     base64_report: str
 
+class VideoReport(BaseModel):
+    result: str
+    average_fake_prob: float
+    confidence_score: str
+    visual_report: str
 
 class BaseVideoConfig(HasPath, HasThreshold):
     img_size: int
+    
+
+@runtime_checkable
+class Scorable(Protocol):
+    prob: float
 
 
-class BaseDetector[Result: BaseModel, Config: BaseModel](ABC):
+class BaseDetector[Config: BaseModel, Report: BaseModel](ABC):
     def __init__(self, config: Config):
         self.config = config
 
@@ -41,15 +52,15 @@ class BaseDetector[Result: BaseModel, Config: BaseModel](ABC):
         pass
 
     @abstractmethod
-    async def _analyze(self, vid_path: str | Path) -> Result:
+    async def _analyze(self, vid_path: str | Path) -> BaseModel:
         pass
 
     @abstractmethod
-    async def analyze(self, vid_path: str | Path) -> dict:
+    async def analyze(self, vid_path: str | Path) -> Report:
         pass
 
 
-class BaseVideoDetector[C: BaseVideoConfig](BaseDetector[ImageResult, C]):
+class BaseVideoDetector[C: BaseVideoConfig](BaseDetector[C, VideoReport]):
     def __init__(self, config: C):
         super().__init__(config)
         self.device: torch.device = torch.device(
@@ -70,17 +81,17 @@ class BaseVideoDetector[C: BaseVideoConfig](BaseDetector[ImageResult, C]):
             if cap is not None:
                 cap.release()
 
-    async def analyze(self, vid_path: str | Path) -> dict:
-        analyze_res = await self._analyze(vid_path)
+    async def analyze(self, vid_path: str | Path) -> VideoReport:
+        analyze_res = cast(ImageInferenceResult, await self._analyze(vid_path))
 
         res = "FAKE" if analyze_res.prob > 0.5 else "REAL"
         confidence = (
             analyze_res.prob if analyze_res.prob > 0.5 else 1 - analyze_res.prob
         )
 
-        return {
-            "result": res,
-            "average_fake_prob": round(analyze_res.prob, 4),
-            "confidence_score": f"{round(confidence * 100, 2)}%",
-            "visual_report": analyze_res.base64_report,
-        }
+        return VideoReport(
+            result=res,
+            average_fake_prob=round(analyze_res.prob, 4),
+            confidence_score=f"{round(confidence * 100, 2)}",
+            visual_report=analyze_res.base64_report,
+        )

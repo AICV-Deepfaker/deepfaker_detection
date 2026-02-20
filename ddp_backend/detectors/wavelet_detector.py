@@ -18,7 +18,7 @@ from wavelet_lib.config_type import WaveletConfig
 from wavelet_lib.detectors import DETECTOR
 from wavelet_lib.detectors.base_detector import AbstractDetector, PredDict
 
-from .base_detector import BaseVideoConfig, BaseVideoDetector, HasNormalize, ImageResult
+from .base_detector import BaseVideoConfig, BaseVideoDetector, HasNormalize, ImageInferenceResult
 
 
 class WaveletConfigParam(BaseVideoConfig, HasNormalize):
@@ -120,7 +120,7 @@ class WaveletDetector(BaseVideoDetector[WaveletConfigParam]):
         return base64.b64encode(buf.read()).decode("utf-8")
 
     @override
-    async def _analyze(self, vid_path: str | Path) -> ImageResult:
+    async def _analyze(self, vid_path: str | Path) -> ImageInferenceResult:
         all_probs: list[float] = []
         max_prob: float = -1.0
         best_img_for_viz = None
@@ -184,4 +184,4 @@ class WaveletDetector(BaseVideoDetector[WaveletConfigParam]):
         if best_img_for_viz is not None:
             visual_report = self.generate_visual_report(best_img_for_viz, max_prob)
 
-        return ImageResult(prob=float(avg_prob), base64_report=visual_report)
+        return ImageInferenceResult(prob=float(avg_prob), base64_report=visual_report)

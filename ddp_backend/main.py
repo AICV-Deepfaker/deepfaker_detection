@@ -1,10 +1,11 @@
+from pydantic import BaseModel
 from typing import Literal
 from contextlib import asynccontextmanager
 import os
 import shutil
 import sys
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Any
 
 import torch
 import uvicorn
@@ -16,7 +17,7 @@ from pyngrok import ngrok
 
 from detectors.wavelet_detector import WaveletDetector
 from detectors.unite_detector import UniteDetector
-from detectors.base_detector import BaseVideoConfig, BaseDetector
+from detectors.base_detector import BaseVideoConfig, BaseDetector, Scorable
 from detectors.stt_detector import STTDetector
 
 # ==========================================
@@ -65,7 +66,7 @@ unite_detector = UniteDetector(
 # WaveletDetector (증거수집모드 / fast)
 wavelet_detector = WaveletDetector.from_yaml(DETECTOR_YAML, IMG_SIZE, CKPT_PATH)
 
-detectors: dict[str, BaseDetector] = {
+detectors: dict[str, BaseDetector[Any, BaseModel]] = {
     "UNITE": unite_detector,
     "wavelet": wavelet_detector,
     "STT": STTDetector(),
@@ -110,19 +111,31 @@ async def predict_deepfake(
 ):
     temp_path = f"temp_{file.filename}"
     model_names: dict[str, list[str]] = {"deep": ["UNITE"], "fast": ["wavelet", "STT"]}
+    probs: list[float] = []
     try:
-        total_response: dict[str, dict] = {}
+        total_response: dict[str, str | float | dict] = {}
         with open(temp_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
         for next_model in model_names[mode]:
             model = detectors[next_model]
 
-            # ── 증거수집모드: WaveletDetector ──────────────────────
-            response = await model.analyze(temp_path)
+            report = await model.analyze(temp_path)
+            response = report.model_dump()
+            if isinstance(report, Scorable):
+                probs.append(report.prob)
             response["status"] = "success"
-            response["analysis_mode"] = mode
             response["model_name"] = next_model
             total_response[next_model] = response
+        
+        avg_prob = sum(probs) / len(probs)
+        confidence = (
+            avg_prob if avg_prob > 0.5 else 1 - avg_prob
+        )
+        total_response["status"] = "success"
+        total_response["result"] = "FAKE" if avg_prob > 0.5 else "REAL"
+        total_response["avg_fake_prob"] = round(avg_prob, 4)
+        total_response["confidence_score"] = f"{round(confidence * 100, 2)}%"
+        total_response["analysis_mode"] = mode
 
         return total_response
     except Exception as e:
