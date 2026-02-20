@@ -26,6 +26,3 @@ dependencies = [
     "wavelet-clip",
 ]
 
-[tool.uv.sources]
-wavelet-clip = { workspace = true, editable = true }
-unite-detection = { workspace = true }

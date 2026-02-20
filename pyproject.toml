@@ -20,6 +20,7 @@ members=[
     "Wavelet-CLIP",
     "ddp_backend",
     "unite_detection",
+    "STT",
 ]
 
 [tool.uv.sources]
@@ -30,7 +31,9 @@ torchvision = [
   { index = "pytorch-cu128", marker = "sys_platform == 'linux'" },
 ]
 clip = { git = "https://github.com/openai/CLIP.git" }
-wavelet-clip = { workspace = true }
+wavelet-clip = { workspace = true, editable = true }
+unite-detection = { workspace = true, editable = true }
+stt = { workspace = true, editable = true }
 
 [[tool.uv.index]]
 name = "pytorch-cu128"
