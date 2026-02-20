@@ -9,7 +9,7 @@ import argparse
 import json
 from pathlib import Path
 
-from .pipeline import run_pipeline
+from stt import run_pipeline
 
 
 def print_result(result) -> None:
