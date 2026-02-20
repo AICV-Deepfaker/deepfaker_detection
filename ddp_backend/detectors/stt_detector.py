@@ -1,10 +1,15 @@
 from pathlib import Path
 
+from pydantic import BaseModel
+from stt import SCAM_SEED_KEYWORDS, STTPipelineResult, run_pipeline
+
 from .base_detector import BaseDetector
-from stt import run_pipeline, SCAM_SEED_KEYWORDS, STTPipelineResult
 
 
-class STTDetector(BaseDetector[STTPipelineResult]):
+class STTDetector(BaseDetector[STTPipelineResult, BaseModel]):
+    def __init__(self):
+        super().__init__(BaseModel())
+
     def load_model(self):
         pass
 
@@ -16,8 +21,7 @@ class STTDetector(BaseDetector[STTPipelineResult]):
         detected_set = set(result.detected_keywords)
         # 시드 키워드 전체를 detected 여부와 함께 반환
         stt_keywords = [
-            {"keyword": kw, "detected": kw in detected_set}
-            for kw in SCAM_SEED_KEYWORDS
+            {"keyword": kw, "detected": kw in detected_set} for kw in SCAM_SEED_KEYWORDS
         ]
         # 시드에 없는 감지 키워드도 추가
         for kw in result.detected_keywords:

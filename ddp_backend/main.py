@@ -16,7 +16,7 @@ from pyngrok import ngrok
 
 from detectors.wavelet_detector import WaveletDetector
 from detectors.unite_detector import UniteDetector
-from detectors.base_detector import Config, BaseDetector
+from detectors.base_detector import BaseVideoConfig, BaseDetector
 from detectors.stt_detector import STTDetector
 
 # ==========================================
@@ -38,8 +38,10 @@ load_dotenv(_STT_DIR / ".env")
 
 _VIDEO_EXTENSIONS = {".mp4", ".avi", ".mov", ".mkv", ".wmv", ".flv", ".webm", ".m4v"}
 
+
 def _is_video(filename: str) -> bool:
     return Path(filename).suffix.lower() in _VIDEO_EXTENSIONS
+
 
 # 서버가 시작될 때 테이블이 없으면 자동 생성 (JPA의 ddl-auto 같은 역할)
 # Base.metadata.create_all(bind=engine)
@@ -53,9 +55,12 @@ IMG_SIZE = 224
 NGROK_AUTH_TOKEN = os.environ.get("NGROK_AUTH_TOKEN", "")
 
 # UniteDetector (정밀탐지모드 / deep)
-unite_detector = UniteDetector(Config(
-    model_path="./unite_baseline.onnx",
-))
+unite_detector = UniteDetector(
+    BaseVideoConfig(
+        model_path="./unite_baseline.onnx",
+        img_size=384,
+    )
+)
 
 # WaveletDetector (증거수집모드 / fast)
 wavelet_detector = WaveletDetector.from_yaml(DETECTOR_YAML, IMG_SIZE, CKPT_PATH)
@@ -63,8 +68,9 @@ wavelet_detector = WaveletDetector.from_yaml(DETECTOR_YAML, IMG_SIZE, CKPT_PATH)
 detectors: dict[str, BaseDetector] = {
     "UNITE": unite_detector,
     "wavelet": wavelet_detector,
-    'STT': STTDetector(),
-    }
+    "STT": STTDetector(),
+}
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):  # pyright: ignore[reportUnusedParameter]
@@ -83,7 +89,7 @@ async def lifespan(app: FastAPI):  # pyright: ignore[reportUnusedParameter]
     print("🚀 FastAPI 서버를 시작합니다 (Port: 8000)...")
 
     yield
-    
+
     # [Shutdown] 서버 종료 시 실행
     if public_url:
         print("\n🛠️ ngrok 터널을 종료 중입니다...")
@@ -91,23 +97,21 @@ async def lifespan(app: FastAPI):  # pyright: ignore[reportUnusedParameter]
         ngrok.kill()
         print("✅ ngrok이 종료되었습니다.")
 
+
 app = FastAPI(lifespan=lifespan)
-
-
 
 
 # ==========================================
 # API 경로
 # ==========================================
 @app.post("/predict/{mode}")
-async def predict_deepfake(file: Annotated[UploadFile, File(...)], mode: Literal['deep', 'fast'] = 'fast'):
+async def predict_deepfake(
+    file: Annotated[UploadFile, File(...)], mode: Literal["deep", "fast"] = "fast"
+):
     temp_path = f"temp_{file.filename}"
-    model_names: dict[str, list[str]] = {
-        'deep': ['UNITE'],
-        'fast': ['wavelet', 'STT']
-    }
+    model_names: dict[str, list[str]] = {"deep": ["UNITE"], "fast": ["wavelet", "STT"]}
     try:
-        total_response:dict[str, dict] = {}
+        total_response: dict[str, dict] = {}
         with open(temp_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
         for next_model in model_names[mode]:
@@ -115,9 +119,9 @@ async def predict_deepfake(file: Annotated[UploadFile, File(...)], mode: Literal
 
             # ── 증거수집모드: WaveletDetector ──────────────────────
             response = await model.analyze(temp_path)
-            response['status'] = 'success'
-            response['analysis_mode'] = mode
-            response['model_name'] = next_model
+            response["status"] = "success"
+            response["analysis_mode"] = mode
+            response["model_name"] = next_model
             total_response[next_model] = response
 
         return total_response
