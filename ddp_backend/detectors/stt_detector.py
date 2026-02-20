@@ -8,11 +8,11 @@ class STTDetector(BaseDetector[STTPipelineResult]):
     def load_model(self):
         pass
 
-    async def _analyze(self, video_path: str | Path) -> STTPipelineResult:
-        return await run_pipeline(video_path)
+    async def _analyze(self, vid_path: str | Path) -> STTPipelineResult:
+        return await run_pipeline(str(vid_path))
 
-    async def analyze(self, video_path: str | Path) -> dict:
-        result = await self._analyze()
+    async def analyze(self, vid_path: str | Path) -> dict:
+        result = await self._analyze(vid_path)
         detected_set = set(result.detected_keywords)
         # 시드 키워드 전체를 detected 여부와 함께 반환
         stt_keywords = [

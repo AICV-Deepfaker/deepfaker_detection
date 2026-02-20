@@ -62,7 +62,7 @@ class BaseVideoDetector[S: BaseSetting](BaseDetector[ImageResult]):
                 cap.release()
 
     async def analyze(self, vid_path: str | Path) -> dict:
-        analyze_res = self._analyze(vid_path)
+        analyze_res = await self._analyze(vid_path)
 
         res = "FAKE" if analyze_res.prob > 0.5 else "REAL"
         confidence = analyze_res.prob if analyze_res.prob > 0.5 else 1 - analyze_res.prob
