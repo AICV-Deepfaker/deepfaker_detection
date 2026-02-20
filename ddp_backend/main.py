@@ -36,7 +36,7 @@ sys.path.insert(0, str(_STT_DIR))
 load_dotenv(_STT_DIR / ".env")
 
 try:
-    from pipeline import run_pipeline as _run_pipeline, SCAM_SEED_KEYWORDS as _SCAM_SEED_KEYWORDS
+    from stt import run_pipeline as _run_pipeline, SCAM_SEED_KEYWORDS as _SCAM_SEED_KEYWORDS
     STT_AVAILABLE = True
 except ImportError as _e:
     STT_AVAILABLE = False

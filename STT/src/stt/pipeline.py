@@ -30,7 +30,7 @@ class PipelineResult(BaseModel):
     detected_keywords: list[str]
     risk_level: Literal["high", "medium", "low", "none"]  # "high" | "medium" | "low" | "none"
     risk_reason: str
-    search_results: list[dict] = field(default_factory=list)
+    search_results: list[dict[str, str]] = field(default_factory=list)
 
 
 def extract_audio(video_path: str | Path) -> str:
