@@ -70,7 +70,7 @@ def main():
         print(f"오류: 파일을 찾을 수 없습니다 — {video_path}")
         return
 
-    result = run_pipeline(str(video_path), whisper_model=args.model)
+    result = await run_pipeline(str(video_path), whisper_model=args.model)
     print_result(result)
 
     if args.output:

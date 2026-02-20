@@ -7,10 +7,10 @@ from torch import Tensor
 from torch.utils.data import DataLoader
 from unite_detection.dataset import CustomVideoDataset
 
-from .base_detector import BaseDetector, BaseSetting
+from .base_detector import BaseVideoDetector, BaseSetting, ImageResult
 
-
-class UniteDetector(BaseDetector[BaseSetting]):
+    
+class UniteDetector(BaseVideoDetector[BaseSetting]):
     @override
     def load_model(self):
         self.session = ort.InferenceSession(
@@ -26,7 +26,7 @@ class UniteDetector(BaseDetector[BaseSetting]):
         return e_x / e_x.sum()
 
     @override
-    def analyze(self, vid_path: str | Path) -> tuple[float, str]:
+    async def _analyze(self, vid_path: str | Path) -> ImageResult:
         vid_dataset = CustomVideoDataset([vid_path])
         loader = DataLoader(vid_dataset, batch_size=1, num_workers=0)
         result_prob: list[float] = []
@@ -40,4 +40,4 @@ class UniteDetector(BaseDetector[BaseSetting]):
             result_prob.append(cur_prob)
         max_prob = max(result_prob)
         # currently no visual output
-        return max_prob, ""
+        return ImageResult(prob=max_prob, base64_report="")

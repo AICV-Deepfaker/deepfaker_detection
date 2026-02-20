@@ -16,9 +16,9 @@ from pydantic import TypeAdapter
 from torchvision.transforms import v2
 from wavelet_lib.config_type import WaveletConfig
 from wavelet_lib.detectors import DETECTOR
-from wavelet_lib.detectors.base_detector import AbstractDetector, PredDict
+from wavelet_lib.detectors.base_detector import AbstractDetector, PredDict 
 
-from .base_detector import BaseDetector, BaseSetting, Config, ImageConfig
+from .base_detector import BaseVideoDetector, BaseSetting, Config, ImageConfig, ImageResult
 
 
 class WaveletSetting(BaseSetting):
@@ -29,7 +29,7 @@ class WaveletSetting(BaseSetting):
 WaveletConfigParam = Config[WaveletSetting]
 
 
-class WaveletDetector(BaseDetector[WaveletSetting]):
+class WaveletDetector(BaseVideoDetector[WaveletSetting]):
     @classmethod
     def from_yaml(
         cls,
@@ -58,8 +58,10 @@ class WaveletDetector(BaseDetector[WaveletSetting]):
     @override
     def load_model(self):
         print(f"Loading on device: {self.device}...")
+        assert self.config.img_config is not None
         assert self.config.img_config.mean is not None
         assert self.config.img_config.std is not None
+        assert self.config.specific_config is not None
         wavelet_config: WaveletConfig = {
             "mean": self.config.img_config.mean,
             "std": self.config.img_config.std,
@@ -127,11 +129,12 @@ class WaveletDetector(BaseDetector[WaveletSetting]):
         return base64.b64encode(buf.read()).decode("utf-8")
 
     @override
-    def analyze(self, vid_path: str | Path) -> tuple[float, str]:
+    async def _analyze(self, vid_path: str | Path) -> ImageResult:
         all_probs: list[float] = []
         max_prob: float = -1.0
         best_img_for_viz = None
 
+        assert self.config.img_config is not None
         assert self.config.img_config.mean is not None
         assert self.config.img_config.std is not None
         transform = v2.Compose(
@@ -195,4 +198,4 @@ class WaveletDetector(BaseDetector[WaveletSetting]):
         if best_img_for_viz is not None:
             visual_report = self.generate_visual_report(best_img_for_viz, max_prob)
 
-        return float(avg_prob), visual_report
+        return ImageResult(prob=float(avg_prob), base64_report=visual_report)
