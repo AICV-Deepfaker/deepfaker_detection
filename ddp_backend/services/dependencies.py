@@ -1,3 +1,7 @@
+"""
+Singleton variables used across files
+"""
+
 from ddp_backend.detectors.audio import STTDetector
 from ddp_backend.detectors.visual import RPPGDetector, UniteDetector, WaveletDetector
 from ddp_backend.schemas import BaseVideoConfig
