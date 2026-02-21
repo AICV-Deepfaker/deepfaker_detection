@@ -33,7 +33,7 @@ class UniteDetector(BaseVideoDetector[BaseVideoConfig]):
         return e_x / e_x.sum()
 
     @override
-    async def _analyze(self, vid_path: str | Path) -> VideoInferenceResult:
+    def _analyze(self, vid_path: str | Path) -> VideoInferenceResult:
         vid_dataset = CustomVideoDataset(
             [vid_path],
             config=DatasetConfig(arch=ArchSchema(img_size=self.config.img_size)),

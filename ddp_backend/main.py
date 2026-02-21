@@ -45,7 +45,6 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 NGROK_AUTH_TOKEN = os.environ.get("NGROK_AUTH_TOKEN", "")
 
-# UniteDetector (정밀탐지모드 / deep)
 @asynccontextmanager
 async def lifespan(app: FastAPI):  # pyright: ignore[reportUnusedParameter]
     load_all_model()

@@ -12,12 +12,12 @@ class VisualDetector(ABC):
         pass
 
     @abstractmethod
-    async def analyze(self, vid_path: str | Path) -> VideoReport:
+    def analyze(self, vid_path: str | Path) -> VideoReport:
         pass
 
 class AudioAnalyzer(ABC):
     model_name: ClassVar[ModelName]
 
     @abstractmethod
-    async def analyze(self, vid_path: str | Path) -> STTReport:
+    def analyze(self, vid_path: str | Path) -> STTReport:
         pass

@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-import asyncio
 import shutil
 from abc import abstractmethod
 from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
+import subprocess
 
 import cv2
 import torch
@@ -45,7 +45,7 @@ class BaseVideoDetector[C: BaseVideoConfig](VisualDetector):
             if cap is not None:
                 cap.release()
 
-    async def set_fps(
+    def set_fps(
         self, vid_src: str | Path, vid_dest: str | Path, target_fps: int = 30
     ):
         # 1. 현재 FPS 확인 (OpenCV 활용)
@@ -75,28 +75,29 @@ class BaseVideoDetector[C: BaseVideoConfig](VisualDetector):
             str(vid_dest),
         ]
 
-        # 3. 비동기 서브프로세스 실행
-        process = await asyncio.create_subprocess_exec(
-            *cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
+        # 3. 동기 서브프로세스 실행
+        result = subprocess.run(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True  # 이 설정을 통해 stderr를 바이트가 아닌 문자열로 바로 받습니다.
         )
 
-        # 실행 완료 대기 및 로그 캡처
-        _, stderr = await process.communicate()
-
-        if process.returncode != 0:
-            error_msg = stderr.decode().strip()
+        # 실행 완료 후 리턴코드 확인
+        if result.returncode != 0:
+            error_msg = result.stderr.strip()
             raise RuntimeError(
-                f"FFMPEG failed with return code {process.returncode}: {error_msg}"
+                f"FFMPEG failed with returncode {result.returncode}: {error_msg}"
             )
 
     @abstractmethod
-    async def _analyze(self, vid_path: str | Path) -> VideoInferenceResult:
+    def _analyze(self, vid_path: str | Path) -> VideoInferenceResult:
         pass
 
-    async def analyze(self, vid_path: str | Path) -> VideoReport:
+    def analyze(self, vid_path: str | Path) -> VideoReport:
         vid_path = Path(vid_path)
-        await self.set_fps(vid_path, vid_path.with_stem(f"resize_{vid_path.stem}"))
-        analyze_res = await self._analyze(vid_path)
+        self.set_fps(vid_path, vid_path.with_stem(f"resize_{vid_path.stem}"))
+        analyze_res = self._analyze(vid_path)
 
         res = Result.FAKE if analyze_res.prob > 0.5 else Result.REAL
 

@@ -126,7 +126,7 @@ class WaveletDetector(BaseVideoDetector[WaveletConfigParam]):
         return base64.b64encode(buf.read()).decode("utf-8")
 
     @override
-    async def _analyze(self, vid_path: str | Path) -> VideoInferenceResult:
+    def _analyze(self, vid_path: str | Path) -> VideoInferenceResult:
         all_probs: list[float] = []
         max_prob: float = -1.0
         best_img_for_viz = None

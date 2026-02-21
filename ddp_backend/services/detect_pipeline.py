@@ -28,11 +28,11 @@ class DetectionPipeline:
         self.wavelet_detector.load_model()
         self.r_ppg_detector.load_model()
 
-    async def run_fast_mode(self, file_path: Path) -> APIOutputFast:
+    def run_fast_mode(self, file_path: Path) -> APIOutputFast:
         try:
-            wavelet_report = await self.wavelet_detector.analyze(file_path)
-            r_ppg_report = await self.r_ppg_detector.analyze(file_path)
-            stt_report = await self.stt_detector.analyze(file_path)
+            wavelet_report = self.wavelet_detector.analyze(file_path)
+            r_ppg_report = self.r_ppg_detector.analyze(file_path)
+            stt_report = self.stt_detector.analyze(file_path)
 
             return APIOutputFast(
                 status=Status.SUCCESS,
@@ -48,9 +48,9 @@ class DetectionPipeline:
                 analysis_mode=AnalyzeMode.FAST,
             )
 
-    async def run_deep_mode(self, file_path: Path) -> APIOutputDeep:
+    def run_deep_mode(self, file_path: Path) -> APIOutputDeep:
         try:
-            unite_report = await self.unite_detector.analyze(file_path)
+            unite_report = self.unite_detector.analyze(file_path)
             return APIOutputDeep(
                 status=Status.SUCCESS,
                 analysis_mode=AnalyzeMode.DEEP,

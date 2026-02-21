@@ -12,8 +12,8 @@ class STTDetector(AudioAnalyzer):
     model_name = ModelName.STT
 
     @override
-    async def analyze(self, vid_path: str | Path) -> STTReport:
-        result = await run_pipeline(str(vid_path))
+    def analyze(self, vid_path: str | Path) -> STTReport:
+        result = run_pipeline(str(vid_path))
         detected_set = set(result.detected_keywords)
         # 시드 키워드 전체를 detected 여부와 함께 반환
         stt_keywords: list[dict[str, str | bool]] = [
