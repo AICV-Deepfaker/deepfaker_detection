@@ -9,8 +9,8 @@ import enum
 
 # 1. Definition of Enum 
 class LoginMethod(str, enum.Enum):
-    local = "Local"
-    google = "Google"
+    local = "local"
+    google = "google"
 
 class Affiliation(str, enum.Enum):
     ind = "개인"
@@ -24,13 +24,13 @@ class VideoStatus(str, enum.Enum): # 필요하지 않을 경우 삭제
     failed = "failed"
 
 class OriginPath(str, enum.Enum):
-    link = "Link"
-    upload = "Upload"
+    link = "link"
+    upload = "upload"
 
 class DetectionResult(str, enum.Enum):
-    real = "Real"
-    fake = "Fake"
-    unknown = "Unknown" # 필요하지 않을 경우 삭제
+    real = "real"
+    fake = "fake"
+    unknown = "unknown" # 필요하지 않을 경우 삭제
 
 
 # 2. User table
