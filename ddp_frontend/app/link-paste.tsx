@@ -15,9 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import {
-  peekPendingImageUri,
   peekPendingVideoUri,
-  setPendingImageUri,
   setPendingVideoUri,
 } from '@/lib/pending-upload';
 
@@ -49,7 +47,7 @@ const PLATFORMS: { id: PlatformId; label: string }[] = [
 function detectPlatformFromUrl(url: string): PlatformId | null {
   const lower = url.toLowerCase().trim();
   if (!lower) return null;
-  if (lower.includes('youtube.com') || lower.includes('youtu.be')) return 'youtube';
+  if (lower.includes('youtube.com') || lower.includes('youtube')) return 'youtube';
   if (lower.includes('instagram.com')) return 'instagram';
   if (lower.includes('twitter.com') || lower.includes('x.com')) return 'twitter';
   if (lower.includes('tiktok.com')) return 'tiktok';
@@ -176,14 +174,6 @@ export default function LinkPasteScreen() {
           <TouchableOpacity style={styles.uploadButton} activeOpacity={0.8} onPress={pickImage}>
             <Image
               source={require('@/assets/images/image_icon.png')}
-              style={styles.uploadIconImage}
-              contentFit="contain"
-            />
-            <ThemedText style={styles.uploadLabel}>이미지 업로드</ThemedText>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.uploadButton} activeOpacity={0.8} onPress={pickVideo}>
-            <Image
-              source={require('@/assets/images/video_icon.png')}
               style={styles.uploadIconImage}
               contentFit="contain"
             />
@@ -323,14 +313,14 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     borderWidth: 1,
     borderColor: 'rgba(0,0,0,0.08)',
-    paddingVertical: 20,
+    paddingVertical: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },
   uploadIconImage: {
-    width: 70,
-    height: 70,
-    marginBottom: 5,
+    width: 60,
+    height: 60,
+    marginBottom: 4,
   },
   uploadLabel: {
     fontSize: 14,

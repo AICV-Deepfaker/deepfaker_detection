@@ -19,8 +19,8 @@ import * as Sharing from 'expo-sharing';
 
 import { ThemedText } from '@/components/themed-text';
 import { useAnalysis } from '@/contexts/analysis-context';
-import { predictWithFile, predictWithImageFile, type PredictMode, type PredictResult, type SttSearchResult } from '@/lib/api';
-import { takePendingImageUri, takePendingVideoUri } from '@/lib/pending-upload';
+import { predictWithFile, type PredictMode, type PredictResult, type SttSearchResult } from '@/lib/api';
+import { takePendingVideoUri } from '@/lib/pending-upload';
 
 const ACCENT_GREEN = '#00CF90';
 const ACCENT_GREEN_DARK = '#00B87A';
@@ -208,16 +208,12 @@ export default function AnalysisResultScreen() {
   const viewShotRef = useRef<ViewShot>(null);
 
   // ✅ pending uri는 "한 번만" 가져오도록 ref에 고정 (렌더마다 바뀌면 꼬임)
-  const initialMediaRef = useRef<{ uri: string; type: 'image' | 'video' } | null>(null);
-  if (initialMediaRef.current === null) {
-    const img = takePendingImageUri();
-    const vid = takePendingVideoUri();
-    if (img) initialMediaRef.current = { uri: img, type: 'image' };
-    else if (vid) initialMediaRef.current = { uri: vid, type: 'video' };
+  const initialVideoRef = useRef<string | null>(null);
+  if (initialVideoRef.current === null) {
+    initialVideoRef.current = takePendingVideoUri();
   }
 
-  const mediaUri = initialMediaRef.current?.uri ?? null;
-  const mediaType = initialMediaRef.current?.type ?? 'video';
+  const mediaUri = initialVideoRef.current ?? null;
 
   const runAnalysis = useCallback(async () => {
     if (!mediaUri) {
@@ -230,10 +226,7 @@ export default function AnalysisResultScreen() {
     setError(null);
 
     try {
-      const res =
-        mediaType === 'image'
-          ? await predictWithImageFile(mediaUri, mode)
-          : await predictWithFile(mediaUri, mode);
+      const res = await predictWithFile(mediaUri, mode);
 
       if (res.status === 'error') {
         setError(res.message ?? '분석 실패');
@@ -245,7 +238,7 @@ export default function AnalysisResultScreen() {
 
       // ✅ 히스토리에 저장하고, 바로 상세로 이동
       const newId = addToHistory(
-        mediaType === 'image' ? '이미지 파일' : '영상 파일',
+        '영상 파일',
         formatResultText(res),
         res.result,
         res.visual_report
@@ -269,7 +262,7 @@ export default function AnalysisResultScreen() {
     } finally {
       setLoading(false);
     }
-  }, [mediaUri, mediaType, mode, addToHistory]);
+  }, [mediaUri, mode, addToHistory]);
 
   useEffect(() => {
     runAnalysis();
