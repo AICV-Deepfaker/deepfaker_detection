@@ -2,8 +2,7 @@
 # Pydantic을 사용하여 회원가입 시 받을 이메일, 비밀번호 형식 등을 정의
 
 from pydantic import BaseModel, EmailStr, Field
-from datetime import date, datetime
-from typing import Optional
+from datetime import date
 from enum import Enum
 
 # models.py에서 정의한 Enum
@@ -23,8 +22,8 @@ class UserCreate(BaseModel):
     name : str = Field(..., min_length=2)
     nickname : str
     birth : date
-    profile_image : Optional[str] = None
-    affiliation : Optional[Affiliation] = None
+    profile_image : str | None = None
+    affiliation : Affiliation | None = None
 
 # 로그인
 class UserLogin(BaseModel):
@@ -33,8 +32,8 @@ class UserLogin(BaseModel):
 
 # 회원정보 수정
 class UserEdit(BaseModel): # 이외에 변경 불가
-    profile_image : Optional[str] = None
-    affiliation : Optional[Affiliation] = None
+    profile_image : str | None = None
+    affiliation : Affiliation | None = None
 
 # 아이디 찾기
 class FindId(BaseModel):
