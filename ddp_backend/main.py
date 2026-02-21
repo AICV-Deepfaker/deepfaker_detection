@@ -1,29 +1,31 @@
 import os
-import shutil
 import sys
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Annotated, Any
 
 from core.database import engine #DB
 from models.models import Base #DB
 
 import torch
 import uvicorn
-from detectors.base_detector import BaseDetector, BaseVideoConfig
-from detectors.stt_detector import STTDetector
-from detectors.unite_detector import UniteDetector
 
+<<<<<<< HEAD
 from detectors.wavelet_detector import WaveletDetector
 from detectors import RPPGDetector
 
+=======
+# from core.database import engine
+# from models.models import Base
+>>>>>>> 496f9fd3031eb4f38f2b85fc34d49bac830ead40
 # ==========================================
 # .env 로드
 # ==========================================
 from dotenv import load_dotenv
-from fastapi import FastAPI, File, Form, UploadFile
-from pyngrok import ngrok
-from schemas import APIOutputFast, APIOutputDeep, BaseReport
+from fastapi import FastAPI
+from pyngrok import ngrok # type: ignore
+
+from ddp_backend.services.dependencies import load_all_model
+from ddp_backend.routers import detection
 
 _BACKEND_DIR = Path(__file__).parent
 load_dotenv(_BACKEND_DIR / ".env")
@@ -54,38 +56,12 @@ def _is_video(filename: str) -> bool:
 
 # 모델 및 환경 변수
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-DETECTOR_YAML = "Wavelet-CLIP/wavelet_lib/config/detector/detector.yaml"
-CKPT_PATH = "ddp_backend/ckpt_best.pth"
-IMG_SIZE = 224
 
 NGROK_AUTH_TOKEN = os.environ.get("NGROK_AUTH_TOKEN", "")
 
-# UniteDetector (정밀탐지모드 / deep)
-unite_detector = UniteDetector(
-    BaseVideoConfig(
-        model_path="./unite_baseline.onnx",
-        img_size=384,
-    )
-)
-
-# WaveletDetector (증거수집모드 / fast)
-wavelet_detector = WaveletDetector.from_yaml(DETECTOR_YAML, IMG_SIZE, CKPT_PATH)
-
-r_ppg_detector = RPPGDetector(BaseVideoConfig(model_path="", img_size=0))
-
-stt_detector = STTDetector()
-
-vid_detectors: dict[str, BaseDetector[Any, BaseReport]] = {
-    "UNITE": unite_detector,
-    "wavelet": wavelet_detector,
-    "r_ppg": r_ppg_detector,
-}
-
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):  # pyright: ignore[reportUnusedParameter]
-    for next_detector in vid_detectors.values():
-        next_detector.load_model()
+    load_all_model()
     public_url = None
 
     if NGROK_AUTH_TOKEN:
@@ -109,87 +85,8 @@ async def lifespan(app: FastAPI):  # pyright: ignore[reportUnusedParameter]
 
 
 app = FastAPI(lifespan=lifespan)
+app.include_router(detection.router)
 
-
-# ==========================================
-# API 경로
-# ==========================================
-@app.post("/predict/fast")
-async def predict_deepfake_fast(
-    file: Annotated[UploadFile, File(...)],
-) -> APIOutputFast:
-    temp_path = f"temp_{file.filename}"
-    probs: float = 0
-
-    try:
-        with open(temp_path, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
-
-        wavelet_report = await wavelet_detector.analyze(temp_path)
-        probs += wavelet_report.probability
-        r_ppg_report = await r_ppg_detector.analyze(temp_path)
-        probs += r_ppg_report.probability
-
-        avg_prob = probs / 2
-
-        stt_report = await stt_detector.analyze(temp_path)
-        
-        confidence = avg_prob if avg_prob > 0.5 else 1 - avg_prob
-        return APIOutputFast(
-            status="success",
-            result="FAKE" if avg_prob > 0.5 else "REAL",
-            average_fake_prob=round(avg_prob, 4),
-            confidence_score=f"{round(confidence * 100, 2)}%",
-            analysis_mode="fast",
-            wavelet=wavelet_report,
-            r_ppg=r_ppg_report,
-            stt=stt_report
-        )
-    except Exception as e:
-        return APIOutputFast(
-            status='error',
-            error_msg=str(e),
-            result='FAKE',
-            average_fake_prob=0,
-            confidence_score="",
-            analysis_mode="fast",
-        )
-    finally:
-        if os.path.exists(temp_path):
-            os.remove(temp_path)
-
-@app.post("/predict/deep")
-async def predict_deepfake_deep(
-    file: Annotated[UploadFile, File(...)],
-) -> APIOutputDeep:
-    temp_path = f"temp_{file.filename}"
-
-    try:
-        with open(temp_path, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
-
-        unite_report = await unite_detector.analyze(temp_path)
-
-        return APIOutputDeep(
-            status="success",
-            result=unite_report.result,
-            average_fake_prob=unite_report.probability,
-            confidence_score=unite_report.confidence_score,
-            analysis_mode="deep",
-            unite=unite_report,
-        )
-    except Exception as e:
-        return APIOutputDeep(
-            status='error',
-            error_msg=str(e),
-            result='FAKE',
-            average_fake_prob=0,
-            confidence_score="",
-            analysis_mode="fast",
-        )
-    finally:
-        if os.path.exists(temp_path):
-            os.remove(temp_path)
 
 
 # ==========================================

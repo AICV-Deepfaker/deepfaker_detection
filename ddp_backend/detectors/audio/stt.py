@@ -1,27 +1,19 @@
 from pathlib import Path
+from typing import final, override
 
-from pydantic import BaseModel
-from stt import SCAM_SEED_KEYWORDS, STTPipelineResult, run_pipeline
+from stt import SCAM_SEED_KEYWORDS, run_pipeline
 
-from ddp_backend.schemas import STTReport
-
-from .base_detector import BaseDetector
+from ddp_backend.schemas import ModelName, Status, STTReport
+from detectors import AudioAnalyzer
 
 
-class STTDetector(BaseDetector[BaseModel, STTReport]):
-    model_name = "STT"
+@final
+class STTDetector(AudioAnalyzer):
+    model_name = ModelName.STT
 
-    def __init__(self):
-        super().__init__(BaseModel())
-
-    def load_model(self):
-        pass
-
-    async def _analyze(self, vid_path: str | Path) -> STTPipelineResult:
-        return await run_pipeline(str(vid_path))
-
-    async def analyze(self, vid_path: str | Path) -> STTReport:
-        result = await self._analyze(vid_path)
+    @override
+    def analyze(self, vid_path: str | Path) -> STTReport:
+        result = run_pipeline(str(vid_path))
         detected_set = set(result.detected_keywords)
         # 시드 키워드 전체를 detected 여부와 함께 반환
         stt_keywords: list[dict[str, str | bool]] = [
@@ -32,7 +24,7 @@ class STTDetector(BaseDetector[BaseModel, STTReport]):
             if kw not in SCAM_SEED_KEYWORDS:
                 stt_keywords.append({"keyword": kw, "detected": True})
         return STTReport(
-            status="success",
+            status=Status.SUCCESS,
             model_name=self.model_name,
             keywords=stt_keywords,
             risk_level=result.risk_level,

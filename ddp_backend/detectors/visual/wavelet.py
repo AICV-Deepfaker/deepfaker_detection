@@ -6,33 +6,32 @@ from typing import Any, Self, cast, override
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
-import pywt
+import pywt  # type: ignore
 import torch
 import yaml
 from cv2.typing import MatLike
-from insightface.app import FaceAnalysis
-from insightface.app.common import Face
+from insightface.app import FaceAnalysis  # type: ignore
+from insightface.app.common import Face  # type: ignore
 from pydantic import TypeAdapter
-from torchvision.transforms import v2
-from wavelet_lib.config_type import WaveletConfig
-from wavelet_lib.detectors import DETECTOR
-from wavelet_lib.detectors.base_detector import AbstractDetector, PredDict
+from torchvision.transforms import v2  # type: ignore
+from wavelet_lib.config_type import WaveletConfig  # type: ignore
+from wavelet_lib.detectors import DETECTOR  # type: ignore
+from wavelet_lib.detectors.base_detector import (  # type: ignore
+    AbstractDetector,
+    PredDict,
+)
 
-from .base_detector import (
-    BaseVideoConfig,
+from ddp_backend.schemas import ModelName
+from ddp_backend.schemas import WaveletConfig as WaveletConfigParam
+
+from .base import (
     BaseVideoDetector,
-    HasNormalize,
     VideoInferenceResult,
 )
 
 
-class WaveletConfigParam(BaseVideoConfig, HasNormalize):
-    model_name: str
-    loss_func: str
-
-
 class WaveletDetector(BaseVideoDetector[WaveletConfigParam]):
-    model_name = "wavelet"
+    model_name = ModelName.WAVELET
 
     @classmethod
     def from_yaml(
@@ -86,7 +85,7 @@ class WaveletDetector(BaseVideoDetector[WaveletConfigParam]):
             name="buffalo_l",
             providers=providers,
         )
-        self.face_app.prepare(ctx_id=0, det_size=(640, 640))
+        self.face_app.prepare(ctx_id=0, det_size=(640, 640))  # type: ignore
 
         print("Load Complete.")
 
@@ -99,18 +98,18 @@ class WaveletDetector(BaseVideoDetector[WaveletConfigParam]):
     @staticmethod
     def generate_visual_report(best_img_rgb: MatLike, max_prob: float):
         gray = cv2.cvtColor(best_img_rgb, cv2.COLOR_RGB2GRAY)
-        coeffs = pywt.dwt2(gray, "haar")
-        _, (LH, HL, HH) = coeffs
-        energy_map = np.sqrt(LH**2 + HL**2 + HH**2)
-        energy_map: np.ndarray = cv2.normalize(  # pyright: ignore[reportUnknownMemberType, reportCallIssue, reportUnknownVariableType]
+        coeffs = pywt.dwt2(gray, "haar")  # type: ignore
+        _, (LH, HL, HH) = coeffs  # type: ignore
+        energy_map = np.sqrt(LH**2 + HL**2 + HH**2)  # type: ignore
+        energy_map: np.ndarray = cv2.normalize(  # type: ignore
             energy_map,
-            None,  # pyright: ignore[reportArgumentType]
+            None,  # type: ignore
             0,
             255,
             cv2.NORM_MINMAX,
         ).astype(np.uint8)
 
-        fig, axes = plt.subplots(1, 2, figsize=(10, 5))
+        fig, axes = plt.subplots(1, 2, figsize=(10, 5))  # type: ignore
         axes[0].imshow(best_img_rgb)
         axes[0].set_title(f"Target Face (Prob: {max_prob:.4f})")
         axes[0].axis("off")
@@ -118,16 +117,16 @@ class WaveletDetector(BaseVideoDetector[WaveletConfigParam]):
         im = axes[1].imshow(energy_map, cmap="magma")
         axes[1].set_title("Wavelet High-Freq Energy Map")
         axes[1].axis("off")
-        plt.colorbar(im, ax=axes[1], fraction=0.046, pad=0.04)
+        plt.colorbar(im, ax=axes[1], fraction=0.046, pad=0.04)  # type: ignore
 
         buf = BytesIO()
-        plt.savefig(buf, format="png", bbox_inches="tight")
+        plt.savefig(buf, format="png", bbox_inches="tight")  # type: ignore
         plt.close(fig)
         buf.seek(0)
         return base64.b64encode(buf.read()).decode("utf-8")
 
     @override
-    async def _analyze(self, vid_path: str | Path) -> VideoInferenceResult:
+    def _analyze(self, vid_path: str | Path) -> VideoInferenceResult:
         all_probs: list[float] = []
         max_prob: float = -1.0
         best_img_for_viz = None
@@ -147,7 +146,7 @@ class WaveletDetector(BaseVideoDetector[WaveletConfigParam]):
                     break
 
                 rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                faces: list[Face] = self.face_app.get(rgb)
+                faces: list[Face] = self.face_app.get(rgb)  # type: ignore
 
                 if len(faces) > 0:
                     face = max(
