@@ -3,7 +3,6 @@
 
 from pydantic import BaseModel, EmailStr, Field
 from datetime import date, datetime
-from typing import Optional
 from enum import Enum
 
 # models.py에서 정의한 Enum
@@ -79,8 +78,8 @@ class TokenResponse(BaseModel):
 # 회원정보 수정 완료
 class UserEditResponse(BaseModel):
     password_changed: bool = False
-    profile_image_changed: Optional[str] = None # 수정 안 하면 None
-    affiliation_changed: Optional[Affiliation] = None
+    profile_image_changed: str | None = None # 수정 안 하면 None
+    affiliation_changed: Affiliation | None = None
 
 # 아이디 찾기
 class FindIdResponse(BaseModel):

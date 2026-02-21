@@ -1,6 +1,6 @@
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, DeclarativeBase, MappedAsDataclass
 from core.config import DATABASE_URL
 
 # DB 엔진 생성
@@ -10,7 +10,8 @@ engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine) #autocommit = 자동 저장, autoflush = 자동 변경 사항 저장
 
 # 테이블을 만들 때 상속받을 기본 클래스
-Base = declarative_base() # JPA의 Entity
+# Base = declarative_base() # JPA의 Entity
+class Base(MappedAsDataclass, DeclarativeBase): ...
 
 # 요청 단위로 DB 세션을 생성하고 종료하는 함수
 def get_db():
