@@ -22,7 +22,7 @@ from .base_detector import (
     BaseVideoConfig,
     BaseVideoDetector,
     HasNormalize,
-    ImageInferenceResult,
+    VideoInferenceResult,
 )
 
 
@@ -127,7 +127,7 @@ class WaveletDetector(BaseVideoDetector[WaveletConfigParam]):
         return base64.b64encode(buf.read()).decode("utf-8")
 
     @override
-    async def _analyze(self, vid_path: str | Path) -> ImageInferenceResult:
+    async def _analyze(self, vid_path: str | Path) -> VideoInferenceResult:
         all_probs: list[float] = []
         max_prob: float = -1.0
         best_img_for_viz = None
@@ -191,4 +191,4 @@ class WaveletDetector(BaseVideoDetector[WaveletConfigParam]):
         if best_img_for_viz is not None:
             visual_report = self.generate_visual_report(best_img_for_viz, max_prob)
 
-        return ImageInferenceResult(prob=float(avg_prob), base64_report=visual_report)
+        return VideoInferenceResult(prob=float(avg_prob), base64_report=visual_report)

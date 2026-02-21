@@ -3,26 +3,26 @@ import shutil
 import sys
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Annotated, Any, Literal
+from typing import Annotated, Any
 
 import torch
 import uvicorn
-from detectors.base_detector import BaseDetector, BaseVideoConfig, Scorable
+from detectors.base_detector import BaseDetector, BaseVideoConfig
 from detectors.stt_detector import STTDetector
 from detectors.unite_detector import UniteDetector
 
 # from core.database import engine
 # from models.models import Base
 from detectors.wavelet_detector import WaveletDetector
+from detectors import RPPGDetector
 
 # ==========================================
 # .env 로드
 # ==========================================
 from dotenv import load_dotenv
 from fastapi import FastAPI, File, Form, UploadFile
-from pydantic import BaseModel
 from pyngrok import ngrok
-from schemas import APIOutput, BaseReport, STTReport, VideoReport
+from schemas import APIOutputFast, APIOutputDeep, BaseReport
 
 _BACKEND_DIR = Path(__file__).parent
 load_dotenv(_BACKEND_DIR / ".env")
@@ -65,16 +65,20 @@ unite_detector = UniteDetector(
 # WaveletDetector (증거수집모드 / fast)
 wavelet_detector = WaveletDetector.from_yaml(DETECTOR_YAML, IMG_SIZE, CKPT_PATH)
 
-detectors: dict[str, BaseDetector[Any, BaseReport]] = {
+r_ppg_detector = RPPGDetector(BaseVideoConfig(model_path="", img_size=0))
+
+stt_detector = STTDetector()
+
+vid_detectors: dict[str, BaseDetector[Any, BaseReport]] = {
     "UNITE": unite_detector,
     "wavelet": wavelet_detector,
-    "STT": STTDetector(),
+    "r_ppg": r_ppg_detector,
 }
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):  # pyright: ignore[reportUnusedParameter]
-    for next_detector in detectors.values():
+    for next_detector in vid_detectors.values():
         next_detector.load_model()
     public_url = None
 
@@ -104,44 +108,78 @@ app = FastAPI(lifespan=lifespan)
 # ==========================================
 # API 경로
 # ==========================================
-@app.post("/predict/{mode}")
-async def predict_deepfake(
-    file: Annotated[UploadFile, File(...)], mode: Literal["deep", "fast"] = "fast"
-) -> APIOutput:
+@app.post("/predict/fast")
+async def predict_deepfake_fast(
+    file: Annotated[UploadFile, File(...)],
+) -> APIOutputFast:
     temp_path = f"temp_{file.filename}"
-    model_names: dict[str, list[str]] = {"deep": ["UNITE"], "fast": ["wavelet", "STT"]}
-    probs: list[float] = []
-    reports: dict[str, BaseReport | VideoReport | STTReport] = {}
+    probs: float = 0
+
     try:
         with open(temp_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
-        for next_model in model_names[mode]:
-            model = detectors[next_model]
 
-            report = await model.analyze(temp_path)
-            reports[next_model] = report
-            if isinstance(report, Scorable):
-                probs.append(report.prob)
+        wavelet_report = await wavelet_detector.analyze(temp_path)
+        probs += wavelet_report.probability
+        r_ppg_report = await r_ppg_detector.analyze(temp_path)
+        probs += r_ppg_report.probability
 
-        avg_prob = sum(probs) / len(probs)
+        avg_prob = probs / 2
+
+        stt_report = await stt_detector.analyze(temp_path)
+        
         confidence = avg_prob if avg_prob > 0.5 else 1 - avg_prob
-        return APIOutput(
+        return APIOutputFast(
             status="success",
             result="FAKE" if avg_prob > 0.5 else "REAL",
             average_fake_prob=round(avg_prob, 4),
             confidence_score=f"{round(confidence * 100, 2)}%",
-            analysis_mode=mode,
-            reports=reports,
+            analysis_mode="fast",
+            wavelet=wavelet_report,
+            r_ppg=r_ppg_report,
+            stt=stt_report
         )
     except Exception as e:
-        return APIOutput(
-            status="error",
+        return APIOutputFast(
+            status='error',
             error_msg=str(e),
-            result="FAKE",
+            result='FAKE',
             average_fake_prob=0,
             confidence_score="",
-            analysis_mode=mode,
-            reports={},
+            analysis_mode="fast",
+        )
+    finally:
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
+
+@app.post("/predict/deep")
+async def predict_deepfake_deep(
+    file: Annotated[UploadFile, File(...)],
+) -> APIOutputDeep:
+    temp_path = f"temp_{file.filename}"
+
+    try:
+        with open(temp_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+
+        unite_report = await unite_detector.analyze(temp_path)
+
+        return APIOutputDeep(
+            status="success",
+            result=unite_report.result,
+            average_fake_prob=unite_report.probability,
+            confidence_score=unite_report.confidence_score,
+            analysis_mode="deep",
+            unite=unite_report,
+        )
+    except Exception as e:
+        return APIOutputDeep(
+            status='error',
+            error_msg=str(e),
+            result='FAKE',
+            average_fake_prob=0,
+            confidence_score="",
+            analysis_mode="fast",
         )
     finally:
         if os.path.exists(temp_path):

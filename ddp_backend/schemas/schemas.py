@@ -11,7 +11,7 @@ class BaseReport(BaseModel):
 
 class VideoReport(BaseReport):
     result: Literal["REAL", "FAKE"]
-    average_fake_prob: float
+    probability: float
     confidence_score: str
     visual_report: str
 
@@ -24,11 +24,18 @@ class STTReport(BaseReport):
     search_results: list[dict[str, str]]
 
 
-class APIOutput(BaseModel):
+class BaseAPIOutput(BaseModel):
     status: Literal["success", "error"]
     error_msg: str | None = None
     result: Literal["REAL", "FAKE"]
     average_fake_prob: float
     confidence_score: str
     analysis_mode: str
-    reports: dict[str, BaseReport | VideoReport | STTReport]
+
+class APIOutputFast(BaseAPIOutput):
+    r_ppg: VideoReport | None = None
+    wavelet: VideoReport | None = None
+    stt: STTReport | None = None
+
+class APIOutputDeep(BaseAPIOutput):
+    unite: VideoReport | None = None

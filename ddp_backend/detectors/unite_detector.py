@@ -9,7 +9,7 @@ from torch.utils.data import DataLoader
 from unite_detection.dataset import CustomVideoDataset
 from unite_detection.schemas import ArchSchema, DatasetConfig
 
-from .base_detector import BaseVideoConfig, BaseVideoDetector, ImageInferenceResult
+from .base_detector import BaseVideoConfig, BaseVideoDetector, VideoInferenceResult
 
 
 class UniteDetector(BaseVideoDetector[BaseVideoConfig]):
@@ -30,7 +30,7 @@ class UniteDetector(BaseVideoDetector[BaseVideoConfig]):
         return e_x / e_x.sum()
 
     @override
-    async def _analyze(self, vid_path: str | Path) -> ImageInferenceResult:
+    async def _analyze(self, vid_path: str | Path) -> VideoInferenceResult:
         vid_dataset = CustomVideoDataset(
             [vid_path],
             config=DatasetConfig(arch=ArchSchema(img_size=self.config.img_size)),
@@ -46,4 +46,4 @@ class UniteDetector(BaseVideoDetector[BaseVideoConfig]):
             result_prob.append(cur_prob)
         max_prob = max(result_prob)
         # currently no visual output
-        return ImageInferenceResult(prob=max_prob, base64_report="")
+        return VideoInferenceResult(prob=max_prob, base64_report="")
