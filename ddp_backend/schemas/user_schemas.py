@@ -8,8 +8,8 @@ from enum import Enum
 
 # models.py에서 정의한 Enum
 class LoginMethod(str, Enum):
-    Local = "Local"
-    Google = "Google"
+    Local = "local"
+    Google = "google"
 
 class Affiliation(str, Enum):
     ind = "개인"
@@ -17,7 +17,7 @@ class Affiliation(str, Enum):
     com = "회사"
 
 # 회원가입
-class UserCreate(BaseModel):
+class UserCreate(BaseModel): # Login_method는 서비스 로직에서
     email : EmailStr
     password : str = Field(..., min_length=8) # 최소 8자 이상
     name : str = Field(..., min_length=2)
@@ -25,6 +25,12 @@ class UserCreate(BaseModel):
     birth : date
     profile_image : Optional[str] = None
     affiliation : Optional[Affiliation] = None
+
+class CheckEmail(BaseModel): # 이메일 중복 확인 요청
+    email: EmailStr
+
+class CheckNickname(BaseModel): # 닉네임 중복 확인 요청
+    nickname: str = Field(..., min_length=2)
 
 # 로그인
 class UserLogin(BaseModel):
@@ -56,7 +62,6 @@ class ResetPassword(BaseModel):  # 새 비밀번호
     verify_code: str
     new_password: str = Field(..., min_length=8)
 
-
 # Response
 # 회원가입 완료
 class UserResponse(BaseModel):
@@ -66,9 +71,15 @@ class UserResponse(BaseModel):
     nickname: str
     created_at: datetime
 
+# 중복 확인 응답 (공통)
+class DuplicateCheckResponse(BaseModel):
+    is_duplicate: bool
+    message: str
+
 # 로그인 완료
 class TokenResponse(BaseModel):
     access_token: str
+    refresh_token: str
     token_type: str = "bearer" # jwt
     user_id: int
     email: EmailStr
@@ -84,4 +95,3 @@ class FindIdResponse(BaseModel):
     email: str  # 마스킹된 문자열로 보낼 예정
 
 # 비밀번호는 200만 반환하면 됨
-

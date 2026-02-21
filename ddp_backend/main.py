@@ -5,14 +5,15 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Annotated, Any
 
+from core.database import engine #DB
+from models.models import Base #DB
+
 import torch
 import uvicorn
 from detectors.base_detector import BaseDetector, BaseVideoConfig
 from detectors.stt_detector import STTDetector
 from detectors.unite_detector import UniteDetector
 
-# from core.database import engine
-# from models.models import Base
 from detectors.wavelet_detector import WaveletDetector
 from detectors import RPPGDetector
 
@@ -26,6 +27,14 @@ from schemas import APIOutputFast, APIOutputDeep, BaseReport
 
 _BACKEND_DIR = Path(__file__).parent
 load_dotenv(_BACKEND_DIR / ".env")
+
+
+# ==========================================
+# DB 생성
+# ==========================================
+# 서버가 시작될 때 테이블이 없으면 자동 생성 (JPA의 ddl-auto 같은 역할)
+Base.metadata.create_all(bind=engine)
+
 
 # ==========================================
 # STT 파이프라인 설정
@@ -42,9 +51,6 @@ _VIDEO_EXTENSIONS = {".mp4", ".avi", ".mov", ".mkv", ".wmv", ".flv", ".webm", ".
 def _is_video(filename: str) -> bool:
     return Path(filename).suffix.lower() in _VIDEO_EXTENSIONS
 
-
-# 서버가 시작될 때 테이블이 없으면 자동 생성 (JPA의 ddl-auto 같은 역할)
-# Base.metadata.create_all(bind=engine)
 
 # 모델 및 환경 변수
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
