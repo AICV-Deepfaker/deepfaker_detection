@@ -15,7 +15,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import {
+  peekPendingImageUri,
   peekPendingVideoUri,
+  setPendingImageUri,
   setPendingVideoUri,
 } from '@/lib/pending-upload';
 
