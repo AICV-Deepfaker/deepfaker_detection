@@ -11,7 +11,7 @@ import instructor
 from pydantic import BaseModel, Field
 from faster_whisper import WhisperModel
 from groq import Groq
-from tavily import AsyncTavilyClient
+from tavily import TavilyClient
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -30,7 +30,7 @@ class STTPipelineResult(BaseModel):
     detected_keywords: list[str]
     risk_level: RiskLevel
     risk_reason: str
-    search_results: list[dict[str, str]] = field(default_factory=list)
+    search_results: list[dict[str, str]] = field(default_factory=list[dict[str, str]])
 
 
 def extract_audio(video_path: str | Path) -> str:
@@ -68,7 +68,7 @@ class Keywords(BaseModel):
     reason: Annotated[str, Field(description="위험 판단 근거 한 줄 설명")]
 
 
-async def extract_keywords_with_groq(transcript: str, client: Groq, model: str = "llama-3.3-70b-versatile") -> Keywords:
+def extract_keywords_with_groq(transcript: str, client: Groq, model: str = "llama-3.3-70b-versatile") -> Keywords:
     """Groq LLM으로 텍스트에서 사기 관련 키워드 및 위험도 추출."""
     seed_str = ", ".join(SCAM_SEED_KEYWORDS)
 
@@ -78,22 +78,22 @@ async def extract_keywords_with_groq(transcript: str, client: Groq, model: str =
         f"참고 키워드 목록: {seed_str}\n\n"
         f"분석할 텍스트:\n{transcript}\n\n"
     )
-    instruct_client = instructor.from_provider(f'groq/{model}', api_key=client.api_key)
+    instruct_client = instructor.from_provider(f'groq/{model}', async_client=False, api_key=client.api_key)
 
-    completion = await instruct_client.create(
+    completion = instruct_client.create(
         messages=[{"role": "user", "content": prompt}],
         response_model=Keywords
     )
     return completion
 
 
-async def search_latest_cases(keywords: list[str], tavily_client: AsyncTavilyClient) -> list[dict[str, str]]:
+def search_latest_cases(keywords: list[str], tavily_client: TavilyClient) -> list[dict[str, str]]:
     """Tavily로 키워드별 최신 사기 사례 검색."""
     results = []
     for kw in keywords[:3]:  # 상위 3개 키워드만 검색
         query = f"딥페이크 {kw} 금융사기 최신 사례"
         print(f"  [Search] 검색 중: {query}")
-        response = await tavily_client.search(query=query, max_results=3)
+        response = tavily_client.search(query=query, max_results=3)
         for item in response.get("results", []):
             results.append(
                 {
@@ -106,7 +106,7 @@ async def search_latest_cases(keywords: list[str], tavily_client: AsyncTavilyCli
     return results
 
 
-async def run_pipeline(video_path: str, whisper_model: str = "base") -> STTPipelineResult:
+def run_pipeline(video_path: str, whisper_model: str = "base") -> STTPipelineResult:
     """전체 파이프라인 실행: 비디오 → STT → 키워드 추출 → 검색."""
     groq_key = os.getenv("GROQ_API_KEY")
     tavily_key = os.getenv("TAVILY_API_KEY")
@@ -117,7 +117,7 @@ async def run_pipeline(video_path: str, whisper_model: str = "base") -> STTPipel
         raise ValueError("TAVILY_API_KEY 환경변수가 설정되지 않았습니다.")
 
     groq_client = Groq(api_key=groq_key)
-    tavily = AsyncTavilyClient(api_key=tavily_key)
+    tavily =TavilyClient(api_key=tavily_key)
 
     print(f"\n[1/4] 오디오 추출: {video_path}")
     audio_path = extract_audio(video_path)
@@ -128,14 +128,14 @@ async def run_pipeline(video_path: str, whisper_model: str = "base") -> STTPipel
         print(f"  전사 결과 ({len(transcript)}자): {transcript[:200]}...")
 
         print("[3/4] Groq로 키워드 및 위험도 분석")
-        kw_result = await extract_keywords_with_groq(transcript, groq_client)
+        kw_result = extract_keywords_with_groq(transcript, groq_client)
         print(f"  감지 키워드: {kw_result.detected_keywords}")
         print(f"  위험도: {kw_result.risk_level} — {kw_result.reason}")
 
         search_results = []
         if kw_result.detected_keywords and kw_result.risk_level != "none":
             print("[4/4] Tavily로 최신 사례 검색")
-            search_results = await search_latest_cases(kw_result.detected_keywords, tavily)
+            search_results = search_latest_cases(kw_result.detected_keywords, tavily)
         else:
             print("[4/4] 사기 관련 키워드 없음 → 검색 생략")
 
