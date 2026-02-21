@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session, joinedload
-from models.models import User, LoginMethod, Token, Video, VideoStatus, Source, Result, FastReport, DeepReport
+from models.models import User, LoginMethod, Token, Video, VideoStatus, Source, Result, FastReport, DeepReport, Alert
 
 # ====================================================
 # User CRUD
@@ -21,7 +21,7 @@ def create_user(db: Session, user_info: dict):
         birth = user_info['birth'],
         profile_image = user_info.get('profile_image'), # s3 url, option
         affiliation = user_info.get('affiliation'), # option
-        active_points = 0    
+        activation_points = 0    
     )
     
     db.add(db_user) #db_user에 추가
@@ -33,15 +33,20 @@ def create_user(db: Session, user_info: dict):
 # 조회 (Read)
 # ==============
 
-# 사용 : 회원가입, 로그인, 회원정보수정
+# 사용 : 회원가입, 로그인, 회원정보수정, 포인트 조회
 def get_user_by_email(db: Session, email: str):
     """ 이메일 조회 """
     return db.query(User).filter(User.email == email).first() # email이 해당되는 행 전체조회 (비밀번호 포함)
 
-# 사용 : 회원가입
+# 사용 : 회원가입 
 def get_user_by_nickname(db: Session, nickname: str):
-    """ 닉네임 조회 """
+    """ 닉네임 중복 체크 """
     return db.query(User).filter(User.nickname == nickname).first()
+
+# 사용 : user_id로 조회
+def get_user_by_id(db: Session, user_id: int): # 공통
+    """ user_id로 유저 조회 """
+    return db.query(User).filter(User.user_id == user_id).first()
 
 # 사용 : 아이디 찾기
 def get_user_by_name_birth(db: Session, name: str, birth):
@@ -72,6 +77,15 @@ def update_user(db: Session, email: str, update_info: dict):
     db.commit()
     db.refresh(user)
     return user
+
+# 사용 : 포인트 업데이트
+def update_active_points(db: Session, user_id: int, points: int):
+    """ 포인트 업데이트 """
+    user = get_user_by_id(db, user_id)
+    user.active_points += points # 1000점
+    db.commit()
+    db.refresh(user)
+    return user.activation_points
 
 # ==============
 # 삭제 (Delete)
@@ -118,7 +132,7 @@ def create_token(db: Session, token_info: dict):
 # 사용 : refresh 토큰 갱신 (access_token은 DB 접근 X), 로그아웃(revoked 조회)
 def get_token_by_refresh(db: Session, refresh_token: str): 
     """ refresh token으로 토큰 조회 """
-    return db.query(Token).filter(Token.refresh_token == refresh_token).first()
+    db.query(Token).filter(Token.refresh_token == refresh_token).first()
 
 # ==============
 # 수정 (Update)
@@ -333,14 +347,30 @@ def get_deep_report_by_result(db: Session, result_id: int):
 
 
 # ====================================================
-# 
+# Alert CRUD
 # ====================================================
 
 # ==============
 # 생성 (Create)
 # ==============
 
+# 사용 : 신고하기
+def create_alert(db: Session, alert_info: dict): 
+    """ 신고 생성 """
+    db_alert = Alert(
+        user_id=alert_info['user_id'],
+        result_id=alert_info['result_id']
+    )
+    db.add(db_alert)
+    db.commit()
+    db.refresh(db_alert)
+    return db_alert
 
 # ==============
 # 조회 (Read)
 # ==============
+
+# 사용 : 신고 내역
+def get_alerts_by_user(db: Session, user_id: int): 
+    """ 유저의 신고 내역 조회 """
+    return db.query(Alert).filter(Alert.user_id == user_id).all()
