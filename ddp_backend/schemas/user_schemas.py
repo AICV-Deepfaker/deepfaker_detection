@@ -3,17 +3,8 @@
 
 from pydantic import BaseModel, EmailStr, Field
 from datetime import date, datetime
-from enum import Enum
+from .enums import Affiliation
 
-# models.py에서 정의한 Enum
-class LoginMethod(str, Enum):
-    local = "local"
-    google = "google"
-
-class Affiliation(str, Enum):
-    ind = "개인"
-    org = "기관"
-    com = "회사"
 
 # 회원가입
 class UserCreate(BaseModel): # Login_method는 서비스 로직에서
