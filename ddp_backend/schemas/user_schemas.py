@@ -2,13 +2,14 @@
 # Pydantic을 사용하여 회원가입 시 받을 이메일, 비밀번호 형식 등을 정의
 
 from pydantic import BaseModel, EmailStr, Field
-from datetime import date
+from datetime import date, datetime
+from typing import Optional
 from enum import Enum
 
 # models.py에서 정의한 Enum
 class LoginMethod(str, Enum):
-    Local = "local"
-    Google = "google"
+    local = "local"
+    google = "google"
 
 class Affiliation(str, Enum):
     ind = "개인"
@@ -38,8 +39,9 @@ class UserLogin(BaseModel):
 
 # 회원정보 수정
 class UserEdit(BaseModel): # 이외에 변경 불가
-    profile_image : str | None = None
-    affiliation : Affiliation | None = None
+    new_password : str | None = Field(None, min_length=8) # 최소 8자 이상
+    new_profile_image : str | None = None
+    new_affiliation : Affiliation | None = None
 
 # 아이디 찾기
 class FindId(BaseModel):
@@ -51,15 +53,6 @@ class FindPassword(BaseModel): # 요청
     name: str = Field(..., min_length=2)
     birth: date
     email: EmailStr
-
-class VerifyCode(BaseModel): # 인증번호 확인
-    email: EmailStr # 프론트가 useState로 들고 있다가 같이 보냄
-    verify_code: str
-
-class ResetPassword(BaseModel):  # 새 비밀번호
-    email: EmailStr
-    verify_code: str
-    new_password: str = Field(..., min_length=8)
 
 # Response
 # 회원가입 완료
@@ -73,7 +66,6 @@ class UserResponse(BaseModel):
 # 중복 확인 응답 (공통)
 class DuplicateCheckResponse(BaseModel):
     is_duplicate: bool
-    message: str
 
 # 로그인 완료
 class TokenResponse(BaseModel):
@@ -86,8 +78,9 @@ class TokenResponse(BaseModel):
 
 # 회원정보 수정 완료
 class UserEditResponse(BaseModel):
-    profile_image: Optional[str] = None # 수정 안 하면 None
-    affiliation: Optional[Affiliation] = None
+    password_changed: bool = False
+    profile_image_changed: Optional[str] = None # 수정 안 하면 None
+    affiliation_changed: Optional[Affiliation] = None
 
 # 아이디 찾기
 class FindIdResponse(BaseModel):

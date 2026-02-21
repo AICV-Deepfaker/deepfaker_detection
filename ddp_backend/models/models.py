@@ -46,7 +46,7 @@ class User(Base):
     birth = Column(Date, nullable=False)
     profile_image = Column(String(500)) # 필요 없을 경우 삭제
     affiliation = Column(Enum(Affiliation), nullable=True)
-    active_points = Column(Integer, default=0, nullable=False)
+    activation_points = Column(Integer, default=0, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     # Relationships
     tokens = relationship("Token", back_populates="user", cascade="all, delete-orphan")
@@ -77,6 +77,7 @@ class Video(Base):
     user_id = Column(BigInteger, ForeignKey("users.user_id", ondelete="CASCADE"))
     origin_path = Column(Enum(OriginPath), nullable=False)
     source_url = Column(String(500), nullable=True)
+    status = Column(Enum(VideoStatus), server_default=VideoStatus.pending.value)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     # Relationships
     user = relationship("User", back_populates="videos")
@@ -89,7 +90,6 @@ class Source(Base): # S3 관리용 (일정 시간 후 삭제 대상)
     source_id = Column(BigInteger, primary_key=True, autoincrement=True)
     video_id = Column(BigInteger, ForeignKey("videos.video_id", ondelete="CASCADE"))
     s3_path = Column(String(500), nullable=False)
-    status = Column(Enum(VideoStatus), server_default=VideoStatus.pending.value)
     expires_at = Column(DateTime, nullable=False) # 12시간 후 만료 등
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     # Relationships
@@ -107,8 +107,8 @@ class Result(Base):
     # Relationships
     user = relationship("User", back_populates="results")
     video = relationship("Video", back_populates="results")
-    fast_report = relationship("FastReport", back_populates="result", uselist=False)
-    deep_report = relationship("DeepReport", back_populates="result", uselist=False)
+    fast_report = relationship("FastReport", back_populates="result", uselist=False, cascade="all, delete-orphan")
+    deep_report = relationship("DeepReport", back_populates="result", uselist=False, cascade="all, delete-orphan")
     alerts = relationship("Alert", back_populates="result")
     
 
@@ -125,7 +125,7 @@ class FastReport(Base):
     rppg_conf = Column(Float, nullable=False)
     rppg_image = Column(String(255), nullable=False)
     stt_keyword = Column(String(255), nullable=False)
-    stt_risk_level = Column(Enum(STTRiskLevel))
+    stt_risk_level = Column(Enum(STTRiskLevel), nullable=False)
     stt_script = Column(JSON, nullable=False)
     # Relationships
     user = relationship("User", back_populates="fast_reports")
@@ -148,9 +148,9 @@ class Alert(Base): # 신고하기
     __tablename__ = "alerts"
     alert_id = Column(BigInteger, primary_key=True, autoincrement=True)
     user_id = Column(BigInteger, ForeignKey("users.user_id", ondelete="CASCADE"))
-    result_id = Column(BigInteger, ForeignKey("results.result_id", ondelete="CASCADE"))
+    result_id = Column(BigInteger, ForeignKey("results.result_id", ondelete="SET NULL"), nullable=True)
     alerted_at = Column(DateTime(timezone=True), server_default=func.now())
     # Relationships
     user = relationship("User", back_populates="alerts")
-    result = relationship("Result", back_populates="alerts")
+    result = relationship("Result", back_populates="alerts", passive_deletes=True)
     
