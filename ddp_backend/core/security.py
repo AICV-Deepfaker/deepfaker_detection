@@ -3,20 +3,33 @@
 
 # 자체 로그인은 보안 설정 -> 데이터 규격 -> 핵심 로직 -> API 경로 순서로 개발
 
+import os
+import hashlib
 from passlib.context import CryptContext
 from datetime import datetime, timezone, timedelta
-from jose import JWTError, jwt
+from jose import JWTError, jwt, ExpiredSignatureError
 from config import settings
 
-# 비밀번호 암호화
+
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
+# 비밀번호 암호화
 def get_password_hash(password: str) -> str:
     hashed_password = pwd_context.hash(password)
     return hashed_password
 
-def verify_password(plain_password: str, hased_password: str) -> bool:
-    return pwd_context.verify(plain_password, hased_password)
+# 비밀번호 검증
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    return pwd_context.verify(plain_password, hashed_password)
+
+# refresh token 암호화
+def hash_refresh_token(token: str) -> str:
+    salt = os.environ.get("REFRESH_TOKEN_SALT", "default_salt")
+    return hashlib.sha256((token + salt).encode()).hexdigest()
+
+# refresh token 검증
+def verify_refresh_token(token: str, hashed_token: str) -> bool:
+    return pwd_context.verify(token, hashed_token)
 
 # jwt access 토큰 생성
 def create_access_token(data: dict, expires_delta: timedelta | None = None):
@@ -26,7 +39,10 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None):
         expire = datetime.now(timezone.utc) + expires_delta
     else:
         expire = datetime.now(timezone.utc) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-    to_encode.update({"exp": expire}) # {"user_id": 1, "exp": 만료시간} 추가
+    to_encode.update({ # {"user_id": 1, "exp": 만료시간} 추가
+        "exp": expire, 
+        "type": "access"
+        }) 
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
     return encoded_jwt
 
@@ -37,18 +53,28 @@ def create_refresh_token(data: dict, expires_delta: timedelta | None = None):
         expire = datetime.now(timezone.utc) + expires_delta
     else:
         expire = datetime.now(timezone.utc) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
-    to_encode.update({"exp": expire})
+    to_encode.update({
+        "exp": expire,
+        "type": "refresh"
+        })
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
     return encoded_jwt
 
 # jwt 토큰 검증
 def decode_token(token: str):
     try:
-        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        payload = jwt.decode(
+            token, 
+            settings.SECRET_KEY, 
+            algorithms=[settings.ALGORITHM]
+            )
         return payload
-    except JWTError:
-        return None # 유효하지 않은 토큰
+    
+    except ExpiredSignatureError:
+        raise ExpiredSignatureError("토큰이 만료되었습니다")
 
+    except JWTError:
+        raise JWTError("유효하지 않은 토큰입니다")
 
 
 

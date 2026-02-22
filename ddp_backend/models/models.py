@@ -78,9 +78,6 @@ class User(Base):
         Enum(Affiliation), nullable=True
     )
     activation_points: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
-    last_used_at : Mapped[datetime | None] = mapped_column( # access/ refresh 토큰을 마지막으로 재발급 받은 시간
-        DateTime(timezone=True), nullable=True
-    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), init=False
     )

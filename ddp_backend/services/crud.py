@@ -146,6 +146,8 @@ def update_active_points(db: Session, user_id: int, points: int):
 def delete_user(db: Session, email: str):
     """유저 삭제"""
     user = get_user_by_email(db, email)
+    if user is None: 
+        return False
     db.delete(user)
     db.commit()
     return True
@@ -160,22 +162,23 @@ def delete_user(db: Session, email: str):
 # ==============
 
 # 사용 : 로그인
-
-
-# TODO: edit from here
-def create_token(db: Session, token_info: TokenCreate):
-    """토큰 저장"""
-    db_token = Token(  # 객체
-        user_id=token_info.user_id,
-        refresh_token=token_info.refresh_token,
-        # device_uuid=token_info.device_uuid, # 기기 수집 (이후 개발 예정)
-        expires_at=token_info.expires_at,
-    )
-
-    db.add(db_token)
+def upsert_token(db: Session, user_id: int, hashed_refresh_token: str, expires_at: datetime):
+    """토큰 업데이트 + 생성"""
+    token = db.scalars(select(Token).where(Token.user_id == user_id)).one_or_none()
+    if token:
+        token.refresh_token = hashed_refresh_token
+        token.expires_at = expires_at
+        token.revoked = False
+    else:
+        token = Token(
+            user_id=user_id,
+            refresh_token=hashed_refresh_token,
+            expires_at=expires_at
+        )
+        db.add(token)
     db.commit()
-    db.refresh(db_token)
-    return db_token
+    db.refresh(token)
+    return token
 
 
 # ==============
@@ -184,9 +187,9 @@ def create_token(db: Session, token_info: TokenCreate):
 
 
 # 사용 : refresh 토큰 갱신 (access_token은 DB 접근 X), 로그아웃(revoked 조회)
-def get_token_by_refresh(db: Session, refresh_token: str):
-    """refresh token으로 토큰 조회"""
-    query = select(Token).where(Token.refresh_token == refresh_token)
+def get_token_by_refresh(db: Session, hashed_refresh_token: str):
+    """hased된 refresh token으로 토큰 조회"""
+    query = select(Token).where(Token.refresh_token == hashed_refresh_token)
     return db.scalars(query).one_or_none()
 
 
@@ -194,17 +197,9 @@ def get_token_by_refresh(db: Session, refresh_token: str):
 # 수정 (Update)
 # ==============
 
-# 사용 : access/refresh 토큰 재발급 시
-def update_last_used(db: Session, user_id: int, last_used_at: datetime):
-    """ 마지막 앱 사용 시간 업데이트 """
-    user = get_user_by_id(db, user_id)
-    user.last_used_at = last_used_at
-    db.commit()
-    return True
-
 
 # 사용 : 로그아웃
-def update_revoked(db: Session, refresh_token: str):
+def set_token_revoked(db: Session, refresh_token: str):
     """토큰 비활성화"""
     token = get_token_by_refresh(db, refresh_token)
     if token is None:
@@ -360,6 +355,8 @@ def get_result_by_id(db: Session, result_id: int):
 def delete_result(db: Session, result_id: int):
     """결과 삭제 (FastReport, DeepReport 함께 삭제)"""
     result = get_result_by_id(db, result_id)
+    if result is None:
+        return False
     db.delete(result)
     db.commit()
     return True
