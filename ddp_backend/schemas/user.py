@@ -33,12 +33,12 @@ class UserCreate(BaseModel):  # Login_method는 서비스 로직에서
     profile_image: str | None = None
     affiliation: Affiliation | None = None
 
-
-class CheckEmail(BaseModel):  # 이메일 중복 확인 요청
+# 이메일 중복 확인 요청
+class CheckEmail(BaseModel):  
     email: EmailStr
 
-
-class CheckNickname(BaseModel):  # 닉네임 중복 확인 요청
+# 닉네임 중복 확인 요청
+class CheckNickname(BaseModel):  
     nickname: str = Field(..., min_length=2)
 
 
@@ -52,7 +52,12 @@ class UserLogin(BaseModel):
 class UserEdit(BaseModel):  # 이외에 변경 불가
     new_password: str | None = Field(None, min_length=8)  # 최소 8자 이상
     new_profile_image: str | None = None
+    delete_profile_image: bool = False  # True면 이미지 삭제
     new_affiliation: Affiliation | None = None
+
+# 프로필 이미지 삭제
+class DeleteProfileImage(BaseModel):  
+    delete_profile_image: bool = False
 
 
 # 아이디 찾기
@@ -94,9 +99,10 @@ class TokenResponse(BaseModel):
 
 # 회원정보 수정 완료
 class UserEditResponse(BaseModel):
-    password_changed: bool = False
-    profile_image_changed: str | None = None  # 수정 안 하면 None
-    affiliation_changed: Affiliation | None = None
+    changed_password: bool = False
+    changed_profile_image: str | None = None  # 프로필 이미지 업데이트
+    deleted_profile_image: bool = False # 프로필이미지 삭제 요청
+    changed_affiliation: Affiliation | None = None # 수정 안 하면 None
 
 
 # 아이디 찾기
