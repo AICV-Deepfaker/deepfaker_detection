@@ -1,6 +1,6 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, DeclarativeBase, MappedAsDataclass
-from core.config import DATABASE_URL
+from ddp_backend.core.config import DATABASE_URL
 
 # DB 엔진 생성
 engine = create_engine(DATABASE_URL)

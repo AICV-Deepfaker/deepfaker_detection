@@ -1,17 +1,17 @@
-# services/auth_service.py (비즈니스 로직)
+# services/auth.py (비즈니스 로직)
 # 토큰 생성, 토큰 갱신, 비밀번호 검증, 로그인, 로그아웃
 
 
-from sqlalchemy.orm import Session # DB 연결
-from fastapi import HTTPException, status # 상태 코드
+from sqlalchemy.orm import Session
+from fastapi import HTTPException, status
 from datetime import datetime, timezone, timedelta
 
-from core.config import settings
-from core.security import hash_refresh_token, create_access_token, create_refresh_token, decode_token, verify_password
+from ddp_backend.core.config import settings
+from ddp_backend.core.security import hash_refresh_token, create_access_token, create_refresh_token, decode_token, verify_password
 
-from ddp_backend.schemas.user import UserLogin, TokenResponse # from router
-from services.crud.user import CRUDUser
-from services.crud.token import CRUDToken
+from ddp_backend.schemas.user import UserLogin, TokenResponse
+from ddp_backend.services.crud.user import CRUDUser
+from ddp_backend.services.crud.token import CRUDToken
 
 # =========
 # 생성된 토큰 저장

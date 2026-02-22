@@ -1,12 +1,12 @@
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
 
-from core.security import get_password_hash
-from core.mailer import send_temp_pwd
+from ddp_backend.core.security import get_password_hash
+from ddp_backend.core.mailer import send_temp_pwd
 from ddp_backend.core.s3 import upload_image_to_s3, delete_image_from_s3, delete_video_from_s3
 
-from schemas.user import UserCreate, UserResponse, FindId, FindIdResponse, FindPassword, UserEdit, UserEditResponse, DeleteProfileImage
-from services.crud.user import CRUDUser
+from ddp_backend.schemas.user import UserCreate, UserResponse, FindId, FindIdResponse, FindPassword, UserEdit, UserEditResponse, DeleteProfileImage
+from ddp_backend.services.crud.user import CRUDUser, UserCreate as UserCreateCRUD, UserUpdate
 
 import random, string
 
@@ -35,15 +35,15 @@ def register(db: Session, user_info: UserCreate) -> UserResponse:
     hashed_password = get_password_hash(user_info.password)
 
     # 4. 유저 생성
-    new_user = CRUDUser.create(db,{
-        "email": user_info.email,
-        "hashed_password": hashed_password,
-        "name": user_info.name,
-        "nickname": user_info.nickname,
-        "birth": user_info.birth,
-        "profile_image": user_info.profile_image,
-        "affiliation": user_info.affiliation
-    })
+    new_user = CRUDUser.create(db, UserCreateCRUD(
+        email=user_info.email,
+        hashed_password=hashed_password,
+        name=user_info.name,
+        nickname=user_info.nickname,
+        birth=user_info.birth,
+        profile_image=user_info.profile_image,
+        affiliation=user_info.affiliation
+    ))
 
     return UserResponse(
         user_id=new_user.user_id,
@@ -111,15 +111,15 @@ def find_password(db: Session, user_info: FindPassword) -> bool:
     
     # 3. DB 업데이트
     hashed = get_password_hash(temp_password)
-    CRUDUser.update(db, user_info.email, {"hashed_password": hashed})
+    CRUDUser.update(db, user.user_id, UserUpdate(hashed_password=hashed))
 
     return True
 
 # =========
 # 회원 정보 수정
 # =========
-def edit_user(db: Session, email: str, update_info: UserEdit) -> UserEditResponse:
-    user = CRUDUser.get_by_email(db, email)
+def edit_user(db: Session, user_id: int, update_info: UserEdit) -> UserEditResponse:
+    user = CRUDUser.get_by_id(db, user_id)
 
     if not user:
         raise HTTPException(
@@ -140,7 +140,7 @@ def edit_user(db: Session, email: str, update_info: UserEdit) -> UserEditRespons
     # 프로필 이미지 변경
     if update_info.new_profile_image:
         update_data['profile_image'] = update_info.new_profile_image
-        upload_image_to_s3(user.new_profile_image)
+        # upload_image_to_s3(user.new_profile_image) # 개발 예정
         response.changed_profile_image = update_info.new_profile_image
     
     # 소속 변경
@@ -154,14 +154,18 @@ def edit_user(db: Session, email: str, update_info: UserEdit) -> UserEditRespons
             detail="변경할 정보가 없습니다"
             )
 
-    CRUDUser.update(db, email, update_data)
+    CRUDUser.update(db, user_id, UserUpdate(
+        hashed_password=update_data.get('hashed_password'),
+        profile_image=update_data.get('profile_image'),
+        affiliation=update_data.get('affiliation')
+    ))
     return response
 
 # =========
 # 프로필 이미지 삭제
 # =========
-def delete_profile_image(db, email) -> UserEditResponse:
-    user = CRUDUser.get_by_email(db, email)
+def delete_profile_image(db: Session, user_id: int) -> UserEditResponse:
+    user = CRUDUser.get_by_id(db, user_id)
     
     if not user:
         raise HTTPException(status_code=404, detail="유저를 찾을 수 없습니다")
@@ -169,28 +173,37 @@ def delete_profile_image(db, email) -> UserEditResponse:
         raise HTTPException(status_code=404, detail="프로필 이미지가 없습니다")
     
     # S3 변경
-    delete_image_from_s3(user.profile_image)  # 이후 개발 예정
+    # delete_image_from_s3(user.profile_image)  # 이후 개발 예정
 
-    CRUDUser.update(db, email, {"profile_image": None})
-    return UserEditResponse(delete_profile_image=True)
+    user.profile_image = None
+    db.commit()
+    db.refresh(user)
+    if user.profile_image is None:
+        return UserEditResponse(delete_profile_image=True)
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
+            detail="이미지 삭제에 실패하였습니다"
+            )
 
 # =========
 # 회원 탈퇴
 # =========
-def withdraw(db: Session, email: str) -> bool:
-    user = CRUDUser.get_by_email(db, email)
+def delete_user(db: Session, user_id: int) -> bool:
+    user = CRUDUser.get_by_id(db, user_id)
+
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="유저를 찾을 수 없습니다")
     
     # 1. 프로필 이미지 S3 삭제 (이후 개발 예정)
-    if user.profile_image:
-        delete_image_from_s3(user.profile_image)
+    # if user.profile_image:
+    #     delete_image_from_s3(user.profile_image)
     
     # 2. 비디오 S3 삭제 (이후 개발 예정)
-    for video in user.videos:
-        if video.source:
-            delete_video_from_s3(video.source.s3_path)
+    # for video in user.videos:
+    #     if video.source:
+    #         delete_video_from_s3(video.source.s3_path)
     
     # 3. 유저 삭제 (cascade로 관련 데이터 모두 삭제)
-    CRUDUser.delete(db, email)
+    CRUDUser.delete(db, user_id)
     return True

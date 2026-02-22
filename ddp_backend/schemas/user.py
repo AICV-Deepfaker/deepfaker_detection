@@ -2,9 +2,7 @@
 # Pydantic을 사용하여 회원가입 시 받을 이메일, 비밀번호 형식 등을 정의
 
 from datetime import date, datetime
-
 from pydantic import BaseModel, EmailStr, Field
-
 from .enums import Affiliation
 
 __all__ = [

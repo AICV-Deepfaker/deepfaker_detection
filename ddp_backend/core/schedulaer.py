@@ -1,8 +1,9 @@
 from apscheduler.schedulers.background import BackgroundScheduler
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 
-from core.database import SessionLocal # DB에서 직접 처리
-from models.models import Token 
+from ddp_backend.core.database import SessionLocal # DB에서 직접 처리
+from ddp_backend.models.models import Token
+
 
 def revoke_expired_tokens():
     """30일 이상 미사용 토큰 revoked=True 처리"""

@@ -96,9 +96,9 @@ class CRUDUser:
 
     # 사용 : 회원정보수정
     @staticmethod
-    def update(db: Session, email: str, update_info: UserUpdate):
+    def update(db: Session, user_id: int, update_info: UserUpdate):
         """유저 정보 변경"""
-        user = CRUDUser.get_by_email(db, email)
+        user = CRUDUser.get_by_id(db, user_id)
         if user is None:
             return None
 
@@ -127,9 +127,9 @@ class CRUDUser:
 
     # 사용 : 회원탈퇴
     @staticmethod
-    def delete(db: Session, email: str):
+    def delete(db: Session, user_id: int):
         """유저 삭제"""
-        user = CRUDUser.get_by_email(db, email)
+        user = CRUDUser.get_by_id(db, user_id)
         if user is None:
             return False
         db.delete(user)
