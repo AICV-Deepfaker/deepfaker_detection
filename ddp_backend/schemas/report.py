@@ -23,9 +23,12 @@ class VideoReport(BaseReport):
         return f"{round(confidence * 100, 2)}%"
 
 
-class STTReport(BaseReport):
-    keywords: list[dict[str, str | bool]]
-    risk_level: RiskLevel
+class STTScript(BaseModel):
     risk_reason: str
     transcript: str
     search_results: list[dict[str, str]]
+
+
+class STTReport(BaseReport, STTScript):
+    keywords: list[dict[str, str | bool]]
+    risk_level: RiskLevel

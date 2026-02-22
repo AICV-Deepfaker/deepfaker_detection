@@ -30,6 +30,7 @@ from ddp_backend.schemas.enums import (
     OriginPath,
     STTRiskLevel,
 )
+from ddp_backend.schemas.report import STTScript
 
 
 class PydanticJSONType[T: BaseModel](TypeDecorator[T]):
@@ -54,11 +55,6 @@ class PydanticJSONType[T: BaseModel](TypeDecorator[T]):
         # Pydantic v2: model_validate()
         return self.pydantic_model.model_validate(value)
 
-
-class STTScript(BaseModel):
-    risk_reason: str
-    transcript: str
-    search_results: list[dict[str, str]]
 
 
 # 1. Users table
@@ -134,7 +130,7 @@ class Token(Base):
 class Video(Base):
     __tablename__ = "videos"
     video_id: Mapped[int] = mapped_column(
-        BigInteger, primary_key=True, autoincrement=True
+        BigInteger, primary_key=True, autoincrement=True, init=False,
     )
     user_id: Mapped[int] = mapped_column(
         BigInteger, ForeignKey("users.user_id", ondelete="CASCADE")
@@ -161,7 +157,7 @@ class Video(Base):
 class Source(Base):  # S3 관리용 (일정 시간 후 삭제 대상)
     __tablename__ = "sources"
     source_id: Mapped[int] = mapped_column(
-        BigInteger, primary_key=True, autoincrement=True
+        BigInteger, primary_key=True, autoincrement=True, init=False,
     )
     video_id: Mapped[int] = mapped_column(
         BigInteger, ForeignKey("videos.video_id", ondelete="CASCADE")
@@ -181,7 +177,7 @@ class Source(Base):  # S3 관리용 (일정 시간 후 삭제 대상)
 class Result(Base):
     __tablename__ = "results"
     result_id: Mapped[int] = mapped_column(
-        BigInteger, primary_key=True, autoincrement=True
+        BigInteger, primary_key=True, autoincrement=True, init=False,
     )
     user_id: Mapped[int] = mapped_column(
         BigInteger, ForeignKey("users.user_id", ondelete="CASCADE")
@@ -211,14 +207,14 @@ class Result(Base):
         cascade="all, delete-orphan",
         init=False,
     )
-    alerts: Mapped[list[Alert]] = relationship("Alert", back_populates="result")
+    alerts: Mapped[list[Alert]] = relationship("Alert", back_populates="result", init=False)
 
 
 # 6. FastReports table
 class FastReport(Base):
     __tablename__ = "fast_reports"
     fast_id: Mapped[int] = mapped_column(
-        BigInteger, primary_key=True, autoincrement=True
+        BigInteger, primary_key=True, autoincrement=True, init=False,
     )
     user_id: Mapped[int] = mapped_column(
         BigInteger, ForeignKey("users.user_id", ondelete="CASCADE")
@@ -250,7 +246,7 @@ class FastReport(Base):
 class DeepReport(Base):
     __tablename__ = "deep_reports"
     deep_id: Mapped[int] = mapped_column(
-        BigInteger, primary_key=True, autoincrement=True
+        BigInteger, primary_key=True, autoincrement=True, init=False,
     )
     user_id: Mapped[int] = mapped_column(
         BigInteger, ForeignKey("users.user_id", ondelete="CASCADE")
@@ -271,7 +267,7 @@ class DeepReport(Base):
 class Alert(Base):  # 신고하기
     __tablename__ = "alerts"
     alert_id: Mapped[int] = mapped_column(
-        BigInteger, primary_key=True, autoincrement=True
+        BigInteger, primary_key=True, autoincrement=True, init=False,
     )
     user_id: Mapped[int] = mapped_column(
         BigInteger, ForeignKey("users.user_id", ondelete="CASCADE")
