@@ -1,7 +1,6 @@
 from pydantic import BaseModel, computed_field
-from stt import RiskLevel
 
-from .enums import ModelName, Result, Status
+from .enums import ModelName, Result, Status, STTRiskLevel
 
 __all__ = ["VideoReport", "STTScript", "STTReport"]
 
@@ -22,7 +21,6 @@ class VideoReport(BaseReport):
         return self.probability if self.probability > 0.5 else 1 - self.probability
 
 
-
 class STTScript(BaseModel):
     keywords: list[str]
     risk_reason: str
@@ -31,4 +29,4 @@ class STTScript(BaseModel):
 
 
 class STTReport(BaseReport, STTScript):
-    risk_level: RiskLevel
+    risk_level: STTRiskLevel

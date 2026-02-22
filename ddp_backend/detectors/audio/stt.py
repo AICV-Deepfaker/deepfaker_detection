@@ -3,7 +3,7 @@ from typing import final, override
 
 from stt import SCAM_SEED_KEYWORDS, run_pipeline
 
-from ddp_backend.schemas.enums import ModelName, Status
+from ddp_backend.schemas.enums import ModelName, Status, STTRiskLevel
 from ddp_backend.schemas.report import STTReport
 from detectors import AudioAnalyzer
 
@@ -28,7 +28,7 @@ class STTDetector(AudioAnalyzer):
             status=Status.SUCCESS,
             model_name=self.model_name,
             keywords=result.detected_keywords,
-            risk_level=result.risk_level,
+            risk_level=STTRiskLevel(result.risk_level),
             risk_reason=result.risk_reason,
             transcript=result.transcript,
             search_results=result.search_results,
