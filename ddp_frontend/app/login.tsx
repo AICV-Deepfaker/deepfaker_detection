@@ -19,21 +19,24 @@ import * as WebBrowser from 'expo-web-browser';
 
 import { ThemedText } from '@/components/themed-text';
 import { findStoredUser, setAuth } from '@/lib/auth-storage';
-import * as Clipboard from 'expo-clipboard';
 
-// WebBrowser must be warmed up for auth redirect on Android
+// Expo Go에서 WebBrowser 세션을 완료하기 위해 필요
 WebBrowser.maybeCompleteAuthSession();
 
 const ACCENT_GREEN = '#00CF90';
 const TEXT_COLOR = '#111';
 const SECONDARY_TEXT_COLOR = '#687076';
 
-// Google Cloud Console에서 OAuth 2.0 클라이언트 ID (웹 앱) 발급 후
-// .env에 EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID=클라이언트ID 입력
-// exp:// 가 Google에서 거부되면 EXPO_PUBLIC_EXPO_OWNER=Expo계정명 넣고
-// 승인된 리디렉션 URI에 https://auth.expo.io/@계정명/ddp 등록 (docs 참고)
 const GOOGLE_WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || '';
 const EXPO_OWNER = process.env.EXPO_PUBLIC_EXPO_OWNER || '';
+
+// Google OAuth 전체 discovery 문서 (tokenEndpoint 필수 — 없으면 proxy가 code 교환 실패)
+const GOOGLE_DISCOVERY = {
+  authorizationEndpoint: 'https://accounts.google.com/o/oauth2/v2/auth',
+  tokenEndpoint: 'https://oauth2.googleapis.com/token',
+  revocationEndpoint: 'https://oauth2.googleapis.com/revoke',
+  userInfoEndpoint: 'https://openidconnect.googleapis.com/v1/userinfo',
+};
 
 export default function LoginScreen() {
   const insets = useSafeAreaInsets();
@@ -42,32 +45,21 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
 
-  // EXPO_OWNER가 있으면 https://auth.expo.io/@계정/ddp 사용 (Google이 .io 도메인만 허용할 때)
-  // 없으면 makeRedirectUri 결과 사용 (Expo Go는 exp://... 나옴)
-  const redirectUri =
-    EXPO_OWNER.trim() !== ''
-      ? `https://auth.expo.io/@${EXPO_OWNER.trim()}/ddp`
-      : AuthSession.makeRedirectUri({
-          scheme: 'ddp',
-          path: 'redirect',
-          useProxy: true,
-        });
+  // auth.expo.io 프록시: Google이 code를 프록시로 보내고, 앱은 useProxy:true로 결과를 polling
+  const redirectUri = `https://auth.expo.io/@${EXPO_OWNER.trim()}/ddp`;
 
-  const [request, response, promptAsync] = AuthSession.useAuthRequest(
+  // useProxy는 v7 타입에서 제거됐으나 런타임에선 동작 (auth.expo.io polling에 필요)
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  // @ts-ignore
+  const [, response, promptAsync] = AuthSession.useAuthRequest(
     {
       clientId: GOOGLE_WEB_CLIENT_ID,
       scopes: ['openid', 'profile', 'email'],
       redirectUri,
-      useProxy: EXPO_OWNER.trim() !== '',
+      useProxy: true,
     },
-    { authorizationEndpoint: 'https://accounts.google.com/o/oauth2/v2/auth' }
+    GOOGLE_DISCOVERY
   );
-
-  useEffect(() => {
-    if (__DEV__ && redirectUri) {
-      console.log('[Redirect URI] Google에 등록할 값:', redirectUri);
-    }
-  }, [redirectUri]);
 
   useEffect(() => {
     if (!response) return;
@@ -107,10 +99,7 @@ export default function LoginScreen() {
 
   const handleGoogleLogin = useCallback(() => {
     if (!GOOGLE_WEB_CLIENT_ID) {
-      Alert.alert(
-        '설정 필요',
-        'Google 로그인을 위해 Google Cloud Console에서 OAuth 클라이언트 ID를 발급한 뒤,\n환경변수 EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID에 넣어 주세요.'
-      );
+      Alert.alert('설정 필요', 'Google Client ID가 설정되지 않았습니다.');
       return;
     }
     setGoogleLoading(true);
@@ -192,20 +181,15 @@ export default function LoginScreen() {
             )}
           </TouchableOpacity>
 
-          {/* Google Console "승인된 리디렉션 URI"에 등록할 값 (복사용) */}
-          <TouchableOpacity
-            style={styles.redirectUriWrap}
-            onPress={() => {
-              Clipboard.setStringAsync(redirectUri);
-              Alert.alert('복사됨', '리디렉션 URI가 클립보드에 복사되었습니다. Google Console에 붙여넣으세요.');
-            }}
-            activeOpacity={0.8}>
-            <ThemedText style={styles.redirectUriLabel}>리디렉션 URI (Google에 등록할 값)</ThemedText>
-            <ThemedText style={styles.redirectUriValue} numberOfLines={2} selectable>
-              {redirectUri}
-            </ThemedText>
-            <ThemedText style={styles.redirectUriHint}>탭하면 복사</ThemedText>
-          </TouchableOpacity>
+          <View style={styles.findRow}>
+            <TouchableOpacity onPress={() => router.push('/find-id')} hitSlop={8}>
+              <ThemedText style={styles.findLink}>아이디 찾기</ThemedText>
+            </TouchableOpacity>
+            <ThemedText style={styles.findSep}>|</ThemedText>
+            <TouchableOpacity onPress={() => router.push('/find-password')} hitSlop={8}>
+              <ThemedText style={styles.findLink}>비밀번호 찾기</ThemedText>
+            </TouchableOpacity>
+          </View>
 
           <View style={styles.signupRow}>
             <ThemedText style={styles.signupHint}>계정이 없으신가요? </ThemedText>
@@ -305,36 +289,27 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: TEXT_COLOR,
   },
-  redirectUriWrap: {
+  findRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
     marginTop: 20,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    backgroundColor: '#F5F5F5',
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.06)',
+    gap: 8,
   },
-  redirectUriLabel: {
-    fontSize: 12,
+  findLink: {
+    fontSize: 14,
     fontWeight: '600',
     color: SECONDARY_TEXT_COLOR,
-    marginBottom: 6,
   },
-  redirectUriValue: {
-    fontSize: 13,
-    color: TEXT_COLOR,
-    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
-  },
-  redirectUriHint: {
-    fontSize: 11,
+  findSep: {
+    fontSize: 14,
     color: SECONDARY_TEXT_COLOR,
-    marginTop: 6,
   },
   signupRow: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 28,
+    marginTop: 16,
   },
   signupHint: {
     fontSize: 14,

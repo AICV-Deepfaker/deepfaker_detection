@@ -1,18 +1,41 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Image } from 'expo-image';
+import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  ScrollView,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
-import { getAuth, getProfileByEmail, type StoredUser } from '@/lib/auth-storage';
+import {
+  findStoredUser,
+  getAuth,
+  getProfileByEmail,
+  type Affiliation,
+  type StoredUser,
+  updateUserPassword,
+  updateUserProfile,
+} from '@/lib/auth-storage';
 
 const ACCENT_GREEN = '#00CF90';
 const TEXT = '#111';
 const SUB = '#687076';
 const CARD_BG = '#fff';
 const BORDER = 'rgba(0,0,0,0.06)';
+
+const AFFILIATION_OPTIONS: { value: Affiliation; label: string }[] = [
+  { value: '개인', label: '개인' },
+  { value: '기관', label: '기관' },
+  { value: '기업', label: '기업' },
+];
 
 function Row({ label, value }: { label: string; value?: string | null }) {
   return (
@@ -27,8 +50,20 @@ export default function MemberInfoScreen() {
   const insets = useSafeAreaInsets();
 
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [authEmail, setAuthEmail] = useState<string | null>(null);
   const [profile, setProfile] = useState<StoredUser | null>(null);
+
+  // 편집 모드
+  const [editMode, setEditMode] = useState(false);
+  const [editAffiliation, setEditAffiliation] = useState<Affiliation | undefined>(undefined);
+  const [editPhotoUri, setEditPhotoUri] = useState<string | null>(null);
+
+  // 비밀번호 변경
+  const [currentPw, setCurrentPw] = useState('');
+  const [newPw, setNewPw] = useState('');
+  const [newPwConfirm, setNewPwConfirm] = useState('');
+  const [pwChanging, setPwChanging] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -36,18 +71,7 @@ export default function MemberInfoScreen() {
       const auth = await getAuth();
       const email = auth?.email ?? null;
       setAuthEmail(email);
-
-      if (!email) {
-        setProfile(null);
-        return;
-      }
-
-      // ✅ 구글 로그인은 로컬 users에 저장된 프로필이 없을 수 있음
-      if (email === 'google') {
-        setProfile(null);
-        return;
-      }
-
+      if (!email || email === 'google') { setProfile(null); return; }
       const p = await getProfileByEmail(email);
       setProfile(p);
     } finally {
@@ -55,9 +79,91 @@ export default function MemberInfoScreen() {
     }
   }, []);
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  useEffect(() => { load(); }, [load]);
+
+  const enterEditMode = () => {
+    if (!profile) return;
+    setEditAffiliation(profile.affiliation);
+    setEditPhotoUri(profile.profilePhotoUri ?? null);
+    setCurrentPw('');
+    setNewPw('');
+    setNewPwConfirm('');
+    setEditMode(true);
+  };
+
+  const cancelEditMode = () => {
+    setEditMode(false);
+  };
+
+  const pickPhoto = async () => {
+    const { granted } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!granted) {
+      Alert.alert('권한 필요', '갤러리 접근 권한이 필요합니다.');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+    if (!result.canceled && result.assets[0]) {
+      setEditPhotoUri(result.assets[0].uri);
+    }
+  };
+
+  const handleSaveProfile = async () => {
+    if (!authEmail) return;
+    setSaving(true);
+    try {
+      const updates: { affiliation?: Affiliation; profilePhotoUri?: string } = {};
+      if (editAffiliation !== undefined) updates.affiliation = editAffiliation;
+      if (editPhotoUri !== null) updates.profilePhotoUri = editPhotoUri;
+      await updateUserProfile(authEmail, updates);
+      await load();
+      setEditMode(false);
+      Alert.alert('저장 완료', '프로필이 업데이트되었습니다.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleChangePassword = async () => {
+    if (!authEmail) return;
+    if (!currentPw || !newPw || !newPwConfirm) {
+      Alert.alert('입력 오류', '모든 비밀번호 항목을 입력해 주세요.');
+      return;
+    }
+    if (newPw.length < 6) {
+      Alert.alert('입력 오류', '새 비밀번호는 6자 이상이어야 합니다.');
+      return;
+    }
+    if (newPw !== newPwConfirm) {
+      Alert.alert('입력 오류', '새 비밀번호가 일치하지 않습니다.');
+      return;
+    }
+    setPwChanging(true);
+    try {
+      const user = await findStoredUser(authEmail, currentPw);
+      if (!user) {
+        Alert.alert('인증 실패', '현재 비밀번호가 올바르지 않습니다.');
+        return;
+      }
+      const ok = await updateUserPassword(authEmail, newPw);
+      if (ok) {
+        setCurrentPw('');
+        setNewPw('');
+        setNewPwConfirm('');
+        Alert.alert('변경 완료', '비밀번호가 변경되었습니다.');
+      } else {
+        Alert.alert('오류', '비밀번호 변경에 실패했습니다.');
+      }
+    } finally {
+      setPwChanging(false);
+    }
+  };
+
+  const avatarUri = editMode ? editPhotoUri : profile?.profilePhotoUri;
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -67,7 +173,30 @@ export default function MemberInfoScreen() {
           <MaterialIcons name="arrow-back" size={24} color={TEXT} />
         </TouchableOpacity>
         <ThemedText style={styles.headerTitle}>회원 정보</ThemedText>
-        <View style={styles.headerRight} />
+        {profile && !loading ? (
+          editMode ? (
+            <View style={styles.headerActions}>
+              <TouchableOpacity onPress={cancelEditMode} style={styles.headerBtn} hitSlop={8}>
+                <ThemedText style={styles.headerBtnTextCancel}>취소</ThemedText>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleSaveProfile}
+                style={styles.headerBtn}
+                hitSlop={8}
+                disabled={saving}>
+                <ThemedText style={styles.headerBtnTextSave}>
+                  {saving ? '저장 중' : '저장'}
+                </ThemedText>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <TouchableOpacity onPress={enterEditMode} style={styles.headerBtn} hitSlop={8}>
+              <ThemedText style={styles.headerBtnTextEdit}>편집</ThemedText>
+            </TouchableOpacity>
+          )
+        ) : (
+          <View style={styles.headerRight} />
+        )}
       </View>
 
       {loading ? (
@@ -102,18 +231,27 @@ export default function MemberInfoScreen() {
         <ScrollView
           style={styles.scroll}
           contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
-          showsVerticalScrollIndicator={false}
-        >
+          showsVerticalScrollIndicator={false}>
           {/* Profile card */}
           <View style={styles.profileCard}>
             <View style={styles.profileTop}>
-              {profile.profilePhotoUri ? (
-                <Image source={{ uri: profile.profilePhotoUri }} style={styles.avatar} contentFit="cover" />
-              ) : (
-                <View style={styles.avatarFallback}>
-                  <MaterialIcons name="person" size={34} color={SUB} />
-                </View>
-              )}
+              <TouchableOpacity
+                onPress={editMode ? pickPhoto : undefined}
+                activeOpacity={editMode ? 0.7 : 1}
+                style={styles.avatarWrap}>
+                {avatarUri ? (
+                  <Image source={{ uri: avatarUri }} style={styles.avatar} contentFit="cover" />
+                ) : (
+                  <View style={styles.avatarFallback}>
+                    <MaterialIcons name="person" size={34} color={SUB} />
+                  </View>
+                )}
+                {editMode && (
+                  <View style={styles.avatarEditBadge}>
+                    <MaterialIcons name="camera-alt" size={14} color="#fff" />
+                  </View>
+                )}
+              </TouchableOpacity>
 
               <View style={{ flex: 1 }}>
                 <ThemedText style={styles.nameText}>{profile.name ?? '-'}</ThemedText>
@@ -125,8 +263,87 @@ export default function MemberInfoScreen() {
 
             <Row label="별명" value={profile.nickname} />
             <Row label="생년월일" value={profile.birthdate} />
-            <Row label="소속" value={profile.affiliation ?? '-'} />
+
+            {/* 소속 */}
+            <View style={styles.row}>
+              <ThemedText style={styles.rowLabel}>소속</ThemedText>
+              {editMode ? (
+                <View style={styles.affiliationRow}>
+                  {AFFILIATION_OPTIONS.map((opt) => (
+                    <TouchableOpacity
+                      key={opt.value}
+                      style={[
+                        styles.affiliationChip,
+                        editAffiliation === opt.value && styles.affiliationChipSelected,
+                      ]}
+                      onPress={() =>
+                        setEditAffiliation(editAffiliation === opt.value ? undefined : opt.value)
+                      }>
+                      <ThemedText
+                        style={[
+                          styles.affiliationLabel,
+                          editAffiliation === opt.value && styles.affiliationLabelSelected,
+                        ]}>
+                        {opt.label}
+                      </ThemedText>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              ) : (
+                <ThemedText style={styles.rowValue}>{profile.affiliation ?? '-'}</ThemedText>
+              )}
+            </View>
           </View>
+
+          {/* 비밀번호 변경 (편집 모드에서만) */}
+          {editMode && (
+            <View style={styles.pwCard}>
+              <ThemedText style={styles.pwCardTitle}>비밀번호 변경</ThemedText>
+
+              <ThemedText style={styles.pwLabel}>현재 비밀번호</ThemedText>
+              <TextInput
+                style={styles.pwInput}
+                placeholder="현재 비밀번호 (임시 비밀번호 포함)"
+                placeholderTextColor={SUB}
+                value={currentPw}
+                onChangeText={setCurrentPw}
+                secureTextEntry
+                editable={!pwChanging}
+              />
+
+              <ThemedText style={[styles.pwLabel, { marginTop: 12 }]}>새 비밀번호</ThemedText>
+              <TextInput
+                style={styles.pwInput}
+                placeholder="6자 이상"
+                placeholderTextColor={SUB}
+                value={newPw}
+                onChangeText={setNewPw}
+                secureTextEntry
+                editable={!pwChanging}
+              />
+
+              <ThemedText style={[styles.pwLabel, { marginTop: 12 }]}>새 비밀번호 확인</ThemedText>
+              <TextInput
+                style={styles.pwInput}
+                placeholder="새 비밀번호 다시 입력"
+                placeholderTextColor={SUB}
+                value={newPwConfirm}
+                onChangeText={setNewPwConfirm}
+                secureTextEntry
+                editable={!pwChanging}
+              />
+
+              <TouchableOpacity
+                style={[styles.pwButton, pwChanging && styles.pwButtonDisabled]}
+                onPress={handleChangePassword}
+                disabled={pwChanging}
+                activeOpacity={0.8}>
+                <ThemedText style={styles.pwButtonText}>
+                  {pwChanging ? '변경 중...' : '비밀번호 변경'}
+                </ThemedText>
+              </TouchableOpacity>
+            </View>
+          )}
         </ScrollView>
       )}
     </View>
@@ -148,7 +365,12 @@ const styles = StyleSheet.create({
   },
   backButton: { padding: 4 },
   headerTitle: { fontSize: 18, fontWeight: '800', color: TEXT },
-  headerRight: { width: 32 },
+  headerRight: { width: 48 },
+  headerActions: { flexDirection: 'row', gap: 8 },
+  headerBtn: { paddingHorizontal: 8, paddingVertical: 4 },
+  headerBtnTextEdit: { fontSize: 15, fontWeight: '700', color: ACCENT_GREEN },
+  headerBtnTextSave: { fontSize: 15, fontWeight: '700', color: ACCENT_GREEN },
+  headerBtnTextCancel: { fontSize: 15, fontWeight: '600', color: SUB },
 
   scroll: { flex: 1, padding: 18 },
 
@@ -165,6 +387,7 @@ const styles = StyleSheet.create({
   },
 
   profileTop: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  avatarWrap: { position: 'relative' },
   avatar: { width: 72, height: 72, borderRadius: 36, backgroundColor: '#eee' },
   avatarFallback: {
     width: 72,
@@ -176,6 +399,19 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: BORDER,
   },
+  avatarEditBadge: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: ACCENT_GREEN,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#fff',
+  },
 
   nameText: { fontSize: 18, fontWeight: '900', color: TEXT },
   emailText: { marginTop: 4, fontSize: 13, color: SUB },
@@ -185,4 +421,46 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10 },
   rowLabel: { width: 90, fontSize: 14, color: SUB, fontWeight: '700' },
   rowValue: { flex: 1, fontSize: 14, color: TEXT, fontWeight: '800' },
+
+  affiliationRow: { flexDirection: 'row', gap: 8, flex: 1, flexWrap: 'wrap' },
+  affiliationChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 20,
+    backgroundColor: '#F0F0F0',
+  },
+  affiliationChipSelected: { backgroundColor: ACCENT_GREEN },
+  affiliationLabel: { fontSize: 13, fontWeight: '600', color: SUB },
+  affiliationLabelSelected: { color: '#fff' },
+
+  // 비밀번호 변경 카드
+  pwCard: {
+    backgroundColor: CARD_BG,
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: BORDER,
+    marginTop: 16,
+  },
+  pwCardTitle: { fontSize: 15, fontWeight: '800', color: TEXT, marginBottom: 16 },
+  pwLabel: { fontSize: 13, fontWeight: '600', color: SUB, marginBottom: 6 },
+  pwInput: {
+    backgroundColor: '#F5F5F5',
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 15,
+    color: TEXT,
+    borderWidth: 1,
+    borderColor: BORDER,
+  },
+  pwButton: {
+    backgroundColor: ACCENT_GREEN,
+    borderRadius: 10,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginTop: 16,
+  },
+  pwButtonDisabled: { opacity: 0.6 },
+  pwButtonText: { fontSize: 15, fontWeight: '700', color: '#fff' },
 });

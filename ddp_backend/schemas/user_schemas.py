@@ -3,18 +3,8 @@
 
 from pydantic import BaseModel, EmailStr, Field
 from datetime import date, datetime
-from typing import Optional
-from enum import Enum
+from .enums import Affiliation
 
-# models.py에서 정의한 Enum
-class LoginMethod(str, Enum):
-    local = "local"
-    google = "google"
-
-class Affiliation(str, Enum):
-    ind = "개인"
-    org = "기관"
-    com = "회사"
 
 # 회원가입
 class UserCreate(BaseModel): # Login_method는 서비스 로직에서
@@ -79,8 +69,8 @@ class TokenResponse(BaseModel):
 # 회원정보 수정 완료
 class UserEditResponse(BaseModel):
     password_changed: bool = False
-    profile_image_changed: Optional[str] = None # 수정 안 하면 None
-    affiliation_changed: Optional[Affiliation] = None
+    profile_image_changed: str | None = None # 수정 안 하면 None
+    affiliation_changed: Affiliation | None = None
 
 # 아이디 찾기
 class FindIdResponse(BaseModel):

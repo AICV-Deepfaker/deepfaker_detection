@@ -1,6 +1,10 @@
+from datetime import date
+from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.exc import NoResultFound
 from models.models import User, LoginMethod, Token, Video, VideoStatus, Source, Result, FastReport, DeepReport, Alert
-from datetime import date, datetime
+
+from ddp_backend.schemas.crud import UserCreate, UserUpdate
 
 # ====================================================
 # User CRUD
@@ -11,18 +15,18 @@ from datetime import date, datetime
 # ==============
 
 # 사용 : 회원가입
-def create_user(db: Session, user_info: dict): 
+def create_user(db: Session, user_info: UserCreate): 
     """ 유저 생성 """
     db_user = User( # 객체
-        email = user_info['email'],
+        email = user_info.email,
         login_method = LoginMethod.local,
-        hashed_password = user_info['hashed_password'], # service에서 입력
-        name = user_info['name'],
-        nickname = user_info['nickname'],
-        birth = user_info['birth'],
-        profile_image = user_info.get('profile_image'), # s3 url, option
-        affiliation = user_info.get('affiliation'), # option
-        activation_points = 0    
+        hashed_password = user_info.hashed_password, # service에서 입력
+        name = user_info.name,
+        nickname = user_info.nickname,
+        birth = user_info.birth,
+        profile_image = user_info.profile_image, # s3 url, option
+        affiliation = user_info.affiliation, # option
+        activation_points = 0, 
     )
     
     db.add(db_user) #db_user에 추가
@@ -37,43 +41,49 @@ def create_user(db: Session, user_info: dict):
 # 사용 : 회원가입, 로그인, 회원정보수정, 포인트 조회
 def get_user_by_email(db: Session, email: str):
     """ 이메일 조회 """
-    return db.query(User).filter(User.email == email).first() # email이 해당되는 행 전체조회 (비밀번호 포함)
+    query = select(User).where(User.email == email)
+    return db.scalars(query).one_or_none() # One user per one email
 
 # 사용 : 회원가입 
 def get_user_by_nickname(db: Session, nickname: str):
     """ 닉네임 중복 체크 """
-    return db.query(User).filter(User.nickname == nickname).first()
+    query = select(User).where(User.nickname == nickname)
+    return db.scalars(query).first() # There might be duplicated nickname; should we really use this?
 
 # 사용 : user_id로 조회
 def get_user_by_id(db: Session, user_id: int): # 공통
     """ user_id로 유저 조회 """
-    return db.query(User).filter(User.user_id == user_id).first()
+    return db.get(User, user_id)
 
 # 사용 : 아이디 찾기
 def get_user_by_name_birth(db: Session, name: str, birth: date):
     """ 이름, 생년월일 조회 """
-    return db.query(User).filter(User.name == name, User.birth == birth).first()
+    query = select(User).where(User.name == name, User.birth == birth)
+    return db.scalars(query).first()
 
 # 사용 : 비밀번호 찾기
-def get_user_by_name_birth_email(db: Session, name: str, birth, email: str): 
+def get_user_by_name_birth_email(db: Session, name: str, birth: date, email: str): 
     """ 이름, 생년월일, 이메일 조회 """
-    return db.query(User).filter(User.name == name, User.birth == birth, User.email == email).first()
+    query = select(User).where(User.name == name, User.birth == birth, User.email == email)
+    return db.scalars(query).one_or_none()
 
 # ==============
 # 수정 (Update)
 # ==============
 
 # 사용 : 회원정보수정
-def update_user(db: Session, email: str, update_info: dict):
+def update_user(db: Session, email: str, update_info: UserUpdate):
     """ 유저 정보 변경 """
     user = get_user_by_email(db, email)
+    if user is None:
+        return None
 
-    if update_info.get('hashed_password') is not None: # pw
-        user.hashed_password = update_info['hashed_password']
-    if update_info.get('profile_image') is not None: # 프로필
-        user.profile_image = update_info['profile_image']
-    if update_info.get('affiliation') is not None: # 소속
-        user.affiliation = update_info['affiliation']
+    if update_info.hashed_password is not None: # pw
+        user.hashed_password = update_info.hashed_password
+    if update_info.profile_image is not None: # 프로필
+        user.profile_image = update_info.profile_image
+    if update_info.affiliation is not None: # 소속
+        user.affiliation = update_info.affiliation
 
     db.commit()
     db.refresh(user)
@@ -83,7 +93,9 @@ def update_user(db: Session, email: str, update_info: dict):
 def update_active_points(db: Session, user_id: int, points: int):
     """ 포인트 업데이트 """
     user = get_user_by_id(db, user_id)
-    user.active_points += points # 1000점
+    if user is None:
+        raise NoResultFound
+    user.activation_points += points # 1000점
     db.commit()
     db.refresh(user)
     return user.activation_points
@@ -112,12 +124,14 @@ def delete_user(db: Session, email: str):
 # ==============
 
 # 사용 : 로그인
+
+# TODO: edit from here
 def create_token(db: Session, token_info: dict): 
     """ 토큰 저장 """
     db_token = Token( #객체
         user_id=token_info['user_id'],
         refresh_token=token_info['refresh_token'],
-        # device_uuid=token_info.get('device_uuid'), // 기기 수집 (이후 개발 예정)
+        # device_uuid=token_info.get('device_uuid'), # 기기 수집 (이후 개발 예정)
         expires_at=token_info['expires_at']
     )
 
@@ -133,7 +147,8 @@ def create_token(db: Session, token_info: dict):
 # 사용 : refresh 토큰 갱신 (access_token은 DB 접근 X), 로그아웃(revoked 조회)
 def get_token_by_refresh(db: Session, refresh_token: str): 
     """ refresh token으로 토큰 조회 """
-    return db.query(Token).filter(Token.refresh_token == refresh_token).first()
+    query = select(Token).where(Token.refresh_token == refresh_token)
+    return db.scalars(query).one_or_none()
 
 # ==============
 # 수정 (Update)
@@ -143,6 +158,8 @@ def get_token_by_refresh(db: Session, refresh_token: str):
 def update_revoked(db: Session, refresh_token: str): 
     """ 토큰 비활성화 """
     token = get_token_by_refresh(db, refresh_token)
+    if token is None:
+        return False
     token.revoked = True
     db.commit()
     return True
@@ -183,7 +200,8 @@ def create_video(db: Session, video_info: dict):
 # 사용 : 히스토리(url)
 def get_videos_by_user(db: Session, user_id: int): 
     """ 유저의 모든 비디오 조회 """
-    return db.query(Video).filter(Video.user_id == user_id).all()
+    query = select(Video).where(Video.user_id == user_id)
+    return db.scalars(query).all()
 
 # ==============
 # 수정 (Update)
@@ -192,7 +210,9 @@ def get_videos_by_user(db: Session, user_id: int):
 # 사용 : 영상 분석 상태 업로드
 def update_video_status(db: Session, video_id: int, status: VideoStatus): 
     """ 비디오 상태 업데이트 """
-    video = db.query(Video).filter(Video.video_id == video_id).first() # video_id로 조회
+    video = db.get(Video, video_id) # video_id로 조회
+    if video is None:
+        raise NoResultFound()
     video.status = status # 상태 업로드 (pending, processing, completed, failed)
     db.commit()
     db.refresh(video) 
@@ -229,7 +249,8 @@ def create_source(db: Session, source_info: dict):
 # 사용 : 영상 재호출(분석 실패 시)
 def get_source_by_video(db: Session, video_id: int): 
     """ video_id로 S3 경로 조회 """
-    return db.query(Source).filter(Source.video_id == video_id).first()
+    query = select(Source).where(Source.video_id == video_id)
+    return db.scalars(query).one_or_none()
 
 
 
@@ -262,7 +283,7 @@ def create_result(db: Session, result_info: dict):
 # 사용 : 히스토리, 상세결과 조회, 공유 페이지
 def get_result_by_id(db: Session, result_id: int):
     """ result_id로 결과 조회 """
-    return db.query(Result).filter(Result.result_id == result_id).first()
+    return db.get(Result, result_id)
 
 
 # 참조 : 링크를 상세결과에만 포함할 경우
@@ -339,12 +360,14 @@ def create_deep_report(db: Session, report_info: dict):
 # 사용 : FastReport 상세 결과 조회
 def get_fast_report_by_result(db: Session, result_id: int): 
     """ result_id로 Fast 리포트 조회 """
-    return db.query(FastReport).filter(FastReport.result_id == result_id).first()
+    query = select(FastReport).where(FastReport.result_id == result_id)
+    return db.scalars(query).one_or_none()
 
 # 사용 : DeepReport 상세 결과 조회
 def get_deep_report_by_result(db: Session, result_id: int): 
     """ result_id로 Deep 리포트 조회 """
-    return db.query(DeepReport).filter(DeepReport.result_id == result_id).first()
+    query = select(DeepReport).where(DeepReport.result_id == result_id)
+    return db.scalars(query).one_or_none()
 
 
 # ====================================================
@@ -374,4 +397,5 @@ def create_alert(db: Session, alert_info: dict):
 # 사용 : 신고 내역
 def get_alerts_by_user(db: Session, user_id: int): 
     """ 유저의 신고 내역 조회 """
-    return db.query(Alert).filter(Alert.user_id == user_id).all()
+    query = select(Alert).where(Alert.alert_id == user_id)
+    return db.scalars(query).all()

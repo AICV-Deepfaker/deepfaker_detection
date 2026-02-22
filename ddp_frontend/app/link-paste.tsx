@@ -15,7 +15,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import {
+  peekPendingImageUri,
   peekPendingVideoUri,
+  setPendingImageUri,
   setPendingVideoUri,
 } from '@/lib/pending-upload';
 
@@ -57,7 +59,7 @@ function detectPlatformFromUrl(url: string): PlatformId | null {
   return null;
 }
 
-type UploadedFile = { type: 'image' | 'video'; uri: string };
+type UploadedFile = { type: 'video'; uri: string };
 
 export default function LinkPasteScreen() {
   const insets = useSafeAreaInsets();
@@ -69,11 +71,9 @@ export default function LinkPasteScreen() {
   const canAnalyze = Boolean(url.trim()) || Boolean(uploadedFile);
 
   useEffect(() => {
-    const img = peekPendingImageUri();
     const vid = peekPendingVideoUri();
-    if (img) setUploadedFile({ type: 'image', uri: img });
-    else if (vid) setUploadedFile({ type: 'video', uri: vid });
-  }, []);
+    if (vid) setUploadedFile({ type: 'video', uri: vid });
+    }, []);
 
   const handleUrlChange = useCallback(
     (text: string) => {
@@ -99,13 +99,8 @@ export default function LinkPasteScreen() {
 
   const handleModeSelect = (mode: 'fast' | 'deep') => {
     if (!uploadedFile) return;
-    if (uploadedFile.type === 'image') {
-      setPendingImageUri(uploadedFile.uri);
-      router.replace(`/analysis-result?pendingImage=1&mode=${mode}`);
-    } else {
-      setPendingVideoUri(uploadedFile.uri);
-      router.replace(`/analysis-result?pendingVideo=1&mode=${mode}`);
-    }
+    setPendingVideoUri(uploadedFile.uri);
+    router.replace(`/analysis-result?pendingVideo=1&mode=${mode}`);
   };
 
   const handleCancel = () => {
@@ -117,26 +112,11 @@ export default function LinkPasteScreen() {
     if (!granted) {
       Alert.alert(
         '권한 필요',
-        '갤러리에서 이미지와 영상을 선택하려면 권한이 필요합니다. 설정에서 권한을 허용해주세요.',
+        '갤러리에서 영상을 선택하려면 권한이 필요합니다. 설정에서 권한을 허용해주세요.',
       );
       return false;
     }
     return true;
-  };
-
-  const pickImage = async () => {
-    const hasPermission = await requestMediaPermission();
-    if (!hasPermission) return;
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsEditing: false,
-      quality: 1,
-      allowsMultipleSelection: false,
-    });
-    if (!result.canceled && result.assets[0]) {
-      setUploadedFile({ type: 'image', uri: result.assets[0].uri });
-      setShowModeButtons(false);
-    }
   };
 
   const pickVideo = async () => {
@@ -169,11 +149,11 @@ export default function LinkPasteScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* 이미지 / 영상 업로드 버튼 (앨범 연동) */}
+        {/* 영상 업로드 버튼 (앨범 연동) */}
         <View style={styles.uploadRow}>
-          <TouchableOpacity style={styles.uploadButton} activeOpacity={0.8} onPress={pickImage}>
+          <TouchableOpacity style={styles.uploadButton} activeOpacity={0.8} onPress={pickVideo}>
             <Image
-              source={require('@/assets/images/image_icon.png')}
+              source={require('@/assets/images/video_icon.png')}
               style={styles.uploadIconImage}
               contentFit="contain"
             />

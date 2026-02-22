@@ -81,3 +81,42 @@ export async function getProfileByEmail(email: string): Promise<StoredUser | nul
   const users = await getStoredUsers();
   return users.find((u) => u.email.toLowerCase() === email.trim().toLowerCase()) ?? null;
 }
+
+export async function findUserByNameAndBirthdate(name: string, birthdate: string): Promise<string | null> {
+  const users = await getStoredUsers();
+  const found = users.find(
+    (u) =>
+      u.name?.trim().toLowerCase() === name.trim().toLowerCase() &&
+      u.birthdate?.trim() === birthdate.trim()
+  );
+  return found?.email ?? null;
+}
+
+export async function updateUserPassword(email: string, newPassword: string): Promise<boolean> {
+  try {
+    const users = await getStoredUsers();
+    const idx = users.findIndex((u) => u.email.toLowerCase() === email.trim().toLowerCase());
+    if (idx === -1) return false;
+    users[idx] = { ...users[idx], password: newPassword };
+    await AsyncStorage.setItem(USERS_KEY, JSON.stringify(users));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export async function updateUserProfile(
+  email: string,
+  updates: { affiliation?: Affiliation; profilePhotoUri?: string }
+): Promise<boolean> {
+  try {
+    const users = await getStoredUsers();
+    const idx = users.findIndex((u) => u.email.toLowerCase() === email.trim().toLowerCase());
+    if (idx === -1) return false;
+    users[idx] = { ...users[idx], ...updates };
+    await AsyncStorage.setItem(USERS_KEY, JSON.stringify(users));
+    return true;
+  } catch {
+    return false;
+  }
+}

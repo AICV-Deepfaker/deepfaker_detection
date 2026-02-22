@@ -26,6 +26,9 @@ export default function RootLayout() {
           <Stack.Screen name="analysis-result" options={{ headerShown: false }} />
           <Stack.Screen name="fraud-report" options={{ headerShown: false }} />
           <Stack.Screen name="inquiry" options={{ headerShown: false }} />
+          <Stack.Screen name="history" options={{ headerShown: false }} />
+          <Stack.Screen name="find-id" options={{ headerShown: false }} />
+          <Stack.Screen name="find-password" options={{ headerShown: false }} />
         </Stack>
         <StatusBar style="auto" />
       </AnalysisProvider>
