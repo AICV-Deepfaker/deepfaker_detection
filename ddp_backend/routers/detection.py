@@ -3,8 +3,6 @@ from typing import Annotated
 from fastapi import APIRouter, File, UploadFile, Depends
 from sqlalchemy.orm import Session
 
-from ddp_backend.schemas.crud import FastReportCreate
-
 from ddp_backend.schemas.api import (
     APIOutputDeep,
     APIOutputFast,
@@ -12,7 +10,7 @@ from ddp_backend.schemas.api import (
 from ddp_backend.schemas.report import STTScript
 from ddp_backend.services.dependencies import detection_pipeline
 from ddp_backend.utils.file_handler import save_temp_file
-from ddp_backend.services import crud
+from ddp_backend.services.crud import FastReportCreate, DeepReportCreate, CRUDFastReport, CRUDDeepReport
 from ddp_backend.core.database import get_db
 
 
@@ -27,7 +25,7 @@ def predict_deepfake_fast(
     with save_temp_file(file) as temp_path:
         output = detection_pipeline.run_fast_mode(temp_path)
         assert output.wavelet is not None and output.r_ppg is not None
-        crud.create_fast_report(db, FastReportCreate(
+        CRUDFastReport.create(db, FastReportCreate(
             user_id=...,
             result_id=...,
             freq_result=output.wavelet.result,
