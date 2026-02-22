@@ -2,8 +2,8 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import ClassVar
 
-from ddp_backend.schemas.enums import ModelName
-from ddp_backend.schemas.report import STTReport, VideoReport
+from schemas.enums import ModelName
+from schemas.report import STTReport, VideoReport
 
 
 class VisualDetector(ABC):

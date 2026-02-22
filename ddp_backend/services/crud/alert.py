@@ -6,7 +6,7 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from ddp_backend.models import Alert
+from models import Alert
 
 __all__ = [
     "AlertCreate",

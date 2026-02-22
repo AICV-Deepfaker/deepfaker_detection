@@ -1,10 +1,16 @@
 from pathlib import Path
 from typing import final, override
+import sys
+import os
 
-from stt import SCAM_SEED_KEYWORDS, run_pipeline
+# STT 폴더가 있는 절대 경로를 파이썬에게 알려줍니다.
+sys.path.append("/content/deepfaker_detection/STT")
+sys.path.append("/content/deepfaker_detection")
 
-from ddp_backend.schemas.enums import ModelName, Status, STTRiskLevel
-from ddp_backend.schemas.report import STTReport
+from STT.src.stt.pipeline import SCAM_SEED_KEYWORDS, run_pipeline
+
+from schemas.enums import ModelName, Status, STTRiskLevel
+from schemas.report import STTReport
 from detectors import AudioAnalyzer
 
 

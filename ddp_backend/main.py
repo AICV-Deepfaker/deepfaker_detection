@@ -15,8 +15,8 @@ from dotenv import load_dotenv
 from fastapi import FastAPI
 from pyngrok import ngrok # type: ignore
 
-from ddp_backend.services.dependencies import load_all_model
-from ddp_backend.routers import detection
+from services.dependencies import load_all_model
+from routers import detection
 
 _BACKEND_DIR = Path(__file__).parent
 load_dotenv(_BACKEND_DIR / ".env")

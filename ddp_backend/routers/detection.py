@@ -3,15 +3,15 @@ from typing import Annotated
 from fastapi import APIRouter, File, UploadFile, Depends, BackgroundTasks
 from sqlalchemy.orm import Session
 
-from ddp_backend.schemas.api import (
+from schemas.api import (
     APIOutputDeep,
     APIOutputFast,
 )
-from ddp_backend.schemas.report import STTScript
-from ddp_backend.services.dependencies import detection_pipeline
-from ddp_backend.utils.file_handler import save_temp_file
-from ddp_backend.services.crud import FastReportCreate, DeepReportCreate, CRUDFastReport, CRUDDeepReport
-from ddp_backend.core.database import get_db
+from schemas.report import STTScript
+from services.dependencies import detection_pipeline
+from utils.file_handler import save_temp_file
+from services.crud import FastReportCreate, DeepReportCreate, CRUDFastReport, CRUDDeepReport
+from core.database import get_db
 
 
 router = APIRouter(prefix="/prediction", tags=["prediction"])

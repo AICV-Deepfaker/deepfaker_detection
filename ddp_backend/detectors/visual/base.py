@@ -11,9 +11,9 @@ import cv2
 import torch
 from pydantic import BaseModel
 
-from ddp_backend.schemas.config import BaseVideoConfig
-from ddp_backend.schemas.enums import Result, Status
-from ddp_backend.schemas.report import VideoReport
+from schemas.config import BaseVideoConfig
+from schemas.enums import Result, Status
+from schemas.report import VideoReport
 from detectors import VisualDetector
 
 

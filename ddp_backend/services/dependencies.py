@@ -2,12 +2,12 @@
 Singleton variables used across files
 """
 
-from ddp_backend.detectors.audio import STTDetector
-from ddp_backend.detectors.visual import RPPGDetector, UniteDetector, WaveletDetector
-from ddp_backend.schemas.config import BaseVideoConfig
-from ddp_backend.services import DetectionPipeline
+from detectors.audio import STTDetector
+from detectors.visual import RPPGDetector, UniteDetector, WaveletDetector
+from schemas.config import BaseVideoConfig
+from services import DetectionPipeline
 
-DETECTOR_YAML = "Wavelet-CLIP/wavelet_lib/config/detector/detector.yaml"
+DETECTOR_YAML = "/content/deepfaker_detection/Wavelet-CLIP/wavelet_lib/config/detector/detector.yaml"
 CKPT_PATH = "ddp_backend/ckpt_best.pth"
 IMG_SIZE = 224
 

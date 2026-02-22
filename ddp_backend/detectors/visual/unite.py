@@ -9,7 +9,7 @@ from torch.utils.data import DataLoader
 from unite_detection.dataset import CustomVideoDataset
 from unite_detection.schemas import ArchSchema, DatasetConfig
 
-from ddp_backend.schemas.enums import ModelName
+from schemas.enums import ModelName
 
 from .base import BaseVideoConfig, BaseVideoDetector, VideoInferenceResult
 
