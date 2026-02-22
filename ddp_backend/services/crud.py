@@ -1,5 +1,6 @@
 from sqlalchemy.orm import Session, joinedload
 from models.models import User, LoginMethod, Token, Video, VideoStatus, Source, Result, FastReport, DeepReport, Alert
+from datetime import date, datetime
 
 # ====================================================
 # User CRUD
@@ -49,7 +50,7 @@ def get_user_by_id(db: Session, user_id: int): # 공통
     return db.query(User).filter(User.user_id == user_id).first()
 
 # 사용 : 아이디 찾기
-def get_user_by_name_birth(db: Session, name: str, birth):
+def get_user_by_name_birth(db: Session, name: str, birth: date):
     """ 이름, 생년월일 조회 """
     return db.query(User).filter(User.name == name, User.birth == birth).first()
 
@@ -132,7 +133,7 @@ def create_token(db: Session, token_info: dict):
 # 사용 : refresh 토큰 갱신 (access_token은 DB 접근 X), 로그아웃(revoked 조회)
 def get_token_by_refresh(db: Session, refresh_token: str): 
     """ refresh token으로 토큰 조회 """
-    db.query(Token).filter(Token.refresh_token == refresh_token).first()
+    return db.query(Token).filter(Token.refresh_token == refresh_token).first()
 
 # ==============
 # 수정 (Update)

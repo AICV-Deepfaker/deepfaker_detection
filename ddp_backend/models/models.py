@@ -44,7 +44,7 @@ class User(Base):
     name = Column(String(100), nullable=False)
     nickname = Column(String(100), unique=True, nullable=False)
     birth = Column(Date, nullable=False)
-    profile_image = Column(String(500)) # 필요 없을 경우 삭제
+    profile_image = Column(String(500), nullable=True) # 필요 없을 경우 삭제
     affiliation = Column(Enum(Affiliation), nullable=True)
     activation_points = Column(Integer, default=0, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
