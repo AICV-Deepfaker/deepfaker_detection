@@ -2,12 +2,9 @@ from pathlib import Path
 
 from ddp_backend.detectors.audio import STTDetector
 from ddp_backend.detectors.visual import RPPGDetector, UniteDetector, WaveletDetector
-from ddp_backend.schemas import (
-    AnalyzeMode,
-    APIOutputDeep,
-    APIOutputFast,
-    Status,
-)
+from ddp_backend.schemas.api import APIOutputDeep, APIOutputFast
+from ddp_backend.schemas.enums import AnalyzeMode, Status
+
 
 class DetectionPipeline:
     def __init__(

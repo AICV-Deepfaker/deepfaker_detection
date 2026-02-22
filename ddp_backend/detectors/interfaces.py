@@ -1,8 +1,10 @@
 from abc import ABC, abstractmethod
-from typing import ClassVar
 from pathlib import Path
+from typing import ClassVar
 
-from ddp_backend.schemas import ModelName, VideoReport, STTReport
+from ddp_backend.schemas.enums import ModelName
+from ddp_backend.schemas.report import STTReport, VideoReport
+
 
 class VisualDetector(ABC):
     model_name: ClassVar[ModelName]

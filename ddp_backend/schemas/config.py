@@ -2,6 +2,12 @@ from pathlib import Path
 
 from pydantic import BaseModel
 
+__all__ = [
+    "BaseVideoConfig",
+    "WaveletConfig",
+]
+
+
 class BaseVideoConfig(BaseModel):
     model_path: str | Path
     threshold: float = 0.5

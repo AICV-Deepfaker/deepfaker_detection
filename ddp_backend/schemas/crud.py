@@ -5,6 +5,18 @@ from pydantic import BaseModel
 from .enums import Affiliation, OriginPath, STTRiskLevel
 from .report import STTScript
 
+__all__ = [
+    "UserCreate",
+    "UserUpdate",
+    "TokenCreate",
+    "VideoCreate",
+    "SourceCreate",
+    "ResultCreate",
+    "FastReportCreate",
+    "DeepReportCreate",
+    "AlertCreate",
+]
+
 
 class UserCreate(BaseModel):
     email: str

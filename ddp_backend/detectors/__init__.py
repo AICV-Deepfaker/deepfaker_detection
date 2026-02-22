@@ -1,4 +1,4 @@
-from interfaces import VisualDetector, AudioAnalyzer
+from .interfaces import VisualDetector, AudioAnalyzer
 
 __all__ = [
     'AudioAnalyzer',

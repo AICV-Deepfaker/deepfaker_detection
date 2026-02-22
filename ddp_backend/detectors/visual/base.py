@@ -1,17 +1,19 @@
 from __future__ import annotations
 
 import shutil
+import subprocess
 from abc import abstractmethod
 from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
-import subprocess
 
 import cv2
 import torch
 from pydantic import BaseModel
 
-from ddp_backend.schemas import BaseVideoConfig, VideoReport, Result, Status
+from ddp_backend.schemas.config import BaseVideoConfig
+from ddp_backend.schemas.enums import Result, Status
+from ddp_backend.schemas.report import VideoReport
 from detectors import VisualDetector
 
 

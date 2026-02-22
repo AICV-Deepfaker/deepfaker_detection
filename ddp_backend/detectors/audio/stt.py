@@ -3,7 +3,8 @@ from typing import final, override
 
 from stt import SCAM_SEED_KEYWORDS, run_pipeline
 
-from ddp_backend.schemas import ModelName, Status, STTReport
+from ddp_backend.schemas.enums import ModelName, Status
+from ddp_backend.schemas.report import STTReport
 from detectors import AudioAnalyzer
 
 

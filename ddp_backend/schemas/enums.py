@@ -1,5 +1,17 @@
 from enum import StrEnum
 
+__all__ = [
+    "ModelName",
+    "Status",
+    "Result",
+    "AnalyzeMode",
+    "LoginMethod",
+    "Affiliation",
+    "VideoStatus",
+    "OriginPath",
+    "STTRiskLevel",
+]
+
 
 class ModelName(StrEnum):
     R_PPG = "r_ppg"
@@ -21,6 +33,7 @@ class Result(StrEnum):
 class AnalyzeMode(StrEnum):
     FAST = "fast"
     DEEP = "deep"
+
 
 class LoginMethod(StrEnum):
     local = "local"

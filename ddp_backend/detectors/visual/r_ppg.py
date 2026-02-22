@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import final, override
 
-from ddp_backend.schemas import ModelName
+from ddp_backend.schemas.enums import ModelName
 
 from .base import BaseVideoConfig, BaseVideoDetector, VideoInferenceResult
 

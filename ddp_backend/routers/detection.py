@@ -5,15 +5,15 @@ from sqlalchemy.orm import Session
 
 from ddp_backend.schemas.crud import FastReportCreate
 
-from ..schemas import (
+from ddp_backend.schemas.api import (
     APIOutputDeep,
     APIOutputFast,
 )
-from ..schemas.report import STTScript
-from ..services.dependencies import detection_pipeline
-from ..utils.file_handler import save_temp_file
-from ..services import crud
-from ..core.database import get_db
+from ddp_backend.schemas.report import STTScript
+from ddp_backend.services.dependencies import detection_pipeline
+from ddp_backend.utils.file_handler import save_temp_file
+from ddp_backend.services import crud
+from ddp_backend.core.database import get_db
 
 
 router = APIRouter(prefix="/prediction", tags=["prediction"])

@@ -21,8 +21,8 @@ from wavelet_lib.detectors.base_detector import (  # type: ignore
     PredDict,
 )
 
-from ddp_backend.schemas import ModelName
-from ddp_backend.schemas import WaveletConfig as WaveletConfigParam
+from ddp_backend.schemas.enums import ModelName
+from ddp_backend.schemas.config import WaveletConfig as WaveletConfigParam
 
 from .base import (
     BaseVideoDetector,
