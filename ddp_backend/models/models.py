@@ -61,6 +61,7 @@ class PydanticJSONType[T: BaseModel](TypeDecorator[T]):
 # 1. Users table
 class User(Base):
     __tablename__ = "users"
+    __table_args__ = {'extend_existing': True}  # "이미 장부에 적혀있으면 무시하고 덮어써!"라는 뜻
     user_id: Mapped[int] = mapped_column(
         BigInteger, primary_key=True, index=True, autoincrement=True, init=False
     )  # 효율성을 위해 user만 index=True

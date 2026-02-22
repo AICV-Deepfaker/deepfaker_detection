@@ -13,6 +13,11 @@ class Settings(BaseSettings):
     ALGORITHM: str
     ACCESS_TOKEN_EXPIRE_MINUTES: int
 
+    # 나중에 쓸 API 키들을 미리 등록해두기
+    GROQ_API_KEY: str | None = None
+    TAVILY_API_KEY: str | None = None
+    NGROK_AUTH_TOKEN: str | None = None
+
     class Config:
         env_file = ".env"
 
