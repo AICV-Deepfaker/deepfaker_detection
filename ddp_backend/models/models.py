@@ -78,6 +78,9 @@ class User(Base):
         Enum(Affiliation), nullable=True
     )
     activation_points: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    last_used_at : Mapped[datetime | None] = mapped_column( # access/ refresh 토큰을 마지막으로 재발급 받은 시간
+        DateTime(timezone=True), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), init=False
     )
@@ -114,16 +117,16 @@ class Token(Base):
     refresh_token: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
     # device_uuid:Mapped[str] = mapped_column(String(255)) # 토큰 보안과 연관 (필요 없을 경우 삭제) # 추후 개발
     expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)  # 토큰 만료
-    created_at: Mapped[datetime] = mapped_column(
+    created_at: Mapped[datetime] = mapped_column( # refresh 토큰 생성 시간
         DateTime(timezone=True), server_default=func.now(), init=False
     )
+    # With default
+    revoked: Mapped[bool] = mapped_column( # 로그아웃 되었거나 보안상 차단된 토큰 -> True시 반드시 재로그인
+        Boolean, default=False
+    )  
     # Relationships
     user: Mapped[User] = relationship("User", back_populates="tokens", init=False)
 
-    # With default
-    revoked: Mapped[bool] = mapped_column(
-        Boolean, default=False
-    )  # 로그아웃 되었거나 보안상 차단된 토큰 -> True시 반드시 재로그인
 
 
 # 3. Videos table

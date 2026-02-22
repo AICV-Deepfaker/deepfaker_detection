@@ -6,7 +6,6 @@
 from passlib.context import CryptContext
 from datetime import datetime, timezone, timedelta
 from jose import JWTError, jwt
-from typing import Optional
 from config import settings
 
 # 비밀번호 암호화
@@ -19,25 +18,33 @@ def get_password_hash(password: str) -> str:
 def verify_password(plain_password: str, hased_password: str) -> bool:
     return pwd_context.verify(plain_password, hased_password)
 
-# jwt 토큰 생성
-def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
-    to_encode = data.copy()
-
+# jwt access 토큰 생성
+def create_access_token(data: dict, expires_delta: timedelta | None = None):
+    to_encode = data.copy() # {"user_id": 1} 복사
     # 토큰 유효시간 계산
     if expires_delta:
         expire = datetime.now(timezone.utc) + expires_delta
     else:
         expire = datetime.now(timezone.utc) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    to_encode.update({"exp": expire}) # {"user_id": 1, "exp": 만료시간} 추가
+    encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+    return encoded_jwt
 
+# jwt refresh 토큰 생성
+def create_refresh_token(data: dict, expires_delta: timedelta | None = None):
+    to_encode = data.copy()
+    if expires_delta:
+        expire = datetime.now(timezone.utc) + expires_delta
+    else:
+        expire = datetime.now(timezone.utc) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
     to_encode.update({"exp": expire})
-
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
     return encoded_jwt
 
 # jwt 토큰 검증
 def decode_token(token: str):
     try:
-        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=settings.ALGORITHM)
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         return payload
     except JWTError:
         return None # 유효하지 않은 토큰
@@ -47,6 +54,9 @@ def decode_token(token: str):
 
 # # --- 테스트 코드 (확인 후 지우셔도 됩니다) ---
 # if __name__ == "__main__":
+#     from datetime import datetime, timezone
+
+
 #     test_password = "my_password123"
     
 #     # 1. 비밀번호 암호화 확인
@@ -59,9 +69,14 @@ def decode_token(token: str):
     
 #     # 3. 토큰 생성 확인
 #     test_data = {"sub": "test@example.com", "user_id": 1}
-#     token = create_access_token(data=test_data)
-#     print(f"3. 생성된 토큰: {token}")
+#     a_token = create_access_token(data=test_data)
+#     r_token = create_refresh_token(data=test_data)
+#     print(f"3. 생성된 토큰: {a_token}, {r_token}")
+   
     
 #     # 4. 토큰 검증 확인
-#     decoded = decode_token(token)
-#     print(f"4. 해독된 내용: {decoded}") # test_data 내용이 보여야 함
+#     a_decoded = decode_token(a_token)
+#     r_decoded = decode_token(r_token)
+#     print(f"4. 해독된 내용: {a_decoded}, {r_decoded}") # test_data 내용이 보여야 함
+
+#     print(f"{datetime.fromtimestamp(a_decoded['exp'], tz=timezone.utc)}, {datetime.fromtimestamp(r_decoded['exp'], tz=timezone.utc)}")

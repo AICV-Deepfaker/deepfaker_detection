@@ -9,7 +9,7 @@
 
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from services.auth_service import create_user
+from ddp_backend.services.auth import create_user
 
 
 # router = APIRouter()

@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 
 from models.models import (
     Alert,
@@ -193,6 +193,14 @@ def get_token_by_refresh(db: Session, refresh_token: str):
 # ==============
 # 수정 (Update)
 # ==============
+
+# 사용 : access/refresh 토큰 재발급 시
+def update_last_used(db: Session, user_id: int, last_used_at: datetime):
+    """ 마지막 앱 사용 시간 업데이트 """
+    user = get_user_by_id(db, user_id)
+    user.last_used_at = last_used_at
+    db.commit()
+    return True
 
 
 # 사용 : 로그아웃
@@ -449,5 +457,5 @@ def create_alert(db: Session, alert_info: AlertCreate):
 # 사용 : 신고 내역
 def get_alerts_by_user(db: Session, user_id: int):
     """유저의 신고 내역 조회"""
-    query = select(Alert).where(Alert.alert_id == user_id)
+    query = select(Alert).where(Alert.user_id == user_id)
     return db.scalars(query).all()
