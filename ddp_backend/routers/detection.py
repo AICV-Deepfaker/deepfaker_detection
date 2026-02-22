@@ -34,9 +34,9 @@ def predict_deepfake_fast(
             rppg_result=output.r_ppg.result,
             rppg_conf=output.r_ppg.confidence_score,
             rppg_image=output.r_ppg.visual_report,
-            stt_keyword=output.stt.keywords,
             stt_risk_level=output.stt.risk_level,
             stt_script=STTScript(
+                keywords=output.stt.keywords,
                 risk_reason=output.stt.risk_reason,
                 transcript=output.stt.transcript,
                 search_results=output.stt.search_results,

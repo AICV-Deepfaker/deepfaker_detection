@@ -24,11 +24,11 @@ class VideoReport(BaseReport):
 
 
 class STTScript(BaseModel):
+    keywords: list[str]
     risk_reason: str
     transcript: str
     search_results: list[dict[str, str]]
 
 
 class STTReport(BaseReport, STTScript):
-    keywords: list[str]
     risk_level: RiskLevel

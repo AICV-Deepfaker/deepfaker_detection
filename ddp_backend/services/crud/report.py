@@ -27,7 +27,6 @@ class FastReportCreate(BaseModel):
     rppg_result: Result
     rppg_conf: float
     rppg_image: str
-    stt_keyword: str
     stt_risk_level: STTRiskLevel
     stt_script: STTScript
 
@@ -53,7 +52,6 @@ class CRUDFastReport:
             rppg_result=report_info.rppg_result,
             rppg_conf=report_info.rppg_conf,
             rppg_image=report_info.rppg_image,
-            stt_keyword=report_info.stt_keyword,
             stt_risk_level=report_info.stt_risk_level,
             stt_script=report_info.stt_script,
         )

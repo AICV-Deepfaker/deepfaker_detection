@@ -229,7 +229,6 @@ class FastReport(Base):
     rppg_result: Mapped[ResultEnum] = mapped_column(Enum(ResultEnum), nullable=False)
     rppg_conf: Mapped[float] = mapped_column(Float, nullable=False)
     rppg_image: Mapped[str] = mapped_column(String(255), nullable=False)
-    stt_keyword: Mapped[str] = mapped_column(String(255), nullable=False)
     stt_risk_level: Mapped[STTRiskLevel] = mapped_column(
         Enum(STTRiskLevel), nullable=False
     )
