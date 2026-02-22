@@ -28,5 +28,5 @@ dependencies = [
     "uvicorn>=0.40.0",
     "wavelet-clip",
     "passlib>=1.7.4",
-    "jose>=1.0.0",
+    "python-jose[cryptography]>=3.5.0",
 ]
