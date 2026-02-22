@@ -34,5 +34,5 @@ class CRUDAlert:
     @staticmethod
     def get_by_user(db: Session, user_id: int):
         """유저의 신고 내역 조회"""
-        query = select(Alert).where(Alert.alert_id == user_id)
+        query = select(Alert).where(Alert.user_id == user_id)
         return db.scalars(query).all()

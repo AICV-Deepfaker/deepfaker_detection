@@ -8,6 +8,8 @@ import uvicorn
 
 # from core.database import engine
 # from models.models import Base
+from core.schedulaer import start_schedular, shutdown_schedular
+
 # ==========================================
 # .env 로드
 # ==========================================
@@ -55,6 +57,8 @@ async def lifespan(app: FastAPI):  # pyright: ignore[reportUnusedParameter]
     load_all_model()
     public_url = None
 
+    start_schedular() # 스케쥴러 : 30일 지난 토큰 만료 처리
+
     if NGROK_AUTH_TOKEN:
         ngrok.set_auth_token(NGROK_AUTH_TOKEN)
         tunnel = ngrok.connect("8000")
@@ -68,6 +72,7 @@ async def lifespan(app: FastAPI):  # pyright: ignore[reportUnusedParameter]
     yield
 
     # [Shutdown] 서버 종료 시 실행
+    shutdown_schedular()  # 스케줄러 종료
     if public_url:
         print("\n🛠️ ngrok 터널을 종료 중입니다...")
         ngrok.disconnect(public_url)

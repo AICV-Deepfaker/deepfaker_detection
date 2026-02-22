@@ -82,8 +82,7 @@ class UserResponse(BaseModel):
 class DuplicateCheckResponse(BaseModel):
     is_duplicate: bool
 
-
-# 로그인 완료
+# 로그인 완료 : 토큰
 class TokenResponse(BaseModel):
     access_token: str
     refresh_token: str
@@ -104,5 +103,6 @@ class UserEditResponse(BaseModel):
 class FindIdResponse(BaseModel):
     email: str  # 마스킹된 문자열로 보낼 예정
 
-
 # 비밀번호는 200만 반환하면 됨
+
+# 탈퇴는 schema 없음

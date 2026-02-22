@@ -27,19 +27,24 @@ class CRUDToken:
     # 사용 : 로그인
 
     @staticmethod
-    def create(db: Session, token_info: TokenCreate):
-        """토큰 저장"""
-        db_token = Token(  # 객체
-            user_id=token_info.user_id,
-            refresh_token=token_info.refresh_token,
-            # device_uuid=token_info.device_uuid, # 기기 수집 (이후 개발 예정)
-            expires_at=token_info.expires_at,
-        )
-
-        db.add(db_token)
+    def upsert_token(db: Session, user_id: int, hashed_refresh_token: str, expires_at: datetime):
+        """토큰 업데이트 + 생성"""
+        token = db.scalars(select(Token).where(Token.user_id == user_id)).one_or_none()
+        if token:
+            token.refresh_token = hashed_refresh_token
+            token.expires_at = expires_at
+            token.revoked = False
+        else:
+            token = Token(
+                user_id=user_id,
+                refresh_token=hashed_refresh_token,
+                # device_uuid=token_info.device_uuid, # 기기 수집 (이후 개발 예정)
+                expires_at=expires_at
+            )
+            db.add(token)
         db.commit()
-        db.refresh(db_token)
-        return db_token
+        db.refresh(token)
+        return token
 
     # 사용 : refresh 토큰 갱신 (access_token은 DB 접근 X), 로그아웃(revoked 조회)
     @staticmethod
