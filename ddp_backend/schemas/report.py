@@ -18,11 +18,9 @@ class VideoReport(BaseReport):
 
     @computed_field
     @property
-    def confidence_score(self) -> str:
-        confidence = (
-            self.probability if self.probability > 0.5 else 1 - self.probability
-        )
-        return f"{round(confidence * 100, 2)}%"
+    def confidence_score(self) -> float:
+        return self.probability if self.probability > 0.5 else 1 - self.probability
+
 
 
 class STTScript(BaseModel):
@@ -32,5 +30,5 @@ class STTScript(BaseModel):
 
 
 class STTReport(BaseReport, STTScript):
-    keywords: list[dict[str, str | bool]]
+    keywords: list[str]
     risk_level: RiskLevel

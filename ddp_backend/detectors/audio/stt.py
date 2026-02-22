@@ -27,7 +27,7 @@ class STTDetector(AudioAnalyzer):
         return STTReport(
             status=Status.SUCCESS,
             model_name=self.model_name,
-            keywords=stt_keywords,
+            keywords=result.detected_keywords,
             risk_level=result.risk_level,
             risk_reason=result.risk_reason,
             transcript=result.transcript,

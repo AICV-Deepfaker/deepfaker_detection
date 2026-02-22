@@ -7,7 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ddp_backend.models import DeepReport, FastReport
-from ddp_backend.schemas.enums import STTRiskLevel
+from ddp_backend.schemas.enums import STTRiskLevel, Result
 from ddp_backend.schemas.report import STTScript
 
 __all__ = [
@@ -21,10 +21,10 @@ __all__ = [
 class FastReportCreate(BaseModel):
     user_id: int
     result_id: int
-    freq_result: str
+    freq_result: Result
     freq_conf: float
     freq_image: str
-    rppg_result: str
+    rppg_result: Result
     rppg_conf: float
     rppg_image: str
     stt_keyword: str
@@ -35,7 +35,7 @@ class FastReportCreate(BaseModel):
 class DeepReportCreate(BaseModel):
     user_id: int
     result_id: int
-    unite_result: str
+    unite_result: Result
     unite_conf: float
 
 

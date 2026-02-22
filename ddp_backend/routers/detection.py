@@ -24,7 +24,7 @@ def predict_deepfake_fast(
 ) -> APIOutputFast:
     with save_temp_file(file) as temp_path:
         output = detection_pipeline.run_fast_mode(temp_path)
-        assert output.wavelet is not None and output.r_ppg is not None
+        assert output.wavelet is not None and output.r_ppg is not None and output.stt is not None
         CRUDFastReport.create(db, FastReportCreate(
             user_id=...,
             result_id=...,

@@ -107,6 +107,6 @@ class BaseVideoDetector[C: BaseVideoConfig](VisualDetector):
             status=Status.SUCCESS,
             model_name=self.model_name,
             result=res,
-            probability=round(analyze_res.prob, 4),
+            probability=analyze_res.prob,
             visual_report=analyze_res.base64_report,
         )

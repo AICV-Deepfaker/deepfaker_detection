@@ -30,6 +30,7 @@ from ddp_backend.schemas.enums import (
     OriginPath,
     STTRiskLevel,
 )
+from ddp_backend.schemas.enums import Result as ResultEnum
 from ddp_backend.schemas.report import STTScript
 
 
@@ -222,10 +223,10 @@ class FastReport(Base):
     result_id: Mapped[int] = mapped_column(
         BigInteger, ForeignKey("results.result_id", ondelete="CASCADE")
     )
-    freq_result: Mapped[str] = mapped_column(String(255), nullable=False)
+    freq_result: Mapped[ResultEnum] = mapped_column(Enum(ResultEnum), nullable=False)
     freq_conf: Mapped[float] = mapped_column(Float, nullable=False)
     freq_image: Mapped[str] = mapped_column(String(255), nullable=False)
-    rppg_result: Mapped[str] = mapped_column(String(255), nullable=False)
+    rppg_result: Mapped[ResultEnum] = mapped_column(Enum(ResultEnum), nullable=False)
     rppg_conf: Mapped[float] = mapped_column(Float, nullable=False)
     rppg_image: Mapped[str] = mapped_column(String(255), nullable=False)
     stt_keyword: Mapped[str] = mapped_column(String(255), nullable=False)
@@ -254,7 +255,7 @@ class DeepReport(Base):
     result_id: Mapped[int] = mapped_column(
         BigInteger, ForeignKey("results.result_id", ondelete="CASCADE")
     )
-    unite_result: Mapped[str] = mapped_column(String(255), nullable=False)
+    unite_result: Mapped[ResultEnum] = mapped_column(Enum(ResultEnum), nullable=False)
     unite_conf: Mapped[float] = mapped_column(Float, nullable=False)
     # Relationships
     user: Mapped[User] = relationship("User", back_populates="deep_reports", init=False)
