@@ -107,31 +107,30 @@ class DeepfakeAbstractBaseDataset(data.Dataset):
 
     def init_data_aug_method(self):
         dest_transforms = []
-        
-        # 1. Flip, Rotate, Blur
-        dest_transforms.append(A.HorizontalFlip(p=self.config['data_aug']['flip_prob']))
-        dest_transforms.append(A.Rotate(limit=self.config['data_aug']['rotate_limit'], p=self.config['data_aug']['rotate_prob']))
-        dest_transforms.append(A.GaussianBlur(blur_limit=self.config['data_aug']['blur_limit'], p=self.config['data_aug']['blur_prob']))
+        cfg = self.config['data_aug']
 
-        # 2. IsotropicResize (OneOf 에러를 피하기 위해 리스트에서 직접 선택하거나 하나만 적용)
+        # 1. 기하학적 변형 (구조적 학습용)
+        dest_transforms.append(A.HorizontalFlip(p=cfg.get('flip_prob', 0.5)))
+        dest_transforms.append(A.Rotate(limit=cfg.get('rotate_limit', 10), p=cfg.get('rotate_prob', 0.5)))
+
+        # 2. Strategy D: 주파수 robustness augmentation
+        dest_transforms.append(A.ImageCompression(quality_lower=60, quality_upper=100, p=0.3))
+        dest_transforms.append(A.GaussianBlur(blur_limit=(3, 7), p=0.2))
+        dest_transforms.append(A.GaussNoise(var_limit=(5.0, 25.0), p=0.2))
+
+        # 3. IsotropicResize (해상도 유지)
         if not self.config.get('with_landmark', False):
-            # OneOf가 계속 에러나면 그냥 대표적인 거 하나만 확률을 주어 사용합니다.
             dest_transforms.append(
                 IsotropicResize(
-                    max_side=self.config['resolution'], 
-                    interpolation_down=cv2.INTER_AREA, 
-                    interpolation_up=cv2.INTER_CUBIC, 
+                    max_side=self.config['resolution'],
+                    interpolation_down=cv2.INTER_AREA,
+                    interpolation_up=cv2.INTER_CUBIC,
                     p=1.0
                 )
             )
 
-        # 3. Brightness, PCA 등
-        dest_transforms.append(A.RandomBrightnessContrast(p=0.5))
-        dest_transforms.append(A.ImageCompression(p=0.5))
-
-        # 4. Compose 적용
         trans = A.Compose(
-            dest_transforms, 
+            dest_transforms,
             keypoint_params=A.KeypointParams(format='xy') if self.config.get('with_landmark', False) else None
         )
         return trans
@@ -352,47 +351,45 @@ class DeepfakeAbstractBaseDataset(data.Dataset):
 
     def data_aug(self, img, landmark=None, mask=None, augmentation_seed=None):
         """
-        Apply data augmentation to an image, landmark, and mask.
-
-        Args:
-            img: An Image object containing the image to be augmented.
-            landmark: A numpy array containing the 2D facial landmarks to be augmented.
-            mask: A numpy array containing the binary mask to be augmented.
-
-        Returns:
-            The augmented image, landmark, and mask.
+        Apply data augmentation to an image, landmark, and mask with video-level seed.
         """
+        import albumentations as A
 
-        # Set the seed for the random number generator
+        # 1. 시드 고정: 비디오 내의 모든 프레임이 동일한 변형을 겪도록 함
         if augmentation_seed is not None:
             random.seed(augmentation_seed)
             np.random.seed(augmentation_seed)
+            try:
+                A.random_utils.set_seed(augmentation_seed)
+            except AttributeError:
+                pass
 
-        # Create a dictionary of arguments
+        # 2. 인자 구성
         kwargs = {'image': img}
 
-        # Check if the landmark and mask are not None
         if landmark is not None:
             kwargs['keypoints'] = landmark
-            kwargs['keypoint_params'] = A.KeypointParams(format='xy')
-        if mask is not None:
-            mask = mask.squeeze(2)
-            if mask.max() > 0:
-                kwargs['mask'] = mask
 
-        # Apply data augmentation
+        if mask is not None:
+            if len(mask.shape) == 3 and mask.shape[2] == 1:
+                mask = mask.squeeze(2)
+            kwargs['mask'] = mask
+
+        # 3. Augmentation 적용
         transformed = self.transform(**kwargs)
 
-        # Get the augmented image, landmark, and mask
+        # 4. 결과 추출
         augmented_img = transformed['image']
         augmented_landmark = transformed.get('keypoints')
-        augmented_mask = transformed.get('mask',mask)
+        augmented_mask = transformed.get('mask')
 
-        # Convert the augmented landmark to a numpy array
+        if augmented_mask is None:
+            augmented_mask = mask
+
         if augmented_landmark is not None:
             augmented_landmark = np.array(augmented_landmark)
 
-        # Reset the seeds to ensure different transformations for different videos
+        # 5. 시드 리셋
         if augmentation_seed is not None:
             random.seed()
             np.random.seed()
@@ -485,15 +482,15 @@ class DeepfakeAbstractBaseDataset(data.Dataset):
             image = self.load_rgb(image_path)
             image = np.array(image)
 
+            # 전처리된 이미지를 resolution 크기로 통일
+            image = cv2.resize(image, (self.config['resolution'], self.config['resolution']), interpolation=cv2.INTER_LINEAR)
+
+            landmarks = None
+
             if mask_path and os.path.exists(mask_path):
                 mask = self.load_mask(mask_path)
             else:
                 mask = None
-
-            if landmark_path and os.path.exists(landmark_path):
-                landmarks = self.load_landmark(landmark_path)
-            else:
-                landmarks = None
 
             # =====================================================
             # 4. Data Augmentation
@@ -569,18 +566,36 @@ class DeepfakeAbstractBaseDataset(data.Dataset):
         # Separate the image, label, landmark, and mask tensors
         images, labels, landmarks, masks = zip(*batch)
 
-        # Stack the image, label, landmark, and mask tensors
-        images = torch.stack(images, dim=0)
+        # 이미지 크기 불일치 해결: 배치 내 모든 이미지를 224×224로 통일
+        standard_size = (224, 224)
+        processed_images = []
+        for img in images:
+            if img.shape[1:] != standard_size:
+                img = torch.nn.functional.interpolate(
+                    img.unsqueeze(0),
+                    size=standard_size,
+                    mode='bilinear',
+                    align_corners=False
+                ).squeeze(0)
+            processed_images.append(img)
+
+        images = torch.stack(processed_images, dim=0)
         labels = torch.LongTensor(labels)
 
         # Special case for landmarks and masks if they are None
         if not any(landmark is None or (isinstance(landmark, list) and None in landmark) for landmark in landmarks):
-            landmarks = torch.stack(landmarks, dim=0)
+            try:
+                landmarks = torch.stack(landmarks, dim=0)
+            except RuntimeError:
+                landmarks = None
         else:
             landmarks = None
 
         if not any(m is None or (isinstance(m, list) and None in m) for m in masks):
-            masks = torch.stack(masks, dim=0)
+            try:
+                masks = torch.stack(masks, dim=0)
+            except RuntimeError:
+                masks = None
         else:
             masks = None
 

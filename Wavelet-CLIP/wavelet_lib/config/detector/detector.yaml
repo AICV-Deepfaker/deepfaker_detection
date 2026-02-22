@@ -1,10 +1,19 @@
-# log dir 
+# log dir
 log_dir: ./logs_debug/clip_wavelet
 
+# ──────────────────────────────────────────────────────────────
+# 3차 학습 — 처음부터 (checkpoint 없음)
+# 핵심 변경: Focal Loss → WeightedCrossEntropy (캘리브레이션 안정화)
+#           backbone_trainable_layers: 2 → 4 (더 많은 적응)
+#           nEpochs: 8 → 12 (충분한 수렴)
+#           lr: 1e-5 → 5e-6 (더 많은 레이어 열리므로 안정적으로)
+# ──────────────────────────────────────────────────────────────
+
 # model setting
-pretrained: ./training/pretrained/clip_wavelet_best.pth # path to a pre-trained model, if using one
-model_name: clip_wavelet   # model name
-backbone_name: vit  # backbone name
+pretrained: null         # 처음부터 학습
+model_name: clip_wavelet
+backbone_name: vit
+backbone_trainable_layers: 4   # 마지막 4개 레이어 학습 (2→4)
 
 #backbone setting
 backbone_config:
@@ -22,39 +31,31 @@ dataset_name: GAN-DIFFUSION
 dataset_roots:
   gan-dataset: /content/gan-dataset
   diffusion-dataset: /content/diffusion-dataset
+  wild-deepfake: /content/wild-deepfake
 
 with_mask: false
 with_landmark: false
-
 
 label_dict:
   real: 0
   fake: 1
 
-
-compression: c23  # compression-level for videos
-train_batchSize: 8   # training batch size
-test_batchSize: 4   # test batch size
-workers: 2   # number of data loading workers
-frame_num: {'train': 32, 'test': 32}   # number of frames to use per video in training and testing
-resolution: 224   # resolution of output image to network
-with_mask: false   # whether to include mask information in the input
-with_landmark: false   # whether to include facial landmark information in the input
-
+compression: c23
+train_batchSize: 8
+test_batchSize: 4
+workers: 2
+frame_num:
+  train: 16
+  test: 16
+resolution: 224
 
 # data augmentation
-use_data_augmentation: true  # Add this flag to enable/disable data augmentation
+use_insightface: true
+use_data_augmentation: true
 data_aug:
   flip_prob: 0.5
   rotate_prob: 0.5
   rotate_limit: [-10, 10]
-  blur_prob: 0.5
-  blur_limit: [3, 7]
-  brightness_prob: 0.5
-  brightness_limit: [-0.1, 0.1]
-  contrast_limit: [-0.1, 0.1]
-  quality_lower: 40
-  quality_upper: 100
 
 # mean and std for normalization
 mean: [0.5, 0.5, 0.5]
@@ -62,39 +63,47 @@ std: [0.5, 0.5, 0.5]
 
 # optimizer config
 optimizer:
-  # choose between 'adam' and 'sgd'
   type: adam
   adam:
-    lr: 0.00001  # learning rate
-    beta1: 0.9  # beta1 for Adam optimizer
-    beta2: 0.999 # beta2 for Adam optimizer
-    eps: 0.00000001  # epsilon for Adam optimizer
-    weight_decay: 0.0005  # weight decay for regularization
+    lr: 0.000005     # 5e-6: backbone 4레이어 열리므로 안정적 LR
+    beta1: 0.9
+    beta2: 0.999
+    eps: 0.00000001
+    weight_decay: 0.0005
     amsgrad: false
   sgd:
-    lr: 0.0002  # learning rate
-    momentum: 0.9  # momentum for SGD optimizer
-    weight_decay: 0.0005  # weight decay for regularization
+    lr: 0.0002
+    momentum: 0.9
+    weight_decay: 0.0005
 
 # training config
-lr_scheduler: null   # learning rate scheduler
-nEpochs: 5   # number of epochs to train for
-start_epoch: 0   # manual epoch number (useful for restarts)
-save_epoch: 1   # interval epochs for saving models
-rec_iter: 100   # interval iterations for recording
-logdir: ./logs   # folder to output images and logs
-manualSeed: 1024   # manual seed for random number generation
-save_ckpt: true   # whether to save checkpoint
-save_feat: false   # whether to save features
+lr_scheduler: cosine
+lr_T_max: 12
+lr_eta_min: 0.00000005
+nEpochs: 12
+start_epoch: 1
+save_epoch: 2
+rec_iter: 100
+logdir: ./logs
+manualSeed: 1024
+save_ckpt: true
+save_feat: false
 
+# ──────────────────────────────────────────────────────────────
 # loss function
-loss_func: cross_entropy   # loss function to use
+# [변경] focal → weighted_cross_entropy
+#
+# WeightedCrossEntropy 장점:
+#   직접적인 클래스 가중치 → Fake 패널티 8배
+#   확률 캘리브레이션 안정 → threshold가 0.3~0.5 범위로 정상화
+# ──────────────────────────────────────────────────────────────
+loss_func: weighted_cross_entropy
+class_weights: [1.0, 8.0]   # [real_weight, fake_weight] — Fake 8배 패널티
 losstype: null
 
 # metric
-metric_scoring: auc   # metric for evaluation (auc, acc, eer, ap)
+metric_scoring: auc
 
 # cuda
-
-cuda: true   # whether to use CUDA acceleration
-cudnn: true   # whether to use CuDNN for convolution operations
+cuda: true
+cudnn: true
