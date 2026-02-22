@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, File, UploadFile, Depends
+from fastapi import APIRouter, File, UploadFile, Depends, BackgroundTasks
 from sqlalchemy.orm import Session
 
 from ddp_backend.schemas.api import (
@@ -20,11 +20,13 @@ router = APIRouter(prefix="/prediction", tags=["prediction"])
 @router.post(path="/fast")
 def predict_deepfake_fast(
     file: Annotated[UploadFile, File(...)],
-    db: Annotated[Session, Depends(get_db)]
+    db: Annotated[Session, Depends(get_db)],
+    background_tasks: BackgroundTasks,
 ) -> APIOutputFast:
     with save_temp_file(file) as temp_path:
         output = detection_pipeline.run_fast_mode(temp_path)
-        assert output.wavelet is not None and output.r_ppg is not None and output.stt is not None
+        if output.wavelet is None or output.r_ppg is None or output.stt is None:
+            return output
         CRUDFastReport.create(db, FastReportCreate(
             user_id=...,
             result_id=...,
