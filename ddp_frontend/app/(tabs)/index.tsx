@@ -2,8 +2,8 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
-import React, { useEffect, useMemo } from 'react';
-import { Alert, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useMemo, useCallback, useState } from 'react';
+import { Alert, ScrollView, StyleSheet, TouchableOpacity, View, Modal, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
@@ -16,6 +16,10 @@ const BLUE_CARD = '#D7ECFF';
 const ACCENT = '#00CF90';
 const TEXT = '#111';
 const SUB = '#687076';
+const ACCENT_GREEN = '#00CF90';
+const ACCENT_GREEN_DARK = '#00B87A';
+const TEXT_COLOR = '#111';
+const SECONDARY_TEXT_COLOR = '#687076';
 
 type QuickAction = {
   key: string;
@@ -28,6 +32,8 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const { totalPoints } = useAnalysis();
   const [nickname, setNickname] = React.useState<string | null>(null);
+  const { history } = useAnalysis();
+
 
   useEffect(() => {
     getAuth().then((auth) => {
@@ -96,6 +102,39 @@ export default function HomeScreen() {
     [],
   );
 
+  const [infoOpen, setInfoOpen] = useState(false);
+
+  const InfoModal = ({
+    visible,
+    onClose,
+  }: {
+    visible: boolean;
+    onClose: () => void;
+  }) => {
+    return (
+      <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+        <View style={styles.modalOverlay}>
+          <Pressable style={styles.modalBackdrop} onPress={onClose} />
+          <View style={styles.modalCard}>
+            <View style={styles.modalIconWrap}>
+              <MaterialIcons name="info-outline" size={26} color={ACCENT_GREEN} />
+            </View>
+
+            <ThemedText style={styles.modalTitle}>분석 기록이 필요해요</ThemedText>
+            <ThemedText style={styles.modalDesc}>
+              탐지 후 분석 기록이 있어야 신고할 수 있어요.{'\n'}
+              먼저 링크/영상으로 분석을 진행해 주세요.
+            </ThemedText>
+
+            <TouchableOpacity style={styles.modalBtnPrimary} onPress={onClose} activeOpacity={0.85}>
+              <ThemedText style={styles.modalBtnPrimaryText}>확인</ThemedText>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+    );
+  };
+
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <ScrollView
@@ -157,7 +196,14 @@ export default function HomeScreen() {
         <TouchableOpacity
           activeOpacity={0.9}
           style={[styles.bigCard, { backgroundColor: BLUE_CARD }]}
-          onPress={() => router.push('/analysis-result?mode=fast')}>
+          onPress={() => {
+              if (!history || history.length === 0) {
+                setInfoOpen(true);
+                return;
+              }
+              router.push('/(tabs)/history'); // 또는 router.push('/history') (너 프로젝트 구조에 맞게)
+            }}
+          >
           <View style={styles.bigCardText}>
             <ThemedText style={styles.bigTitle}>신고하고{'\n'}보상을 받아보세요</ThemedText>
             <View style={styles.linkRowBlue}>
@@ -198,6 +244,7 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
       </ScrollView>
+      <InfoModal visible={infoOpen} onClose={() => setInfoOpen(false)} />
     </View>
   );
 }
@@ -315,5 +362,67 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
     color: ACCENT,
+  },
+  modalOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  modalBackdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  modalCard: {
+    width: '100%',
+    maxWidth: 360,
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 22,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.06)',
+  },
+  modalIconWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(0, 207, 144, 0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'center',
+    marginBottom: 12,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: TEXT_COLOR,
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  modalDesc: {
+    fontSize: 13,
+    color: SECONDARY_TEXT_COLOR,
+    textAlign: 'center',
+    lineHeight: 18,
+    marginBottom: 16,
+  },
+  modalBtnPrimary: {
+    backgroundColor: ACCENT_GREEN,
+    paddingVertical: 14,
+    borderRadius: 14,
+    alignItems: 'center',
+  },
+  modalBtnPrimaryText: {
+    color: '#fff',
+    fontWeight: '900',
+    fontSize: 15,
   },
 });

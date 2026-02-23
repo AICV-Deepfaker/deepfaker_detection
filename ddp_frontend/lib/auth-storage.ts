@@ -31,7 +31,7 @@ export async function clearAuth(): Promise<void> {
   await AsyncStorage.removeItem(AUTH_KEY);
 }
 
-export type Affiliation = '개인' | '기관' | '기업';
+export type Affiliation = '개인' | '기관' | '회사';
 
 export type StoredUser = {
   email: string;

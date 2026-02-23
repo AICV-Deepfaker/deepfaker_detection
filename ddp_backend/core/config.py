@@ -1,4 +1,3 @@
-import os 
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -12,6 +11,7 @@ load_dotenv(BASE_DIR / ".env")
 # JWT 토큰 생성을 위한 환경 설정
 class Settings(BaseSettings):
     DATABASE_URL: str
+    REDIS_URL: str
     SECRET_KEY: str
     ALGORITHM: str
     ACCESS_TOKEN_EXPIRE_MINUTES: int
@@ -24,7 +24,9 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env"
 
-settings = Settings()
+settings = Settings() # type: ignore
 
 # 환경 변수에서 URL을 가져와 DB 엔진 만들기 
-DATABASE_URL = os.getenv("DATABASE_URL")
+# DATABASE_URL = os.getenv("DATABASE_URL")
+DATABASE_URL = settings.DATABASE_URL
+REDIS_URL = settings.REDIS_URL

@@ -113,7 +113,7 @@ export default function HistoryScreen() {
           <MaterialIcons name="history" size={64} color={SECONDARY_TEXT_COLOR} />
           <ThemedText style={styles.emptyTitle}>분석 내역이 없습니다</ThemedText>
           <ThemedText style={styles.emptySubtitle}>
-            링크나 파일을 챗봇으로 보내면{'\n'} 분석 결과가 여기에 저장됩니다
+            링크나 파일을 업로드 후 탐지하면{'\n'} 분석 결과가 여기에 저장됩니다
           </ThemedText>
         </View>
       ) : (

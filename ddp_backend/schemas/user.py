@@ -2,6 +2,7 @@
 # Pydantic을 사용하여 회원가입 시 받을 이메일, 비밀번호 형식 등을 정의
 
 from datetime import date, datetime
+from typing import Annotated
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 from .enums import  Affiliation
 
@@ -27,9 +28,9 @@ __all__ = [
 # 회원가입
 class UserCreate(BaseModel):  # Login_method는 서비스 로직에서
     email: EmailStr
-    password: str | None = Field(..., min_length=8)  # 최소 8자 이상 (구글은 비번이 없음-service에서 차단)
+    password: Annotated[str | None, Field(min_length=8)] = None  # 최소 8자 이상 (구글은 비번이 없음-service에서 차단)
     name: str = Field(..., min_length=2)
-    nickname: str
+    nickname: str | None = None
     birth: date | None = None
     profile_image: str | None = None
     affiliation: Affiliation | None = None
@@ -121,3 +122,16 @@ class FindIdResponse(BaseModel):
 # 비밀번호는 200만 반환하면 됨
 
 # 탈퇴는 schema 없음
+
+# 내 정보 조회
+class UserMeResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    user_id: int
+    email: EmailStr
+    name: str
+    nickname: str
+    birth: date | None = None
+    affiliation: Affiliation | None = None
+    profile_image: str | None = None
+    created_at: datetime

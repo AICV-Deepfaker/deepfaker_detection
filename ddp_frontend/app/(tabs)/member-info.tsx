@@ -16,14 +16,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import {
-  findStoredUser,
   getAuth,
-  getProfileByEmail,
   type Affiliation,
-  type StoredUser,
-  updateUserPassword,
-  updateUserProfile,
 } from '@/lib/auth-storage';
+import { editUser, getMyProfile } from '@/lib/account-api';
 
 const ACCENT_GREEN = '#00CF90';
 const TEXT = '#111';
@@ -34,7 +30,7 @@ const BORDER = 'rgba(0,0,0,0.06)';
 const AFFILIATION_OPTIONS: { value: Affiliation; label: string }[] = [
   { value: '개인', label: '개인' },
   { value: '기관', label: '기관' },
-  { value: '기업', label: '기업' },
+  { value: '회사', label: '회사' },
 ];
 
 function Row({ label, value }: { label: string; value?: string | null }) {
@@ -52,7 +48,8 @@ export default function MemberInfoScreen() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [authEmail, setAuthEmail] = useState<string | null>(null);
-  const [profile, setProfile] = useState<StoredUser | null>(null);
+  type MyProfile = Awaited<ReturnType<typeof getMyProfile>>;
+  const [profile, setProfile] = useState<MyProfile | null>(null);
 
   // 편집 모드
   const [editMode, setEditMode] = useState(false);
@@ -60,7 +57,6 @@ export default function MemberInfoScreen() {
   const [editPhotoUri, setEditPhotoUri] = useState<string | null>(null);
 
   // 비밀번호 변경
-  const [currentPw, setCurrentPw] = useState('');
   const [newPw, setNewPw] = useState('');
   const [newPwConfirm, setNewPwConfirm] = useState('');
   const [pwChanging, setPwChanging] = useState(false);
@@ -71,8 +67,8 @@ export default function MemberInfoScreen() {
       const auth = await getAuth();
       const email = auth?.email ?? null;
       setAuthEmail(email);
-      if (!email || email === 'google') { setProfile(null); return; }
-      const p = await getProfileByEmail(email);
+      if (!email || !auth?.accessToken) { setProfile(null); return; }
+      const p = await getMyProfile(auth.accessToken);
       setProfile(p);
     } finally {
       setLoading(false);
@@ -83,9 +79,8 @@ export default function MemberInfoScreen() {
 
   const enterEditMode = () => {
     if (!profile) return;
-    setEditAffiliation(profile.affiliation);
-    setEditPhotoUri(profile.profilePhotoUri ?? null);
-    setCurrentPw('');
+    setEditAffiliation((profile.affiliation as Affiliation) ?? undefined);
+    setEditPhotoUri(profile.profile_image ?? null);
     setNewPw('');
     setNewPwConfirm('');
     setEditMode(true);
@@ -116,13 +111,19 @@ export default function MemberInfoScreen() {
     if (!authEmail) return;
     setSaving(true);
     try {
-      const updates: { affiliation?: Affiliation; profilePhotoUri?: string } = {};
-      if (editAffiliation !== undefined) updates.affiliation = editAffiliation;
-      if (editPhotoUri !== null) updates.profilePhotoUri = editPhotoUri;
-      await updateUserProfile(authEmail, updates);
+      const auth = await getAuth();
+      if (!auth?.accessToken) {
+        Alert.alert('오류', '로그인 정보를 찾을 수 없습니다.');
+        return;
+      }
+      await editUser(auth.accessToken, {
+        new_affiliation: editAffiliation,
+      });
       await load();
       setEditMode(false);
       Alert.alert('저장 완료', '프로필이 업데이트되었습니다.');
+    } catch (e: any) {
+      Alert.alert('오류', e?.message ?? '저장에 실패했습니다.');
     } finally {
       setSaving(false);
     }
@@ -130,12 +131,12 @@ export default function MemberInfoScreen() {
 
   const handleChangePassword = async () => {
     if (!authEmail) return;
-    if (!currentPw || !newPw || !newPwConfirm) {
-      Alert.alert('입력 오류', '모든 비밀번호 항목을 입력해 주세요.');
+    if (!newPw || !newPwConfirm) {
+      Alert.alert('입력 오류', '새 비밀번호를 입력해 주세요.');
       return;
     }
-    if (newPw.length < 6) {
-      Alert.alert('입력 오류', '새 비밀번호는 6자 이상이어야 합니다.');
+    if (newPw.length < 8) {
+      Alert.alert('입력 오류', '새 비밀번호는 8자 이상이어야 합니다.');
       return;
     }
     if (newPw !== newPwConfirm) {
@@ -144,26 +145,23 @@ export default function MemberInfoScreen() {
     }
     setPwChanging(true);
     try {
-      const user = await findStoredUser(authEmail, currentPw);
-      if (!user) {
-        Alert.alert('인증 실패', '현재 비밀번호가 올바르지 않습니다.');
+      const auth = await getAuth();
+      if (!auth?.accessToken) {
+        Alert.alert('오류', '로그인 정보를 찾을 수 없습니다.');
         return;
       }
-      const ok = await updateUserPassword(authEmail, newPw);
-      if (ok) {
-        setCurrentPw('');
-        setNewPw('');
-        setNewPwConfirm('');
-        Alert.alert('변경 완료', '비밀번호가 변경되었습니다.');
-      } else {
-        Alert.alert('오류', '비밀번호 변경에 실패했습니다.');
-      }
+      await editUser(auth.accessToken, { new_password: newPw });
+      setNewPw('');
+      setNewPwConfirm('');
+      Alert.alert('변경 완료', '비밀번호가 변경되었습니다.');
+    } catch (e: any) {
+      Alert.alert('오류', e?.message ?? '비밀번호 변경에 실패했습니다.');
     } finally {
       setPwChanging(false);
     }
   };
 
-  const avatarUri = editMode ? editPhotoUri : profile?.profilePhotoUri;
+  const avatarUri = editMode ? editPhotoUri : profile?.profile_image;
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -262,7 +260,7 @@ export default function MemberInfoScreen() {
             <View style={styles.divider} />
 
             <Row label="별명" value={profile.nickname} />
-            <Row label="생년월일" value={profile.birthdate} />
+            <Row label="생년월일" value={profile.birth} />
 
             {/* 소속 */}
             <View style={styles.row}>
@@ -300,21 +298,10 @@ export default function MemberInfoScreen() {
             <View style={styles.pwCard}>
               <ThemedText style={styles.pwCardTitle}>비밀번호 변경</ThemedText>
 
-              <ThemedText style={styles.pwLabel}>현재 비밀번호</ThemedText>
+              <ThemedText style={styles.pwLabel}>새 비밀번호 (8자 이상)</ThemedText>
               <TextInput
                 style={styles.pwInput}
-                placeholder="현재 비밀번호 (임시 비밀번호 포함)"
-                placeholderTextColor={SUB}
-                value={currentPw}
-                onChangeText={setCurrentPw}
-                secureTextEntry
-                editable={!pwChanging}
-              />
-
-              <ThemedText style={[styles.pwLabel, { marginTop: 12 }]}>새 비밀번호</ThemedText>
-              <TextInput
-                style={styles.pwInput}
-                placeholder="6자 이상"
+                placeholder="8자 이상"
                 placeholderTextColor={SUB}
                 value={newPw}
                 onChangeText={setNewPw}

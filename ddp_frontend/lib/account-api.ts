@@ -109,3 +109,175 @@ export async function withdraw(accessToken: string): Promise<{ status?: string; 
     return { status: 'success' };
   }
 }
+/**
+ * ✅ 회원가입
+ * POST /user/register
+ */
+export type UserRegisterRequest = {
+  email: string;
+  password: string;
+  name: string;
+  nickname: string;
+  birth?: string;       // "YYYY-MM-DD"
+  affiliation?: string; // "개인" | "기관" | "회사"
+  profile_image?: string | null;
+};
+
+export type UserRegisterResponse = {
+  user_id: number;
+  email: string;
+  name: string;
+  nickname: string;
+  created_at: string;
+};
+
+export async function register(data: UserRegisterRequest): Promise<UserRegisterResponse> {
+  const res = await fetch(`${API_BASE}/user/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const msg = await readErrorText(res);
+    throw new Error(`회원가입 실패 (${res.status}): ${msg}`);
+  }
+  return res.json();
+}
+
+/**
+ * ✅ 이메일 중복 확인
+ * POST /user/check-email
+ */
+export async function checkEmail(email: string): Promise<{ is_duplicate: boolean }> {
+  const res = await fetch(`${API_BASE}/user/check-email`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email }),
+  });
+  if (!res.ok) {
+    const msg = await readErrorText(res);
+    throw new Error(`이메일 확인 실패 (${res.status}): ${msg}`);
+  }
+  return res.json();
+}
+
+/**
+ * ✅ 닉네임 중복 확인
+ * POST /user/check-nickname
+ */
+export async function checkNickname(nickname: string): Promise<{ is_duplicate: boolean }> {
+  const res = await fetch(`${API_BASE}/user/check-nickname`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ nickname }),
+  });
+  if (!res.ok) {
+    const msg = await readErrorText(res);
+    throw new Error(`닉네임 확인 실패 (${res.status}): ${msg}`);
+  }
+  return res.json();
+}
+
+/**
+ * ✅ 아이디(이메일) 찾기
+ * POST /user/find-id
+ * body: { name, birth: "YYYY-MM-DD" }
+ */
+export async function findId(name: string, birth: string): Promise<{ email: string }> {
+  const res = await fetch(`${API_BASE}/user/find-id`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, birth }),
+  });
+  if (!res.ok) {
+    const msg = await readErrorText(res);
+    throw new Error(`아이디 찾기 실패 (${res.status}): ${msg}`);
+  }
+  return res.json();
+}
+
+/**
+ * ✅ 비밀번호 찾기 (임시 비밀번호 이메일 발송)
+ * POST /user/find-password
+ * body: { name, birth: "YYYY-MM-DD", email }
+ */
+export async function findPassword(
+  name: string,
+  birth: string,
+  email: string
+): Promise<{ status?: string; message?: string }> {
+  const res = await fetch(`${API_BASE}/user/find-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, birth, email }),
+  });
+  if (!res.ok) {
+    const msg = await readErrorText(res);
+    throw new Error(`비밀번호 찾기 실패 (${res.status}): ${msg}`);
+  }
+  try {
+    return await res.json();
+  } catch {
+    return { status: 'success' };
+  }
+}
+
+/**
+ * ✅ 회원정보 수정
+ * PATCH /user/edit
+ * header: Authorization: Bearer <access_token>
+ * body: { new_password?, new_affiliation?, delete_profile_image? }
+ */
+export async function editUser(
+  accessToken: string,
+  data: {
+    new_password?: string;
+    new_affiliation?: string;
+    delete_profile_image?: boolean;
+  }
+): Promise<{
+  changed_password: boolean;
+  changed_profile_image: string | null;
+  deleted_profile_image: boolean;
+  changed_affiliation: string | null;
+}> {
+  const res = await fetch(`${API_BASE}/user/edit`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const msg = await readErrorText(res);
+    throw new Error(`정보 수정 실패 (${res.status}): ${msg}`);
+  }
+  return res.json();
+}
+
+/**
+ * GET /user/me - 내 정보 조회 (토큰 필요)
+ */
+export async function getMyProfile(accessToken: string): Promise<{
+  user_id: number;
+  email: string;
+  name: string;
+  nickname: string;
+  birth: string | null;
+  affiliation: string | null;
+  profile_image: string | null;
+  created_at: string;
+}> {
+  const res = await fetch(`${API_BASE}/user/me`, {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+  if (!res.ok) {
+    const msg = await readErrorText(res);
+    throw new Error(`내 정보 조회 실패 (${res.status}): ${msg}`);
+  }
+  return res.json();
+}

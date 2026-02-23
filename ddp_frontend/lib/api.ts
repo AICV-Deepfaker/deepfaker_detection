@@ -1,3 +1,5 @@
+import { getAuth } from './auth-storage';
+
 const API_BASE = (process.env.EXPO_PUBLIC_API_URL ?? '').replace(/\/$/, '');
 
 export type PredictMode = 'fast' | 'deep';
@@ -64,7 +66,6 @@ function mapBackendResponse(raw: any, mode: PredictMode): PredictResult {
     const rppg = raw.r_ppg ?? {};
     const stt = raw.stt ?? {};
 
-    // FAKE 판정: wavelet 또는 r_ppg 중 하나라도 FAKE면 FAKE
     const isFake = wavelet.result === 'FAKE' || rppg.result === 'FAKE';
 
     return {
@@ -113,16 +114,73 @@ function mapBackendResponse(raw: any, mode: PredictMode): PredictResult {
   };
 }
 
+/** Authorization 헤더용 access token 가져오기 */
+async function getAuthHeader(): Promise<Record<string, string>> {
+  const auth = await getAuth();
+  if (auth?.accessToken) {
+    return { Authorization: `Bearer ${auth.accessToken}` };
+  }
+  return {};
+}
+
+/** 2초 대기 */
+function delay(ms: number) {
+  return new Promise<void>((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * 분석 상태를 폴링하다가 completed 시 결과를 가져옴.
+ * 최대 180초 (2초 간격 × 90회) 대기
+ */
+async function pollUntilDone(
+  videoId: number,
+  mode: PredictMode,
+  authHeaders: Record<string, string>
+): Promise<PredictResult> {
+  const MAX_TRIES = 90;
+  for (let i = 0; i < MAX_TRIES; i++) {
+    await delay(2000);
+
+    const statusRes = await fetch(`${API_BASE}/prediction/status/${videoId}`, {
+      headers: { 'ngrok-skip-browser-warning': 'true', ...authHeaders },
+    });
+    if (!statusRes.ok) {
+      throw new Error(`상태 조회 실패 (${statusRes.status})`);
+    }
+    const statusData = await statusRes.json();
+
+    if (statusData.status === 'completed') {
+      const resultRes = await fetch(`${API_BASE}/prediction/result/${videoId}`, {
+        headers: { 'ngrok-skip-browser-warning': 'true', ...authHeaders },
+      });
+      if (!resultRes.ok) {
+        const text = await resultRes.text();
+        throw new Error(`결과 조회 실패 (${resultRes.status}): ${text}`);
+      }
+      const raw = await resultRes.json();
+      return mapBackendResponse(raw, mode);
+    }
+
+    if (statusData.status === 'failed') {
+      throw new Error('분석 처리 중 오류가 발생했습니다.');
+    }
+    // 'pending' | 'processing' → 계속 폴링
+  }
+  throw new Error('분석 시간이 초과되었습니다. 잠시 후 다시 시도해 주세요.');
+}
+
 /**
  * 영상 파일로 딥페이크 추론 요청
- * fast → POST /prediction/fast
- * deep → POST /prediction/deep
+ * POST /prediction/{mode} → video_id (202)
+ * → 폴링 GET /prediction/status/{video_id}
+ * → GET /prediction/result/{video_id}
  */
 export async function predictWithFile(
   videoUri: string,
   mode: PredictMode = 'deep'
 ): Promise<PredictResult> {
   const endpoint = mode === 'fast' ? '/prediction/fast' : '/prediction/deep';
+  const authHeaders = await getAuthHeader();
 
   const formData = new FormData();
   formData.append('file', {
@@ -136,6 +194,7 @@ export async function predictWithFile(
     body: formData,
     headers: {
       'ngrok-skip-browser-warning': 'true',
+      ...authHeaders,
     },
   });
 
@@ -144,8 +203,11 @@ export async function predictWithFile(
     throw new Error(`서버 오류 (${response.status}): ${text || response.statusText}`);
   }
 
-  const raw = await response.json();
-  return mapBackendResponse(raw, mode);
+  // 202 응답에서 video_id 추출
+  const initData = await response.json();
+  const videoId: number = initData.video_id;
+
+  return pollUntilDone(videoId, mode, authHeaders);
 }
 
 /** URI 확장자로 MIME 타입·파일명 결정 */
@@ -159,8 +221,6 @@ function getImageMimeAndName(uri: string): { type: string; name: string } {
 
 /**
  * 이미지 파일로 딥페이크 추론 요청
- * fast → POST /prediction/fast
- * deep → POST /prediction/deep
  */
 export async function predictWithImageFile(
   imageUri: string,
@@ -168,6 +228,7 @@ export async function predictWithImageFile(
 ): Promise<PredictResult> {
   const endpoint = mode === 'fast' ? '/prediction/fast' : '/prediction/deep';
   const { type, name } = getImageMimeAndName(imageUri);
+  const authHeaders = await getAuthHeader();
 
   const formData = new FormData();
   formData.append('file', {
@@ -181,6 +242,7 @@ export async function predictWithImageFile(
     body: formData,
     headers: {
       'ngrok-skip-browser-warning': 'true',
+      ...authHeaders,
     },
   });
 
@@ -189,6 +251,8 @@ export async function predictWithImageFile(
     throw new Error(`서버 오류 (${response.status}): ${text || response.statusText}`);
   }
 
-  const raw = await response.json();
-  return mapBackendResponse(raw, mode);
+  const initData = await response.json();
+  const videoId: number = initData.video_id;
+
+  return pollUntilDone(videoId, mode, authHeaders);
 }

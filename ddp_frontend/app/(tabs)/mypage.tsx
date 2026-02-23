@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ThemedText } from '@/components/themed-text';
 import { useAnalysis } from '@/contexts/analysis-context';
 import { clearAuth, getAuth } from '@/lib/auth-storage';
+import { logout as logoutApi, withdraw as withdrawApi } from '@/lib/account-api';
 
 const ACCENT_GREEN = '#00CF90';
 const TEXT_COLOR = '#111';

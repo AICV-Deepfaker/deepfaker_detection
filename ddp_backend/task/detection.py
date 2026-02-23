@@ -1,12 +1,16 @@
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
+from redis import Redis
 from sqlalchemy.orm import Session
 from taskiq import TaskiqDepends
 
 from ddp_backend.core.database import get_db
+from ddp_backend.core.model import detection_pipeline
+from ddp_backend.core.redis_bridge import NOTIFY_CHANNEL, REDIS_URL
 from ddp_backend.core.s3 import download_video_from_s3
 from ddp_backend.core.tk_broker import broker
+from ddp_backend.schemas.api import WorkerPubSubAPI
 from ddp_backend.schemas.enums import Status, VideoStatus
 from ddp_backend.schemas.report import STTScript
 from ddp_backend.services.crud import (
@@ -19,10 +23,15 @@ from ddp_backend.services.crud import (
     FastReportCreate,
 )
 from ddp_backend.services.crud.result import ResultCreate
-from ddp_backend.services.dependencies import detection_pipeline
+
+_redis = Redis.from_url(REDIS_URL, db=1)
 
 
-@broker.task()
+def publish_notification(msg: WorkerPubSubAPI):
+    _redis.publish(NOTIFY_CHANNEL, msg.model_dump_json())
+
+
+@broker.task
 def predict_deepfake_fast(
     video_id: int,
     db: Session = TaskiqDepends(get_db),
@@ -72,6 +81,12 @@ def predict_deepfake_fast(
             ),
         )
         CRUDVideo.update_status(db, src.video_id, VideoStatus.COMPLETED)
+        publish_notification(
+            WorkerPubSubAPI(
+                user_id=src.video.user_id,
+                result_id=result.result_id,
+            )
+        )
         return result.result_id
 
 
@@ -114,4 +129,10 @@ def predict_deepfake_deep(
             ),
         )
         CRUDVideo.update_status(db, src.video_id, VideoStatus.COMPLETED)
+        publish_notification(
+            WorkerPubSubAPI(
+                user_id=src.video.user_id,
+                result_id=result.result_id,
+            )
+        )
         return result.result_id
