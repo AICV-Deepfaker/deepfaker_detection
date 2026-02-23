@@ -3,11 +3,11 @@ import sys
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-import torch
+# import torch
 import uvicorn
 
-# from core.database import engine
-# from models.models import Base
+from ddp_backend.core.database import engine
+from ddp_backend.models.models import Base
 from ddp_backend.core.scheduler import start_schedular, shutdown_schedular
 
 # ==========================================
@@ -17,7 +17,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI
 from pyngrok import ngrok # type: ignore
 
-from ddp_backend.services.dependencies import load_all_model
+# from ddp_backend.services.dependencies import load_all_model
 from ddp_backend.routers import detection
 from ddp_backend.routers import auth
 from ddp_backend.routers import user

@@ -64,13 +64,15 @@ class User(Base):
     user_id: Mapped[int] = mapped_column(
         BigInteger, primary_key=True, index=True, autoincrement=True, init=False
     )  # 효율성을 위해 user만 index=True
+    # 기본값 없는 필드 먼저
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
     login_method: Mapped[LoginMethod] = mapped_column(
         Enum(LoginMethod), nullable=False
     )
-    hashed_password: Mapped[str | None] = mapped_column(String(255), nullable=True, default=None)  # 자체 로그인 시에만 사용
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     nickname: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
+    # 기본값 없는 필드 나중에
+    hashed_password: Mapped[str | None] = mapped_column(String(255), nullable=True, default=None)  # 자체 로그인 시에만 사용
     birth: Mapped[date | None] = mapped_column(Date, nullable=True, default=None)
     profile_image: Mapped[str | None] = mapped_column(
         String(500), nullable=True, default=None
