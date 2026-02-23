@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from taskiq import TaskiqDepends
 
 from ddp_backend.core.database import get_db
+from ddp_backend.core.model import detection_pipeline
 from ddp_backend.core.redis_bridge import NOTIFY_CHANNEL, REDIS_URL
 from ddp_backend.core.s3 import download_video_from_s3
 from ddp_backend.core.tk_broker import broker
@@ -22,7 +23,6 @@ from ddp_backend.services.crud import (
     FastReportCreate,
 )
 from ddp_backend.services.crud.result import ResultCreate
-from ddp_backend.core.model import detection_pipeline
 
 _redis = Redis.from_url(REDIS_URL, db=1)
 

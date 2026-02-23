@@ -1,6 +1,8 @@
+from typing import Literal
+
 from pydantic import BaseModel
 
-from .enums import AnalyzeMode, Status, Result
+from .enums import AnalyzeMode, Result, Status
 from .report import STTReport, VideoReport
 
 __all__ = [
@@ -19,15 +21,16 @@ class BaseAPIOutput(BaseModel):
 
 
 class APIOutputFast(BaseAPIOutput):
-    analysis_mode: AnalyzeMode = AnalyzeMode.FAST
+    analysis_mode: Literal[AnalyzeMode.FAST] = AnalyzeMode.FAST
     r_ppg: VideoReport | None = None
     wavelet: VideoReport | None = None
     stt: STTReport | None = None
 
 
 class APIOutputDeep(BaseAPIOutput):
-    analysis_mode: AnalyzeMode = AnalyzeMode.DEEP
+    analysis_mode: Literal[AnalyzeMode.DEEP] = AnalyzeMode.DEEP
     unite: VideoReport | None = None
+
 
 class WorkerPubSubAPI(BaseModel):
     user_id: int
