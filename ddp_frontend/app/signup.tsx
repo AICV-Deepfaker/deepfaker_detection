@@ -17,16 +17,19 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
-import { addStoredUser, type Affiliation } from '@/lib/auth-storage';
+import { register } from '@/lib/account-api';
 
 const ACCENT_GREEN = '#00CF90';
 const TEXT_COLOR = '#111';
 const SECONDARY_TEXT_COLOR = '#687076';
 
+// 백엔드 enum 기준: Affiliation = "개인" | "기관" | "회사"
+type Affiliation = '개인' | '기관' | '회사';
+
 const AFFILIATION_OPTIONS: { value: Affiliation; label: string }[] = [
   { value: '개인', label: '개인' },
   { value: '기관', label: '기관' },
-  { value: '기업', label: '기업' },
+  { value: '회사', label: '회사' },
 ];
 
 export default function SignupScreen() {
@@ -82,30 +85,30 @@ export default function SignupScreen() {
       Alert.alert('입력 오류', '생년월일을 입력해 주세요.');
       return;
     }
-    if (trimmedPassword.length < 6) {
-      Alert.alert('입력 오류', '비밀번호는 6자 이상이어야 합니다.');
+    if (trimmedPassword.length < 8) {
+      Alert.alert('입력 오류', '비밀번호는 8자 이상이어야 합니다.');
       return;
     }
     if (trimmedPassword !== trimmedConfirm) {
       Alert.alert('입력 오류', '비밀번호가 일치하지 않습니다.');
       return;
     }
+
     setLoading(true);
     try {
-      await addStoredUser({
+      await register({
         email: trimmedEmail,
         password: trimmedPassword,
         name: trimmedName,
         nickname: trimmedNickname,
-        birthdate: trimmedBirthdate,
-        profilePhotoUri: profilePhotoUri ?? undefined,
-        affiliation,
+        birth: trimmedBirthdate,
+        affiliation: affiliation,
       });
       Alert.alert('회원가입 완료', '로그인해 주세요.', [
         { text: '확인', onPress: () => router.replace('/login') },
       ]);
-    } catch {
-      Alert.alert('오류', '회원가입 처리 중 오류가 발생했습니다.');
+    } catch (e: any) {
+      Alert.alert('회원가입 실패', e?.message ?? '다시 시도해 주세요.');
     } finally {
       setLoading(false);
     }
@@ -145,10 +148,10 @@ export default function SignupScreen() {
             keyboardType="email-address"
             editable={!loading}
           />
-          <ThemedText style={[styles.sectionLabel, { marginTop: 16 }]}>비밀번호 *</ThemedText>
+          <ThemedText style={[styles.sectionLabel, { marginTop: 16 }]}>비밀번호 * (8자 이상)</ThemedText>
           <TextInput
             style={styles.input}
-            placeholder="6자 이상 입력"
+            placeholder="8자 이상 입력"
             placeholderTextColor={SECONDARY_TEXT_COLOR}
             value={password}
             onChangeText={setPassword}
@@ -166,7 +169,7 @@ export default function SignupScreen() {
             editable={!loading}
           />
 
-          <ThemedText style={[styles.sectionLabel, { marginTop: 20 }]}>이름 *</ThemedText>
+          <ThemedText style={[styles.sectionLabel, { marginTop: 20 }]}>이름 * (2자 이상)</ThemedText>
           <TextInput
             style={styles.input}
             placeholder="이름 입력"

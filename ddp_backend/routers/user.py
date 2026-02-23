@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from ddp_backend.schemas.enums import LoginMethod
 from ddp_backend.core.database import get_db
 from ddp_backend.core.security import get_current_user
-from ddp_backend.models import User 
+from ddp_backend.models import User
 from ddp_backend.schemas.user import (
     UserCreate, UserResponse,
     FindId, FindIdResponse,
@@ -48,7 +48,6 @@ def find_password_route(user_info: FindPassword, db: Session = Depends(get_db)):
     return find_password(db, user_info)
 
 # 회원정보수정 - 비밀번호/프로필이미지/소속 변경 (토큰 필요)
-<<<<<<< HEAD
 @router.patch("/edit", response_model=UserEditResponse)
 def edit_route(
     update_info: UserEdit,
@@ -75,31 +74,3 @@ def withdraw_route(
     current_user: User = Depends(get_current_user)
 ):
     return delete_user(db, current_user.user_id)
-=======
-# @router.patch("/edit", response_model=UserEditResponse)
-# def edit_route(
-#     update_info: UserEdit,
-#     db: Session = Depends(get_db),
-#     user_id: int = Depends(get_current_user)
-# ):
-#     return edit_user(db, user_id, update_info)
-
-# 프로필 이미지 삭제 - delete_profile_image=True 요청 시 이미지 삭제 (토큰 필요)
-# @router.delete("/profile", response_model=UserEditResponse)
-# def delete_profile_route(
-#     request: DeleteProfileImage,
-#     db: Session = Depends(get_db),
-#     user_id: int = Depends(get_current_user)
-# ):
-#     if not request.delete_profile_image:
-#         raise HTTPException(status_code=400, detail="삭제 요청이 아닙니다")
-#     return delete_profile_image(db, user_id)
-
-# # 회원탈퇴 - 유저 삭제 (cascade로 관련 데이터 모두 삭제) (토큰 필요)
-# @router.delete("/withdraw")
-# def withdraw_route(
-#     db: Session = Depends(get_db),
-#     user_id: int = Depends(get_current_user)
-# ):
-#     return delete_user(db, user_id)
->>>>>>> eda6fc1 (jiyun for server)

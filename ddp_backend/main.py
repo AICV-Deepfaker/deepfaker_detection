@@ -3,7 +3,7 @@ import sys
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-# import torch
+import torch
 import uvicorn
 
 from ddp_backend.core.database import engine
@@ -15,9 +15,10 @@ from ddp_backend.core.scheduler import start_schedular, shutdown_schedular
 # ==========================================
 from dotenv import load_dotenv
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from pyngrok import ngrok # type: ignore
 
-# from ddp_backend.services.dependencies import load_all_model
+from ddp_backend.services.dependencies import load_all_model
 from ddp_backend.routers import detection
 from ddp_backend.routers import auth
 from ddp_backend.routers import user
@@ -83,6 +84,16 @@ async def lifespan(app: FastAPI):  # pyright: ignore[reportUnusedParameter]
 
 
 app = FastAPI(lifespan=lifespan)
+
+# CORS 설정 - 프론트엔드(Expo) 접속 허용
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 app.include_router(detection.router)
 app.include_router(auth.router)
 app.include_router(user.router)

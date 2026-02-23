@@ -31,7 +31,7 @@ const SECONDARY_TEXT_COLOR = '#687076';
 const GOOGLE_WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || '';
 const EXPO_OWNER = process.env.EXPO_PUBLIC_EXPO_OWNER || '';
 
-// Google OAuth 전체 discovery 문서 (tokenEndpoint 필수 — 없으면 proxy가 code 교환 실패)
+// Google OAuth 전체 discovery 문서
 const GOOGLE_DISCOVERY = {
   authorizationEndpoint: 'https://accounts.google.com/o/oauth2/v2/auth',
   tokenEndpoint: 'https://oauth2.googleapis.com/token',
@@ -46,10 +46,8 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
 
-  // auth.expo.io 프록시: Google이 code를 프록시로 보내고, 앱은 useProxy:true로 결과를 polling
   const redirectUri = `https://auth.expo.io/@${EXPO_OWNER.trim()}/ddp`;
 
-  // useProxy는 v7 타입에서 제거됐으나 런타임에선 동작 (auth.expo.io polling에 필요)
   // eslint-disable-next-line @typescript-eslint/ban-ts-comment
   // @ts-ignore
   const [, response, promptAsync] = AuthSession.useAuthRequest(
@@ -66,7 +64,7 @@ export default function LoginScreen() {
     if (!response) return;
     if (response.type === 'success') {
       setGoogleLoading(false);
-      setAuth({ email: 'google', isLoggedIn: true }).then(() => router.replace('/(tabs)'));
+      setAuth({ email: 'google', isLoggedIn: true } as any).then(() => router.replace('/(tabs)'));
     } else if (response.type === 'error') {
       setGoogleLoading(false);
       Alert.alert('Google 로그인 실패', response.error?.message || '다시 시도해 주세요.');
@@ -85,44 +83,22 @@ export default function LoginScreen() {
 
     setLoading(true);
     try {
-        // 서버 연결 된 경우 이 코드로 변경
-//       const result = await login(trimmedEmail, trimmedPassword);
-//
-//           await setAuth({
-//             email: result.email,
-//             nickname: result.nickname,
-//             accessToken: result.access_token,
-//             refreshToken: result.refresh_token,
-//             userId: result.user_id,
-//             isLoggedIn: true,
-//           });
-//
-//           router.replace('/(tabs)');
-//         } catch (e: any) {
-//           Alert.alert('로그인 실패', e?.message ?? '다시 시도해 주세요.');
-//         } finally {
-//           setLoading(false);
-//         }
-//       }, [email, password]);
-
-      // 임시로 사용: 서버 붙기 전까지는 로컬 로그인으로 통과
+      const result = await login(trimmedEmail, trimmedPassword);
       await setAuth({
-            email: trimmedEmail,
-            nickname: trimmedEmail.split('@')[0],
-            isLoggedIn: true,
-            accessToken: 'local-dev',
-            refreshToken: 'local-dev',
-            userId: 0,
-          } as any);
-
-          router.replace('/(tabs)');
-        } catch (e) {
-          console.log('LOGIN ERROR:', e);
-          Alert.alert('오류', '로그인 처리 중 오류가 발생했습니다.');
-        } finally {
-          setLoading(false);
-        }
-      }, [email, password]);
+        email: result.email,
+        nickname: result.nickname,
+        accessToken: result.access_token,
+        refreshToken: result.refresh_token,
+        userId: result.user_id,
+        isLoggedIn: true,
+      });
+      router.replace('/(tabs)');
+    } catch (e: any) {
+      Alert.alert('로그인 실패', e?.message ?? '다시 시도해 주세요.');
+    } finally {
+      setLoading(false);
+    }
+  }, [email, password]);
 
   const handleGoogleLogin = useCallback(() => {
     if (!GOOGLE_WEB_CLIENT_ID) {

@@ -14,7 +14,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
-import { findUserByNameAndBirthdate } from '@/lib/auth-storage';
+import { findId } from '@/lib/account-api';
 
 const ACCENT_GREEN = '#00CF90';
 const TEXT_COLOR = '#111';
@@ -34,8 +34,11 @@ export default function FindIdScreen() {
     }
     setLoading(true);
     try {
-      const email = await findUserByNameAndBirthdate(name, birthdate);
-      setFoundEmail(email);
+      const result = await findId(name.trim(), birthdate.trim());
+      setFoundEmail(result.email);
+    } catch (e: any) {
+      // 404 or 404-like → 일치하는 계정 없음
+      setFoundEmail(null);
     } finally {
       setLoading(false);
     }
