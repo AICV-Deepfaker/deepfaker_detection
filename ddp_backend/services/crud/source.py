@@ -2,8 +2,6 @@
 Source CRUD
 """
 
-from datetime import datetime
-
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -19,7 +17,6 @@ __all__ = [
 class SourceCreate(BaseModel):
     video_id: int
     s3_path: str
-    expires_at: datetime
 
 
 class CRUDSource:
@@ -30,7 +27,6 @@ class CRUDSource:
         db_source = Source(
             video_id=source_info.video_id,
             s3_path=source_info.s3_path,
-            expires_at=source_info.expires_at,
         )
         db.add(db_source)
         db.commit()

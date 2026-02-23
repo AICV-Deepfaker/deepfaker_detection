@@ -20,6 +20,8 @@ def delete_video_from_s3(url: str):
 
 # 예외사항 반드시 넣기
 
+def upload_video_to_s3(file, filename: str | Path) -> str:
+    return ""
+
 def download_video_from_s3(url: str, download_path: Path) -> Path:
     return download_path
-    pass

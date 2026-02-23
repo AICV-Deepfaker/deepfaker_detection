@@ -1,7 +1,7 @@
 # 테이블이 4개 정도이므로 하나의 파일로 테이블 구성
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from typing import Any
 
 from ddp_backend.core.database import Base
@@ -165,7 +165,7 @@ class Source(Base):  # S3 관리용 (일정 시간 후 삭제 대상)
     )
     s3_path: Mapped[str] = mapped_column(String(500), nullable=False)
     expires_at: Mapped[datetime] = mapped_column(
-        DateTime, nullable=False
+        DateTime, server_default=func.now() + timedelta(hours=12), nullable=False, init=False,
     )  # 12시간 후 만료 등
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), init=False
