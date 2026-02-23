@@ -29,4 +29,5 @@ dependencies = [
     "wavelet-clip",
     "passlib>=1.7.4",
     "python-jose[cryptography]>=3.5.0",
+    "apscheduler>=3.11.2",
 ]

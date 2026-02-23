@@ -8,7 +8,7 @@ import uvicorn
 
 # from core.database import engine
 # from models.models import Base
-from core.schedulaer import start_schedular, shutdown_schedular
+from ddp_backend.core.scheduler import start_schedular, shutdown_schedular
 
 # ==========================================
 # .env 로드
