@@ -8,7 +8,7 @@ from ddp_backend.schemas.config import BaseVideoConfig
 from ddp_backend.services import DetectionPipeline
 
 DETECTOR_YAML = "Wavelet-CLIP/wavelet_lib/config/detector/detector.yaml"
-CKPT_PATH = "ddp_backend/ckpt_best.pth"
+CKPT_PATH = "/home/ubuntu/deepfaker_detection/ckpt_best_5.pth"
 IMG_SIZE = 224
 
 
