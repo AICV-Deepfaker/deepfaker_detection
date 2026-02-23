@@ -2,26 +2,40 @@
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from ddp_backend.schemas.enums import LoginMethod
 from ddp_backend.core.database import get_db
 from ddp_backend.core.security import get_current_user
+from ddp_backend.models import User 
 from ddp_backend.schemas.user import (
     UserCreate, UserResponse,
     FindId, FindIdResponse,
-    FindPassword,
+    FindPassword, DuplicateCheckResponse,
+    CheckEmail, CheckNickname,
     UserEdit, UserEditResponse,
     DeleteProfileImage
 )
 from ddp_backend.services.user import (
+    check_email_duplicate, check_nickname_duplicate,
     register, edit_user, delete_user,
     find_id, find_password, delete_profile_image
 )
 
 router = APIRouter(prefix="/user", tags=["user"])
 
-# 회원가입 - 이메일/닉네임 중복 확인 후 유저 생성
+# 이메일 중복 확인 (실시간 체크)
+@router.post("/check-email", response_model=DuplicateCheckResponse)
+def check_email_route(body: CheckEmail, db: Session = Depends(get_db)):
+    return DuplicateCheckResponse(is_duplicate=check_email_duplicate(db, body.email))
+
+# 닉네임 중복 확인 (실시간 체크)
+@router.post("/check-nickname", response_model=DuplicateCheckResponse)
+def check_nickname_route(body: CheckNickname, db: Session = Depends(get_db)):
+    return DuplicateCheckResponse(is_duplicate=check_nickname_duplicate(db, body.nickname))
+
+# 회원가입 - 이메일/닉네임 중복 확인 후 유저 생성 (로컬)
 @router.post("/register", response_model=UserResponse)
 def register_route(user_info: UserCreate, db: Session = Depends(get_db)):
-    return register(db, user_info)
+    return register(db, user_info, LoginMethod.LOCAL)
 
 # 아이디 찾기 - 이름/생년월일로 이메일 조회 (마스킹 처리)
 @router.get("/find-id", response_model=FindIdResponse)
@@ -38,25 +52,25 @@ def find_password_route(user_info: FindPassword, db: Session = Depends(get_db)):
 def edit_route(
     update_info: UserEdit,
     db: Session = Depends(get_db),
-    user_id: int = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
-    return edit_user(db, user_id, update_info)
+    return edit_user(db, current_user.user_id, update_info)
 
 # 프로필 이미지 삭제 - delete_profile_image=True 요청 시 이미지 삭제 (토큰 필요)
 @router.delete("/profile", response_model=UserEditResponse)
 def delete_profile_route(
     request: DeleteProfileImage,
     db: Session = Depends(get_db),
-    user_id: int = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     if not request.delete_profile_image:
         raise HTTPException(status_code=400, detail="삭제 요청이 아닙니다")
-    return delete_profile_image(db, user_id)
+    return delete_profile_image(db, current_user.user_id)
 
 # 회원탈퇴 - 유저 삭제 (cascade로 관련 데이터 모두 삭제) (토큰 필요)
 @router.delete("/withdraw")
 def withdraw_route(
     db: Session = Depends(get_db),
-    user_id: int = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
-    return delete_user(db, user_id)
+    return delete_user(db, current_user.user_id)

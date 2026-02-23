@@ -42,7 +42,7 @@ class CRUDUser:
         """유저 생성"""
         db_user = User(  # 객체
             email=user_info.email,
-            login_method=LoginMethod.LOCAL,
+            login_method=user_info.login_method,
             hashed_password=user_info.hashed_password,  # service에서 입력
             name=user_info.name,
             nickname=user_info.nickname,
@@ -110,6 +110,17 @@ class CRUDUser:
         if update_info.affiliation is not None:  # 소속
             user.affiliation = update_info.affiliation
 
+        db.commit()
+        db.refresh(user)
+        return user
+    
+    # 사용 : 이미지 삭제
+    @staticmethod
+    def delete_profile_image(db: Session, user_id: int):
+        user = CRUDUser.get_by_id(db, user_id)
+        if user is None:
+            return None
+        user.profile_image = None
         db.commit()
         db.refresh(user)
         return user

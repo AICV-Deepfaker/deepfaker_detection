@@ -1,4 +1,4 @@
-# core/security.py (비밀번호 암호화 및 JWT)
+# core/security.py (JWT토큰, 비밀번호 암호화)
 # passward hashing 및 로그인 성공 시 JWT 토큰을 생성하는 유틸리티 파일
 
 # 자체 로그인은 보안 설정 -> 데이터 규격 -> 핵심 로직 -> API 경로 순서로 개발
@@ -8,30 +8,21 @@ import hashlib
 from passlib.context import CryptContext
 from datetime import datetime, timezone, timedelta
 from jose import JWTError, jwt, ExpiredSignatureError
-from config import settings
+from fastapi import Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordBearer
+from sqlalchemy.orm import Session
 
+from ddp_backend.core.config import settings  # 수정
+from ddp_backend.core.database import get_db
+from ddp_backend.services.crud.user import CRUDUser
 
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-# 비밀번호 암호화
-def get_password_hash(password: str) -> str:
-    hashed_password = pwd_context.hash(password)
-    return hashed_password
 
-# 비밀번호 검증
-def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return pwd_context.verify(plain_password, hashed_password)
-
-# refresh token 암호화
-def hash_refresh_token(token: str) -> str:
-    salt = os.environ.get("REFRESH_TOKEN_SALT", "default_salt")
-    return hashlib.sha256((token + salt).encode()).hexdigest()
-
-# refresh token 검증
-def verify_refresh_token(token: str, hashed_token: str) -> bool:
-    return pwd_context.verify(token, hashed_token)
-
+# =========
 # jwt access 토큰 생성
+# =========
 def create_access_token(data: dict, expires_delta: timedelta | None = None):
     to_encode = data.copy() # {"user_id": 1} 복사
     # 토큰 유효시간 계산
@@ -46,7 +37,36 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None):
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
     return encoded_jwt
 
+
+# =========
+# refresh token 암호화
+# =========
+def hash_refresh_token(token: str) -> str: # 단방향 (sha256은 같은 토큰을 변환할 시 동일한 값 출력)
+    salt = os.environ.get("REFRESH_TOKEN_SALT", "default_salt")
+    return hashlib.sha256((token + salt).encode()).hexdigest()
+
+
+# =========
+# jwt 토큰 검증
+# =========
+def decode_token(token: str):
+    try:
+        payload = jwt.decode(
+            token, 
+            settings.SECRET_KEY, 
+            algorithms=[settings.ALGORITHM]
+            )
+        return payload
+    
+    except ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="토큰이 만료되었습니다")
+    except JWTError:
+        raise HTTPException(status_code=401, detail="유효하지 않은 토큰입니다")
+
+
+# =========
 # jwt refresh 토큰 생성
+# =========
 def create_refresh_token(data: dict, expires_delta: timedelta | None = None):
     to_encode = data.copy()
     if expires_delta:
@@ -60,21 +80,46 @@ def create_refresh_token(data: dict, expires_delta: timedelta | None = None):
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
     return encoded_jwt
 
-# jwt 토큰 검증
-def decode_token(token: str):
-    try:
-        payload = jwt.decode(
-            token, 
-            settings.SECRET_KEY, 
-            algorithms=[settings.ALGORITHM]
-            )
-        return payload
-    
-    except ExpiredSignatureError:
-        raise ExpiredSignatureError("토큰이 만료되었습니다")
 
-    except JWTError:
-        raise JWTError("유효하지 않은 토큰입니다")
+# =========
+# user 토큰 검증
+# =========
+def get_current_user(
+    token: str = Depends(oauth2_scheme),
+    db: Session = Depends(get_db)
+):
+    # 토큰 유효한지 체크
+    payload = decode_token(token)
+    
+    if payload.get("type") != "access":
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="access 토큰이 아닙니다")
+        
+    user = CRUDUser.get_by_id(db, payload.get("user_id"))
+    # 유저가 없을 때
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="존재하지 않는 유저입니다")
+    
+    # 로그아웃된 토큰 사용 시
+    if user.tokens and user.tokens.revoked:
+        raise HTTPException(status_code=401, detail="비정상적인 접근입니다. 다시 로그인해주세요")
+    
+    return user # 보통 객체를 받아서 라우터 내부에서 user_id 뽑음
+
+
+# =========
+# 비밀번호 암호화
+# =========
+def get_password_hash(password: str) -> str:
+    hashed_password = pwd_context.hash(password)
+    return hashed_password
+
+
+# =========
+# 비밀번호 검증
+# =========
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    return pwd_context.verify(plain_password, hashed_password)
+
 
 
 

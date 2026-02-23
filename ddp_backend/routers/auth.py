@@ -1,13 +1,25 @@
 # routers/auth_router.py
 from fastapi import APIRouter, Depends
+from fastapi.responses import RedirectResponse
 from fastapi.security import OAuth2PasswordBearer #OAuth 사용
 from sqlalchemy.orm import Session
+from datetime import datetime, timezone, timedelta
+import httpx
 
+from ddp_backend.core.config import settings
 from ddp_backend.core.database import get_db
-from ddp_backend.schemas.user import UserLogin, TokenResponse
-from ddp_backend.services.auth import login, logout, reissue_token
+from ddp_backend.core.security import create_access_token, create_refresh_token, oauth2_scheme
+from ddp_backend.schemas.user import UserLogin, TokenResponse, UserCreate
+from ddp_backend.schemas.enums import LoginMethod
+from ddp_backend.services.auth import login, logout, reissue_token, save_refresh_token
+from ddp_backend.services.user import register
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+# 구글 
+GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
+GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
+GOOGLE_USERINFO_URL = "https://www.googleapis.com/oauth2/v3/userinfo"
 
 # Bearer 토큰 자동 추출 (Swagger 자물쇠 버튼 생성)
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
@@ -32,3 +44,57 @@ def reissue_route(
     db: Session = Depends(get_db)
 ):
     return reissue_token(db, refresh_token)
+
+# Google OAuth 시작
+@router.get("/google")
+def google_auth():
+    params = {
+        "client_id": settings.GOOGLE_CLIENT_ID,
+        "redirect_uri": settings.GOOGLE_REDIRECT_URI,
+        "response_type": "code",
+        "scope": "openid email profile",
+    }
+    query = "&".join(f"{k}={v}" for k, v in params.items())
+    return RedirectResponse(f"{GOOGLE_AUTH_URL}?{query}")
+
+# Google OAuth 콜백
+@router.get("/google/callback", response_model=TokenResponse)
+def google_callback(code: str, db: Session = Depends(get_db)):
+    with httpx.Client() as client:
+        token_data = client.post(GOOGLE_TOKEN_URL, data={
+            "code": code,
+            "client_id": settings.GOOGLE_CLIENT_ID,
+            "client_secret": settings.GOOGLE_CLIENT_SECRET,
+            "redirect_uri": settings.GOOGLE_REDIRECT_URI,
+            "grant_type": "authorization_code",
+        }).json()
+
+        userinfo = client.get(
+            GOOGLE_USERINFO_URL,
+            headers={"Authorization": f"Bearer {token_data['access_token']}"}
+        ).json()
+
+    # 회원가입 또는 기존 유저 조회
+    user_info = UserCreate(
+        email=userinfo["email"],
+        name=userinfo.get("name", ""),
+        profile_image=userinfo.get("picture"),
+    )
+    user = register(db, user_info, LoginMethod.GOOGLE)
+
+    # 토큰 발급
+    access_token = create_access_token({"user_id": user.user_id})
+    refresh_token = create_refresh_token({"user_id": user.user_id})
+    save_refresh_token(
+        db,
+        user_id=user.user_id,
+        refresh_token=refresh_token,
+        expires_at=datetime.now(timezone.utc) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
+    )
+    return TokenResponse(
+        access_token=access_token,
+        refresh_token=refresh_token,
+        user_id=user.user_id,
+        email=user.email,
+        nickname=user.nickname
+    )

@@ -8,50 +8,84 @@ from ddp_backend.core.s3 import upload_image_to_s3, delete_image_from_s3, delete
 from ddp_backend.schemas.user import UserCreate, UserResponse, FindId, FindIdResponse, FindPassword, UserEdit, UserEditResponse, DeleteProfileImage
 from ddp_backend.services.crud.user import CRUDUser, UserCreate as UserCreateCRUD, UserUpdate
 
+from ddp_backend.schemas.enums import LoginMethod
+
 import random, string
 
 
 # 로그인, 로그아웃 -> auth.py
 
+
+# =========
+# 닉네임 생성 (Google 전용, 필수)
+# =========
+def generate_nickname(email: str, db) -> str:
+    base = email.split("@")[0]
+    while True:
+        nickname = f"{base}_{random.randint(1000, 9999)}"
+        if not CRUDUser.get_by_nickname(db, nickname):
+            return nickname
+        
+# =========
+# 이메일 중복 확인
+# =========
+def check_email_duplicate(db, email: str) -> bool:
+    return CRUDUser.get_by_email(db, email) is not None
+
+# =========
+# 닉네임 중복 확인
+# =========
+def check_nickname_duplicate(db, nickname: str) -> bool:
+    return CRUDUser.get_by_nickname(db, nickname) is not None
+
 # =========
 # 회원가입
 # =========
-def register(db: Session, user_info: UserCreate) -> UserResponse:
-    # 1. 이메일 중복 확인
-    if CRUDUser.get_by_email(db, user_info.email):
+def register(db: Session, user_info: UserCreate, login_method: LoginMethod = LoginMethod.LOCAL) -> UserResponse:
+    # 1. 이미 가입된 유저인지 확인
+    existing_user = CRUDUser.get_by_email(db, user_info.email)
+    if existing_user:
+        if login_method == LoginMethod.GOOGLE:
+            return existing_user  # Google은 재로그인 처리
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, 
+            status_code=status.HTTP_400_BAD_REQUEST,
             detail="이미 사용 중인 이메일입니다"
         )
 
-    # 2. 닉네임 중복 확인
-    if CRUDUser.get_by_nickname(db, user_info.nickname):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, 
-            detail="이미 사용 중인 닉네임입니다"
-        )
-    
-    # 3. 비밀번호 해싱
-    hashed_password = get_password_hash(user_info.password)
+    # 2. 로컬만 체크
+    if login_method == LoginMethod.LOCAL:
+        if user_info.password is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="비밀번호는 필수입니다"
+            )
+        if user_info.birth is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="생년월일은 필수입니다"
+            )
+        if check_nickname_duplicate(db, user_info.nickname):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="이미 사용 중인 닉네임입니다"
+            )
+
+    # 3. 닉네임 처리 (Google은 랜덤 생성)
+    nickname = user_info.nickname if login_method == LoginMethod.LOCAL else generate_nickname(user_info.email, db)
 
     # 4. 유저 생성
+    hashed_password = get_password_hash(user_info.password) if login_method == LoginMethod.LOCAL else None # 비밀번호 해싱
     new_user = CRUDUser.create(db, UserCreateCRUD(
         email=user_info.email,
+        login_method=login_method,
         hashed_password=hashed_password,
         name=user_info.name,
-        nickname=user_info.nickname,
+        nickname=nickname,
         birth=user_info.birth,
         profile_image=user_info.profile_image,
-        affiliation=user_info.affiliation
+        affiliation=user_info.affiliation,
     ))
-
-    return UserResponse(
-        user_id=new_user.user_id,
-        email=new_user.email,
-        name=new_user.name,
-        nickname=new_user.nickname,
-        created_at=new_user.created_at
-    )
+    return UserResponse.model_validate(new_user)
 
 # =========
 # 아이디 찾기
@@ -174,17 +208,11 @@ def delete_profile_image(db: Session, user_id: int) -> UserEditResponse:
     
     # S3 변경
     # delete_image_from_s3(user.profile_image)  # 이후 개발 예정
+    CRUDUser.delete_profile_image(db, user_id)
 
-    user.profile_image = None
-    db.commit()
-    db.refresh(user)
-    if user.profile_image is None:
-        return UserEditResponse(delete_profile_image=True)
-    else:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
-            detail="이미지 삭제에 실패하였습니다"
-            )
+    return UserEditResponse(deleted_profile_image=True)
+
+
 
 # =========
 # 회원 탈퇴

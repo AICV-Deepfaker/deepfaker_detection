@@ -22,10 +22,12 @@ __all__ = [
 ]
 
 
+
+
 # 회원가입
 class UserCreate(BaseModel):  # Login_method는 서비스 로직에서
     email: EmailStr
-    password: str = Field(..., min_length=8)  # 최소 8자 이상
+    password: str | None = Field(..., min_length=8)  # 최소 8자 이상 (구글은 비번이 없음-service에서 차단)
     name: str = Field(..., min_length=2)
     nickname: str
     birth: date | None = None
