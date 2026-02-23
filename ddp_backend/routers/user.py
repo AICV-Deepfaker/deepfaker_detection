@@ -38,7 +38,7 @@ def register_route(user_info: UserCreate, db: Session = Depends(get_db)):
     return register(db, user_info, LoginMethod.LOCAL)
 
 # 아이디 찾기 - 이름/생년월일로 이메일 조회 (마스킹 처리)
-@router.get("/find-id", response_model=FindIdResponse)
+@router.post("/find-id", response_model=FindIdResponse)
 def find_id_route(user_info: FindId, db: Session = Depends(get_db)):
     return find_id(db, user_info)
 

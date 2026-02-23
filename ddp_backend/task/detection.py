@@ -1,6 +1,5 @@
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Annotated
 
 from sqlalchemy.orm import Session
 from taskiq import TaskiqDepends
@@ -26,7 +25,7 @@ from ddp_backend.services.dependencies import detection_pipeline
 @broker.task()
 def predict_deepfake_fast(
     video_id: int,
-    db: Annotated[Session, TaskiqDepends(get_db)],
+    db: Session = TaskiqDepends(get_db),
 ) -> int | None:
     src = CRUDSource.get_by_video(db, video_id)
     if src is None:
@@ -79,7 +78,7 @@ def predict_deepfake_fast(
 @broker.task()
 def predict_deepfake_deep(
     video_id: int,
-    db: Annotated[Session, TaskiqDepends(get_db)],
+    db: Session = TaskiqDepends(get_db),
 ) -> int | None:
     src = CRUDSource.get_by_video(db, video_id)
     if src is None:
@@ -102,7 +101,7 @@ def predict_deepfake_deep(
                 user_id=src.video.user_id,
                 video_id=src.video.video_id,
                 total_result=output.result,
-                is_fast=True,
+                is_fast=False,
             ),
         )
         CRUDDeepReport.create(

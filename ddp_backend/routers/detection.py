@@ -1,55 +1,46 @@
 from typing import Annotated
 
-from fastapi import APIRouter, File, UploadFile, Depends, BackgroundTasks
+from fastapi import APIRouter, File, UploadFile, Depends, status
 from sqlalchemy.orm import Session
 
-from ddp_backend.schemas.api import (
-    APIOutputDeep,
-    APIOutputFast,
-)
-from ddp_backend.schemas.report import STTScript
-from ddp_backend.services.dependencies import detection_pipeline
-from ddp_backend.utils.file_handler import save_temp_file
-from ddp_backend.services.crud import FastReportCreate, DeepReportCreate, CRUDFastReport, CRUDDeepReport
+from ddp_backend.schemas.enums import OriginPath, AnalyzeMode
+from ddp_backend.services.crud.source import CRUDSource, SourceCreate
+from ddp_backend.services.crud import CRUDVideo, VideoCreate
 from ddp_backend.core.database import get_db
+from ddp_backend.core.s3 import upload_video_to_s3
+from ddp_backend.task.detection import predict_deepfake_deep, predict_deepfake_fast
 
 
 router = APIRouter(prefix="/prediction", tags=["prediction"])
 
 
-@router.post(path="/fast")
-def predict_deepfake_fast(
+@router.post(path="/{mode}", status_code=status.HTTP_202_ACCEPTED)
+async def predict_deepfake(
     file: Annotated[UploadFile, File(...)],
+    user_id: Annotated[
+        int, Depends()
+    ],  # TODO add dependency gives user id from JWT token
     db: Annotated[Session, Depends(get_db)],
-    background_tasks: BackgroundTasks,
-) -> APIOutputFast:
-    with save_temp_file(file) as temp_path:
-        output = detection_pipeline.run_fast_mode(temp_path)
-        if output.wavelet is None or output.r_ppg is None or output.stt is None:
-            return output
-        CRUDFastReport.create(db, FastReportCreate(
-            user_id=...,
-            result_id=...,
-            freq_result=output.wavelet.result,
-            freq_conf=output.wavelet.confidence_score,
-            freq_image=output.wavelet.visual_report,
-            rppg_result=output.r_ppg.result,
-            rppg_conf=output.r_ppg.confidence_score,
-            rppg_image=output.r_ppg.visual_report,
-            stt_risk_level=output.stt.risk_level,
-            stt_script=STTScript(
-                keywords=output.stt.keywords,
-                risk_reason=output.stt.risk_reason,
-                transcript=output.stt.transcript,
-                search_results=output.stt.search_results,
-            )
-        ))
-        return output
-
-
-@router.post("/deep")
-def predict_deepfake_deep(
-    file: Annotated[UploadFile, File(...)],
-) -> APIOutputDeep:
-    with save_temp_file(file) as temp_path:
-        return detection_pipeline.run_deep_mode(temp_path)
+    mode: AnalyzeMode,
+) -> None:
+    video = CRUDVideo.create(
+        db,
+        VideoCreate(
+            user_id=user_id,
+            origin_path=OriginPath.UPLOAD,
+        ),
+    )
+    filename = file.filename if file.filename is not None else "unnamed.mp4"
+    s3_path = upload_video_to_s3(file.file, filename)
+    CRUDSource.create(
+        db,
+        SourceCreate(
+            video_id=video.video_id,
+            s3_path=s3_path,
+        ),
+    )
+    if mode == AnalyzeMode.FAST:
+        await predict_deepfake_fast.kiq(video.video_id)
+    elif mode == AnalyzeMode.DEEP:
+        await predict_deepfake_deep.kiq(video.video_id)
+    return None

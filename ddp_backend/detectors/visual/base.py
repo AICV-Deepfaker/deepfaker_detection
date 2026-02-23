@@ -14,7 +14,7 @@ from pydantic import BaseModel
 from ddp_backend.schemas.config import BaseVideoConfig
 from ddp_backend.schemas.enums import Result, Status
 from ddp_backend.schemas.report import VideoReport
-from detectors import VisualDetector
+from ddp_backend.detectors import VisualDetector
 
 
 class VideoInferenceResult(BaseModel):
