@@ -1,14 +1,17 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, File, UploadFile, status
+from fastapi import APIRouter, Depends, File, UploadFile, status, HTTPException
+from pydantic import Field
 from sqlalchemy.orm import Session
 
 from ddp_backend.core.database import get_db
 from ddp_backend.core.s3 import upload_video_to_s3
 from ddp_backend.core.security import get_current_user
 from ddp_backend.models import User
-from ddp_backend.schemas.enums import AnalyzeMode, OriginPath
-from ddp_backend.services.crud import CRUDVideo, VideoCreate
+from ddp_backend.schemas.api import APIOutputDeep, APIOutputFast
+from ddp_backend.schemas.enums import AnalyzeMode, ModelName, OriginPath, Result, Status
+from ddp_backend.schemas.report import STTReport, VideoReport
+from ddp_backend.services.crud import CRUDVideo, VideoCreate, CRUDResult, CRUDFastReport, CRUDDeepReport
 from ddp_backend.services.crud.source import CRUDSource, SourceCreate
 from ddp_backend.task.detection import predict_deepfake_deep, predict_deepfake_fast
 
@@ -46,3 +49,54 @@ async def predict_deepfake(
     elif mode == AnalyzeMode.DEEP:
         await predict_deepfake_deep.kiq(video.video_id)
     return None
+
+type ResultType = Annotated[APIOutputFast | APIOutputDeep, Field(discriminator='analysis_mode')]
+
+def conf_to_prob(conf: float, result: Result)-> float:
+    match result:
+        case Result.UNKNOWN:
+            return 0.5
+        case Result.REAL:
+            return conf
+        case Result.FAKE:
+            return 1 - conf
+
+@router.get(path="/result/{result_id}", response_model=ResultType)
+async def get_result(
+    result_id: int,
+    user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)]
+):
+    result = CRUDResult.get_by_id(db, result_id)
+    if result is None:
+        raise HTTPException(404, "Item not found")
+    if result.user_id != user.user_id:
+        raise HTTPException(403, "Forbidden")
+    
+    if result.is_fast:
+        report = result.fast_report
+        return APIOutputFast(
+            status=Status.SUCCESS if report is not None else Status.ERROR,
+            error_msg=None if report is not None else "Could not find detail report",
+            result=result.total_result,
+            r_ppg=VideoReport(
+                status=Status.SUCCESS if report is not None else Status.ERROR,
+                model_name=ModelName.R_PPG,
+                result=report.rppg_result if report is not None else Result.UNKNOWN,
+                probability=conf_to_prob(report.rppg_conf, report.rppg_result) if report is not None else 0,
+                visual_report=report.rppg_image if report is not None else "",
+            ),
+            wavelet=VideoReport(
+                status=Status.SUCCESS if report is not None else Status.ERROR,
+                model_name=ModelName.WAVELET,
+                result=report.freq_result if report is not None else Result.UNKNOWN,
+                probability=conf_to_prob(report.freq_conf, report.freq_result) if report is not None else 0,
+                visual_report=report.freq_image if report is not None else "",
+            ),
+            stt=STTReport(
+                risk_level=report.stt_risk_level if report is not None else ,
+                **report.stt_script.model_dump(),
+            ),
+        )
+    else:
+        report = result.deep_report

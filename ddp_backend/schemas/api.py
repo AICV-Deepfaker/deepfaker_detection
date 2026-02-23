@@ -14,17 +14,19 @@ __all__ = [
 class BaseAPIOutput(BaseModel):
     status: Status
     error_msg: str | None = None
-    analysis_mode: AnalyzeMode
+    # analysis_mode: AnalyzeMode
     result: Result
 
 
 class APIOutputFast(BaseAPIOutput):
+    analysis_mode: AnalyzeMode = AnalyzeMode.FAST
     r_ppg: VideoReport | None = None
     wavelet: VideoReport | None = None
     stt: STTReport | None = None
 
 
 class APIOutputDeep(BaseAPIOutput):
+    analysis_mode: AnalyzeMode = AnalyzeMode.DEEP
     unite: VideoReport | None = None
 
 class WorkerPubSubAPI(BaseModel):

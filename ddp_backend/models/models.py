@@ -200,14 +200,14 @@ class Result(Base):
     # Relationships
     user: Mapped[User] = relationship("User", back_populates="results", init=False)
     video: Mapped[Video] = relationship("Video", back_populates="result", init=False)
-    fast_report: Mapped[FastReport] = relationship(
+    fast_report: Mapped[FastReport | None] = relationship(
         "FastReport",
         back_populates="result",
         uselist=False,
         cascade="all, delete-orphan",
         init=False,
     )
-    deep_report: Mapped[DeepReport] = relationship(
+    deep_report: Mapped[DeepReport | None] = relationship(
         "DeepReport",
         back_populates="result",
         uselist=False,
