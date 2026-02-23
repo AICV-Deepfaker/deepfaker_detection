@@ -1,11 +1,13 @@
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
+from pydantic import SecretStr
 
 from ddp_backend.core.security import get_password_hash
 from ddp_backend.core.mailer import send_temp_pwd
-from ddp_backend.core.s3 import upload_image_to_s3, delete_image_from_s3, delete_video_from_s3
+# from ddp_backend.core.s3 import upload_image_to_s3, delete_image_from_s3, delete_video_from_s3 # 개발 예정
+from ddp_backend.schemas.enums import Affiliation
 
-from ddp_backend.schemas.user import UserCreate, UserResponse, FindId, FindIdResponse, FindPassword, UserEdit, UserEditResponse, DeleteProfileImage
+from ddp_backend.schemas.user import UserCreate, UserResponse, FindId, FindIdResponse, FindPassword, UserEdit, UserEditResponse
 from ddp_backend.services.crud.user import CRUDUser, UserCreate as UserCreateCRUD, UserUpdate
 
 from ddp_backend.schemas.enums import LoginMethod
@@ -19,7 +21,7 @@ import random, string
 # =========
 # 닉네임 생성 (Google 전용, 필수)
 # =========
-def generate_nickname(email: str, db) -> str:
+def generate_nickname(db: Session, email: str) -> str:
     base = email.split("@")[0]
     while True:
         nickname = f"{base}_{random.randint(1000, 9999)}"
@@ -29,13 +31,13 @@ def generate_nickname(email: str, db) -> str:
 # =========
 # 이메일 중복 확인
 # =========
-def check_email_duplicate(db, email: str) -> bool:
+def check_email_duplicate(db: Session, email: str) -> bool:
     return CRUDUser.get_by_email(db, email) is not None
 
 # =========
 # 닉네임 중복 확인
 # =========
-def check_nickname_duplicate(db, nickname: str) -> bool:
+def check_nickname_duplicate(db: Session, nickname: str) -> bool:
     return CRUDUser.get_by_nickname(db, nickname) is not None
 
 # =========
@@ -46,35 +48,45 @@ def register(db: Session, user_info: UserCreate, login_method: LoginMethod = Log
     existing_user = CRUDUser.get_by_email(db, user_info.email)
     if existing_user:
         if login_method == LoginMethod.GOOGLE:
-            return existing_user  # Google은 재로그인 처리
+            return UserResponse.model_validate(existing_user)  # Google은 재로그인 처리
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="이미 사용 중인 이메일입니다"
         )
 
-    # 2. 로컬만 체크
+    # 2. 닉네임 처리 (Google은 랜덤생성)
+    if login_method == LoginMethod.GOOGLE:
+        nickname = generate_nickname(db, user_info.email)
+    else:
+        if user_info.nickname is None:
+            raise HTTPException(status_code=400, detail="닉네임은 필수입니다")
+        nickname = user_info.nickname
+
+    # 3. 로컬만 체크
     if login_method == LoginMethod.LOCAL:
         if user_info.password is None:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="비밀번호는 필수입니다"
+                detail="비밀번호를 입력해주세요"
             )
         if user_info.birth is None:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="생년월일은 필수입니다"
+                detail="생년월일을 입력해주세요"
             )
-        if check_nickname_duplicate(db, user_info.nickname):
+        if check_nickname_duplicate(db, nickname):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="이미 사용 중인 닉네임입니다"
             )
 
-    # 3. 닉네임 처리 (Google은 랜덤 생성)
-    nickname = user_info.nickname if login_method == LoginMethod.LOCAL else generate_nickname(user_info.email, db)
-
     # 4. 유저 생성
-    hashed_password = get_password_hash(user_info.password) if login_method == LoginMethod.LOCAL else None # 비밀번호 해싱
+    if login_method == LoginMethod.LOCAL:
+        assert user_info.password is not None # local의 password는 무조건 있어야 함
+        hashed_password = get_password_hash(user_info.password)  
+    else:
+        hashed_password = None
+
     new_user = CRUDUser.create(db, UserCreateCRUD(
         email=user_info.email,
         login_method=login_method,
@@ -144,7 +156,7 @@ def find_password(db: Session, user_info: FindPassword) -> bool:
             )
     
     # 3. DB 업데이트
-    hashed = get_password_hash(temp_password)
+    hashed = get_password_hash(SecretStr(temp_password))
     CRUDUser.update(db, user.user_id, UserUpdate(hashed_password=hashed))
 
     return True
@@ -161,39 +173,39 @@ def edit_user(db: Session, user_id: int, update_info: UserEdit) -> UserEditRespo
             detail="유저를 찾을 수 없습니다"
             )
     
-    update_data = {}
     response = UserEditResponse()
+    hashed_password: str | None = None
+    profile_image: str | None = None
+    affiliation: Affiliation | None = None  # 추가
 
     # 비밀번호 변경
     if update_info.new_password:
-        update_data['hashed_password'] = get_password_hash(
-            update_info.new_password
-            )
+        hashed_password = get_password_hash(update_info.new_password)
         response.changed_password = True
     
     # 프로필 이미지 변경
     if update_info.new_profile_image:
-        update_data['profile_image'] = update_info.new_profile_image
-        # upload_image_to_s3(user.new_profile_image) # 개발 예정
+        profile_image = update_info.new_profile_image
         response.changed_profile_image = update_info.new_profile_image
     
     # 소속 변경
     if update_info.new_affiliation:
-        update_data['affiliation'] = update_info.new_affiliation
+        affiliation = update_info.new_affiliation  
         response.changed_affiliation = update_info.new_affiliation
-
-    if not update_data:
+    
+    if not any([hashed_password, profile_image, affiliation]):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, 
             detail="변경할 정보가 없습니다"
             )
 
     CRUDUser.update(db, user_id, UserUpdate(
-        hashed_password=update_data.get('hashed_password'),
-        profile_image=update_data.get('profile_image'),
-        affiliation=update_data.get('affiliation')
+        hashed_password=hashed_password,
+        profile_image=profile_image,
+        affiliation=affiliation
     ))
     return response
+
 
 # =========
 # 프로필 이미지 삭제
@@ -211,7 +223,6 @@ def delete_profile_image(db: Session, user_id: int) -> UserEditResponse:
     CRUDUser.delete_profile_image(db, user_id)
 
     return UserEditResponse(deleted_profile_image=True)
-
 
 
 # =========

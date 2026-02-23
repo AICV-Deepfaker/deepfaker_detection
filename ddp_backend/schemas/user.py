@@ -2,8 +2,7 @@
 # Pydantic을 사용하여 회원가입 시 받을 이메일, 비밀번호 형식 등을 정의
 
 from datetime import date, datetime
-from typing import Annotated
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, SecretStr # 비밀번호 "***"로 표시
 from .enums import  Affiliation
 
 __all__ = [
@@ -28,12 +27,13 @@ __all__ = [
 # 회원가입
 class UserCreate(BaseModel):  # Login_method는 서비스 로직에서
     email: EmailStr
-    password: Annotated[str | None, Field(min_length=8)] = None  # 최소 8자 이상 (구글은 비번이 없음-service에서 차단)
+    password: SecretStr | None = Field(..., min_length=8)  # 최소 8자 이상 (구글은 비번이 없음-service에서 차단)
     name: str = Field(..., min_length=2)
-    nickname: str | None = None
+    nickname: str | None = None # Service에서 모두 필수 입력으로 처리 (구글-랜덤생성                                                                          ㅠㅎ ㅍ)
     birth: date | None = None
     profile_image: str | None = None
     affiliation: Affiliation | None = None
+
 
 # 이메일 중복 확인 요청
 class CheckEmail(BaseModel):  
@@ -47,12 +47,12 @@ class CheckNickname(BaseModel):
 # 로그인
 class UserLogin(BaseModel):
     email: EmailStr
-    password: str = Field(..., min_length=8)  # 최소 8자 이상
+    password: SecretStr = Field(..., min_length=8)  # 최소 8자 이상
 
 
 # 회원정보 수정
 class UserEdit(BaseModel):  # 이외에 변경 불가
-    new_password: str | None = Field(None, min_length=8)  # 최소 8자 이상
+    new_password: SecretStr | None = Field(None, min_length=8)  # 최소 8자 이상
     new_profile_image: str | None = None
     delete_profile_image: bool = False  # True면 이미지 삭제
     new_affiliation: Affiliation | None = None

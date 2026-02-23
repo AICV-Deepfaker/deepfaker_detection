@@ -11,6 +11,7 @@ from jose import JWTError, jwt, ExpiredSignatureError
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
+from pydantic import SecretStr
 
 from ddp_backend.core.config import settings  # 수정
 from ddp_backend.core.database import get_db
@@ -23,18 +24,36 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 # =========
 # jwt access 토큰 생성
 # =========
-def create_access_token(data: dict, expires_delta: timedelta | None = None):
-    to_encode = data.copy() # {"user_id": 1} 복사
-    # 토큰 유효시간 계산
-    if expires_delta:
-        expire = datetime.now(timezone.utc) + expires_delta
-    else:
-        expire = datetime.now(timezone.utc) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-    to_encode.update({ # {"user_id": 1, "exp": 만료시간} 추가
-        "exp": expire, 
-        "type": "access"
-        }) 
-    encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+def create_access_token(user_id: int, expires_delta: timedelta | None = None):
+    expire = datetime.now(timezone.utc) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS) # 기본값
+
+    if expires_delta: # 만료기간을 따로 지정할 경우
+        expire = datetime.now(timezone.utc) + expires_delta # 덮어씌움
+
+    encoded_jwt = jwt.encode(
+            {"user_id": user_id, "exp": expire, "type": "refresh"},
+            settings.SECRET_KEY,
+            algorithm=settings.ALGORITHM
+        )
+    
+    return encoded_jwt
+
+
+# =========
+# jwt refresh 토큰 생성
+# =========
+def create_refresh_token(user_id: int, expires_delta: timedelta | None = None):
+    expire = datetime.now(timezone.utc) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS) # 기본값
+
+    if expires_delta: # 만료기간을 따로 지정할 경우
+        expire = datetime.now(timezone.utc) + expires_delta # 덮어씌움
+
+    encoded_jwt = jwt.encode(
+            {"user_id": user_id, "exp": expire, "type": "refresh"},
+            settings.SECRET_KEY,
+            algorithm=settings.ALGORITHM
+        )
+    
     return encoded_jwt
 
 
@@ -65,23 +84,6 @@ def decode_token(token: str):
 
 
 # =========
-# jwt refresh 토큰 생성
-# =========
-def create_refresh_token(data: dict, expires_delta: timedelta | None = None):
-    to_encode = data.copy()
-    if expires_delta:
-        expire = datetime.now(timezone.utc) + expires_delta
-    else:
-        expire = datetime.now(timezone.utc) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
-    to_encode.update({
-        "exp": expire,
-        "type": "refresh"
-        })
-    encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
-    return encoded_jwt
-
-
-# =========
 # user 토큰 검증
 # =========
 def get_current_user(
@@ -90,12 +92,16 @@ def get_current_user(
 ):
     # 토큰 유효한지 체크
     payload = decode_token(token)
-    
     if payload.get("type") != "access":
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="access 토큰이 아닙니다")
         
-    user = CRUDUser.get_by_id(db, payload.get("user_id"))
-    # 유저가 없을 때
+    # 유저 체크
+    user_id: int | None = payload.get("user_id")
+    # 토큰을 가진 user_id가 없을 때
+    if user_id is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="유효하지 않은 토큰입니다")
+    # 정상 토큰인데 유저가 없을 때
+    user = CRUDUser.get_by_id(db, user_id)  # 이제 int 확정
     if user is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="존재하지 않는 유저입니다")
     
@@ -109,16 +115,17 @@ def get_current_user(
 # =========
 # 비밀번호 암호화
 # =========
-def get_password_hash(password: str) -> str:
-    hashed_password = pwd_context.hash(password)
+def get_password_hash(password: SecretStr) -> str:
+    hashed_password = pwd_context.hash(password.get_secret_value())
     return hashed_password
 
 
 # =========
 # 비밀번호 검증
 # =========
-def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return pwd_context.verify(plain_password, hashed_password)
+def verify_password(plain_password: SecretStr, hashed_password: str) -> bool:
+    verify_password = pwd_context.verify(plain_password.get_secret_value(), hashed_password)
+    return verify_password
 
 
 

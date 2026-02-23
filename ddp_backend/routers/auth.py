@@ -1,7 +1,6 @@
 # routers/auth_router.py
 from fastapi import APIRouter, Depends
 from fastapi.responses import RedirectResponse
-from fastapi.security import OAuth2PasswordBearer #OAuth 사용
 from sqlalchemy.orm import Session
 from datetime import datetime, timezone, timedelta
 import httpx
@@ -76,13 +75,14 @@ def google_callback(code: str, db: Session = Depends(get_db)):
     user_info = UserCreate(
         email=userinfo["email"],
         name=userinfo.get("name", ""),
+        password=None, # google이 None이 들어올 수 있음 (service에서 처리)
         profile_image=userinfo.get("picture"),
     )
     user = register(db, user_info, LoginMethod.GOOGLE)
 
     # 토큰 발급
-    access_token = create_access_token({"user_id": user.user_id})
-    refresh_token = create_refresh_token({"user_id": user.user_id})
+    access_token = create_access_token(user.user_id)
+    refresh_token = create_refresh_token(user.user_id)
     save_refresh_token(
         db,
         user_id=user.user_id,

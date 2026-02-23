@@ -17,11 +17,11 @@ from ddp_backend.services.crud.token import CRUDToken
 # 생성된 토큰 저장
 # =========
 def save_refresh_token(
-        db, 
-        user_id, 
-        refresh_token, 
-        expires_at
-        ):
+        db: Session, 
+        user_id: int, 
+        refresh_token: str, 
+        expires_at: datetime
+        ) -> None:
     hashed = hash_refresh_token(refresh_token) # 리프레시 토큰 해시
     CRUDToken.upsert_token(db, user_id, hashed, expires_at)
 
@@ -62,8 +62,8 @@ def reissue_token(db: Session, refresh_token: str):
     
     # refresh 유효
     if datetime.now(timezone.utc) < token.expires_at:
-        new_access_token = create_access_token({"user_id": token.user_id}) 
-        new_refresh_token = create_refresh_token({"user_id": token.user_id}) 
+        new_access_token = create_access_token(token.user_id) 
+        new_refresh_token = create_refresh_token(token.user_id) 
         save_refresh_token(
             db,
             user_id=token.user_id,
@@ -85,15 +85,17 @@ def reissue_token(db: Session, refresh_token: str):
 def login(db:Session, user_info: UserLogin) -> TokenResponse:
     # 1. 유저 조회 + 비밀번호 확인
     user = CRUDUser.get_by_email(db, user_info.email)
-    if not user or not verify_password(user_info.password, user.hashed_password):
+    if not user or user.hashed_password is None: # 유저가 없거나 패스워드(구글일 경우)가 없을 떄
+        raise HTTPException(status_code=401, detail="이메일 또는 비밀번호가 올바르지 않습니다")
+    if not verify_password(user_info.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, 
             detail="이메일 또는 비밀번호가 올바르지 않습니다"
             )
 
     # 2. 토큰 발급
-    access_token = create_access_token({"user_id": user.user_id})
-    refresh_token = create_refresh_token({"user_id": user.user_id})
+    access_token = create_access_token(user.user_id)
+    refresh_token = create_refresh_token(user.user_id)
 
     # 3. refresh_token 해시 후 저장
     save_refresh_token(
