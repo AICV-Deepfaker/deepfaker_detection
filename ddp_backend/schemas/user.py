@@ -122,3 +122,16 @@ class FindIdResponse(BaseModel):
 # 비밀번호는 200만 반환하면 됨
 
 # 탈퇴는 schema 없음
+
+# 내 정보 조회
+class UserMeResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    user_id: int
+    email: EmailStr
+    name: str
+    nickname: str
+    birth: date | None = None
+    affiliation: Affiliation | None = None
+    profile_image: str | None = None
+    created_at: datetime

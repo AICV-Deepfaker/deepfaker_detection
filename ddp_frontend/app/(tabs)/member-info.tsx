@@ -17,11 +17,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ThemedText } from '@/components/themed-text';
 import {
   getAuth,
-  getProfileByEmail,
   type Affiliation,
-  type StoredUser,
 } from '@/lib/auth-storage';
-import { editUser } from '@/lib/account-api';
+import { editUser, getMyProfile } from '@/lib/account-api';
 
 const ACCENT_GREEN = '#00CF90';
 const TEXT = '#111';
@@ -50,7 +48,8 @@ export default function MemberInfoScreen() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [authEmail, setAuthEmail] = useState<string | null>(null);
-  const [profile, setProfile] = useState<StoredUser | null>(null);
+  type MyProfile = Awaited<ReturnType<typeof getMyProfile>>;
+  const [profile, setProfile] = useState<MyProfile | null>(null);
 
   // 편집 모드
   const [editMode, setEditMode] = useState(false);
@@ -68,8 +67,8 @@ export default function MemberInfoScreen() {
       const auth = await getAuth();
       const email = auth?.email ?? null;
       setAuthEmail(email);
-      if (!email || email === 'google') { setProfile(null); return; }
-      const p = await getProfileByEmail(email);
+      if (!email || !auth?.accessToken) { setProfile(null); return; }
+      const p = await getMyProfile(auth.accessToken);
       setProfile(p);
     } finally {
       setLoading(false);
@@ -80,8 +79,8 @@ export default function MemberInfoScreen() {
 
   const enterEditMode = () => {
     if (!profile) return;
-    setEditAffiliation(profile.affiliation);
-    setEditPhotoUri(profile.profilePhotoUri ?? null);
+    setEditAffiliation((profile.affiliation as Affiliation) ?? undefined);
+    setEditPhotoUri(profile.profile_image ?? null);
     setNewPw('');
     setNewPwConfirm('');
     setEditMode(true);
@@ -162,7 +161,7 @@ export default function MemberInfoScreen() {
     }
   };
 
-  const avatarUri = editMode ? editPhotoUri : profile?.profilePhotoUri;
+  const avatarUri = editMode ? editPhotoUri : profile?.profile_image;
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -261,7 +260,7 @@ export default function MemberInfoScreen() {
             <View style={styles.divider} />
 
             <Row label="별명" value={profile.nickname} />
-            <Row label="생년월일" value={profile.birthdate} />
+            <Row label="생년월일" value={profile.birth} />
 
             {/* 소속 */}
             <View style={styles.row}>

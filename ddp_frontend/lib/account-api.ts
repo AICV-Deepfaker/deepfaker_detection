@@ -255,3 +255,29 @@ export async function editUser(
   }
   return res.json();
 }
+
+/**
+ * GET /user/me - 내 정보 조회 (토큰 필요)
+ */
+export async function getMyProfile(accessToken: string): Promise<{
+  user_id: number;
+  email: string;
+  name: string;
+  nickname: string;
+  birth: string | null;
+  affiliation: string | null;
+  profile_image: string | null;
+  created_at: string;
+}> {
+  const res = await fetch(`${API_BASE}/user/me`, {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+  if (!res.ok) {
+    const msg = await readErrorText(res);
+    throw new Error(`내 정보 조회 실패 (${res.status}): ${msg}`);
+  }
+  return res.json();
+}

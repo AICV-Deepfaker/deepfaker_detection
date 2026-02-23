@@ -12,7 +12,7 @@ from ddp_backend.schemas.user import (
     FindPassword, DuplicateCheckResponse,
     CheckEmail, CheckNickname,
     UserEdit, UserEditResponse,
-    DeleteProfileImage
+    DeleteProfileImage, UserMeResponse
 )
 from ddp_backend.services.user import (
     check_email_duplicate, check_nickname_duplicate,
@@ -21,6 +21,14 @@ from ddp_backend.services.user import (
 )
 
 router = APIRouter(prefix="/user", tags=["user"])
+
+# 내 정보 조회 (토큰 필요)
+@router.get("/me", response_model=UserMeResponse)
+def get_me_route(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    return UserMeResponse.model_validate(current_user)
 
 # 이메일 중복 확인 (실시간 체크)
 @router.post("/check-email", response_model=DuplicateCheckResponse)
