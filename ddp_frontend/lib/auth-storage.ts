@@ -3,7 +3,14 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const AUTH_KEY = 'ddp_auth';
 const USERS_KEY = 'ddp_users';
 
-export type AuthUser = { email: string; isLoggedIn: true; nickname?: string };
+export type AuthUser = {
+  email: string;
+  nickname?: string;
+  accessToken: string;
+  refreshToken: string;
+  userId: number;
+  isLoggedIn: true;
+};
 
 export async function getAuth(): Promise<AuthUser | null> {
   try {

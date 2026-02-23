@@ -13,7 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { useAnalysis } from '@/contexts/analysis-context';
-import { clearAuth } from '@/lib/auth-storage';
+import { clearAuth, getAuth } from '@/lib/auth-storage';
 
 const ACCENT_GREEN = '#00CF90';
 const TEXT_COLOR = '#111';
@@ -64,7 +64,7 @@ function ConfirmModal({
         iconBg: 'rgba(229,57,53,0.10)',
         iconColor: DANGER,
         title: '정말 탈퇴하시겠어요?',
-        desc: '탈퇴 시 계정 정보와 이용 기록이 삭제될 수 있으며, 복구가 어려울 수 있어요.\n진행하시려면 아래 버튼을 눌러주세요.',
+        desc: '탈퇴 시 계정 정보와 이용 기록이 모두 삭제되며,\n복구가 불가능해요. 신중히 생각하신 후\n진행하시려면 아래 버튼을 눌러주세요.',
         confirmText: '탈퇴하기',
         confirmBg: DANGER,
       };
@@ -132,16 +132,36 @@ export default function MypageScreen() {
 
   const closeConfirm = useCallback(() => setConfirmOpen(false), []);
 
-  const doLogout = useCallback(() => {
+  const doLogout = useCallback(async () => {
     setConfirmOpen(false);
-    clearAuth();
+
+    const auth = await getAuth();
+    if (!auth) return;
+
+    try {
+      await logoutApi(auth.refreshToken);
+    } catch (e) {
+      console.log('서버 로그아웃 실패, 로컬만 진행');
+    }
+
+    await clearAuth();
     router.replace('/login');
   }, []);
 
-  const doWithdraw = useCallback(() => {
-    // TODO(나중): 백엔드 연동 시 여기에서 "탈퇴 API 호출" → 성공 시 clearAuth 처리
+  const doWithdraw = useCallback(async () => {
     setConfirmOpen(false);
-    clearAuth();
+
+    const auth = await getAuth();
+    if (!auth) return;
+
+    try {
+      await withdrawApi(auth.accessToken);
+    } catch (e) {
+      alert('탈퇴 실패');
+      return;
+    }
+
+    await clearAuth();
     router.replace('/login');
   }, []);
 

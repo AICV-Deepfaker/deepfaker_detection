@@ -84,7 +84,8 @@ async def lifespan(app: FastAPI):  # pyright: ignore[reportUnusedParameter]
 
 app = FastAPI(lifespan=lifespan)
 app.include_router(detection.router)
-
+app.include_router(auth.router)
+app.include_router(user.router)
 
 
 # ==========================================

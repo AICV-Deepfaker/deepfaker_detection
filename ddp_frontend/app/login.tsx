@@ -18,7 +18,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as WebBrowser from 'expo-web-browser';
 
 import { ThemedText } from '@/components/themed-text';
-import { findStoredUser, setAuth } from '@/lib/auth-storage';
+import { setAuth } from '@/lib/auth-storage';
+import { login } from '@/lib/account-api';
 
 // Expo Go에서 WebBrowser 세션을 완료하기 위해 필요
 WebBrowser.maybeCompleteAuthSession();
@@ -81,21 +82,47 @@ export default function LoginScreen() {
       Alert.alert('입력 오류', '이메일과 비밀번호를 입력해 주세요.');
       return;
     }
+
     setLoading(true);
     try {
-      const user = await findStoredUser(trimmedEmail, trimmedPassword);
+        // 서버 연결 된 경우 이 코드로 변경
+//       const result = await login(trimmedEmail, trimmedPassword);
+//
+//           await setAuth({
+//             email: result.email,
+//             nickname: result.nickname,
+//             accessToken: result.access_token,
+//             refreshToken: result.refresh_token,
+//             userId: result.user_id,
+//             isLoggedIn: true,
+//           });
+//
+//           router.replace('/(tabs)');
+//         } catch (e: any) {
+//           Alert.alert('로그인 실패', e?.message ?? '다시 시도해 주세요.');
+//         } finally {
+//           setLoading(false);
+//         }
+//       }, [email, password]);
+
+      // 임시로 사용: 서버 붙기 전까지는 로컬 로그인으로 통과
       await setAuth({
-        email: trimmedEmail,
-        isLoggedIn: true,
-        nickname: user?.nickname,
-      });
-      router.replace('/(tabs)');
-    } catch {
-      Alert.alert('오류', '로그인 처리 중 오류가 발생했습니다.');
-    } finally {
-      setLoading(false);
-    }
-  }, [email, password]);
+            email: trimmedEmail,
+            nickname: trimmedEmail.split('@')[0],
+            isLoggedIn: true,
+            accessToken: 'local-dev',
+            refreshToken: 'local-dev',
+            userId: 0,
+          } as any);
+
+          router.replace('/(tabs)');
+        } catch (e) {
+          console.log('LOGIN ERROR:', e);
+          Alert.alert('오류', '로그인 처리 중 오류가 발생했습니다.');
+        } finally {
+          setLoading(false);
+        }
+      }, [email, password]);
 
   const handleGoogleLogin = useCallback(() => {
     if (!GOOGLE_WEB_CLIENT_ID) {
