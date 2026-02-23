@@ -2,6 +2,7 @@
 Source CRUD
 """
 
+from uuid import UUID
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -15,7 +16,7 @@ __all__ = [
 
 
 class SourceCreate(BaseModel):
-    video_id: int
+    video_id: UUID
     s3_path: str
 
 
@@ -35,7 +36,7 @@ class CRUDSource:
 
     # 사용 : 영상 재호출(분석 실패 시)
     @staticmethod
-    def get_by_video(db: Session, video_id: int):
+    def get_by_video(db: Session, video_id: UUID):
         """video_id로 S3 경로 조회"""
         query = select(Source).where(Source.video_id == video_id)
         return db.scalars(query).one_or_none()

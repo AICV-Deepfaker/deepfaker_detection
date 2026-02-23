@@ -2,6 +2,7 @@
 User CRUD
 """
 
+from uuid import UUID
 from datetime import date
 
 from pydantic import BaseModel
@@ -75,7 +76,7 @@ class CRUDUser:
 
     # 사용 : user_id로 조회
     @staticmethod
-    def get_by_id(db: Session, user_id: int):  # 공통
+    def get_by_id(db: Session, user_id: UUID):  # 공통
         """user_id로 유저 조회"""
         return db.get(User, user_id)
 
@@ -97,7 +98,7 @@ class CRUDUser:
 
     # 사용 : 회원정보수정
     @staticmethod
-    def update(db: Session, user_id: int, update_info: UserUpdate):
+    def update(db: Session, user_id: UUID, update_info: UserUpdate):
         """유저 정보 변경"""
         user = CRUDUser.get_by_id(db, user_id)
         if user is None:
@@ -116,7 +117,7 @@ class CRUDUser:
     
     # 사용 : 이미지 삭제
     @staticmethod
-    def delete_profile_image(db: Session, user_id: int):
+    def delete_profile_image(db: Session, user_id: UUID):
         user = CRUDUser.get_by_id(db, user_id)
         if user is None:
             return None
@@ -127,7 +128,7 @@ class CRUDUser:
 
     # 사용 : 포인트 업데이트
     @staticmethod
-    def update_active_points(db: Session, user_id: int, points: int):
+    def update_active_points(db: Session, user_id: UUID, points: int):
         """포인트 업데이트"""
         user = CRUDUser.get_by_id(db, user_id)
         if user is None:
@@ -139,7 +140,7 @@ class CRUDUser:
 
     # 사용 : 회원탈퇴
     @staticmethod
-    def delete(db: Session, user_id: int):
+    def delete(db: Session, user_id: UUID):
         """유저 삭제"""
         user = CRUDUser.get_by_id(db, user_id)
         if user is None:

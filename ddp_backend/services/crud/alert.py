@@ -2,6 +2,7 @@
 Alert CRUD
 """
 
+from uuid import UUID
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -15,8 +16,8 @@ __all__ = [
 
 
 class AlertCreate(BaseModel):
-    user_id: int
-    result_id: int | None = None
+    user_id: UUID
+    result_id: UUID | None = None
 
 
 class CRUDAlert:
@@ -32,7 +33,7 @@ class CRUDAlert:
 
     # 사용 : 신고 내역
     @staticmethod
-    def get_by_user(db: Session, user_id: int):
+    def get_by_user(db: Session, user_id: UUID):
         """유저의 신고 내역 조회"""
         query = select(Alert).where(Alert.user_id == user_id)
         return db.scalars(query).all()

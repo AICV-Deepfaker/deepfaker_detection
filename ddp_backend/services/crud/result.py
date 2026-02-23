@@ -2,6 +2,7 @@
 Result CRUD
 """
 
+from uuid import UUID
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -15,8 +16,8 @@ __all__ = [
 
 
 class ResultCreate(BaseModel):
-    user_id: int
-    video_id: int
+    user_id: UUID
+    video_id: UUID
     total_result: ResultEnum
     is_fast: bool
 
@@ -39,7 +40,7 @@ class CRUDResult:
 
     # 사용 : 히스토리, 상세결과 조회, 공유 페이지
     @staticmethod
-    def get_by_id(db: Session, result_id: int):
+    def get_by_id(db: Session, result_id: UUID):
         """result_id로 결과 조회"""
         return db.get(Result, result_id)
 
@@ -56,7 +57,7 @@ class CRUDResult:
 
     # 사용 : 히스토리 삭제
     @staticmethod
-    def delete(db: Session, result_id: int):
+    def delete(db: Session, result_id: UUID):
         """결과 삭제 (FastReport, DeepReport 함께 삭제)"""
         result = CRUDResult.get_by_id(db, result_id)
         if result is None:

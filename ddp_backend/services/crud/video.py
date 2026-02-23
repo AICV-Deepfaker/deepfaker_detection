@@ -2,6 +2,7 @@
 Video CRUD
 """
 
+from uuid import UUID
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -16,7 +17,7 @@ __all__ = [
 
 
 class VideoCreate(BaseModel):
-    user_id: int
+    user_id: UUID
     origin_path: OriginPath
     source_url: str | None = None
 
@@ -42,14 +43,14 @@ class CRUDVideo:
 
     # 사용 : 히스토리(url)
     @staticmethod
-    def get_by_user(db: Session, user_id: int):
+    def get_by_user(db: Session, user_id: UUID):
         """유저의 모든 비디오 조회"""
         query = select(Video).where(Video.user_id == user_id)
         return db.scalars(query).all()
 
     # 사용 : 영상 분석 상태 업로드
     @staticmethod
-    def update_status(db: Session, video_id: int, status: VideoStatus):
+    def update_status(db: Session, video_id: UUID, status: VideoStatus):
         """비디오 상태 업데이트"""
         video = db.get(Video, video_id)  # video_id로 조회
         if video is None:

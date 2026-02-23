@@ -2,9 +2,9 @@
 Token CRUD
 """
 
+from uuid import UUID
 from datetime import datetime
 
-from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -19,7 +19,7 @@ class CRUDToken:
     # 사용 : 로그인
 
     @staticmethod
-    def upsert_token(db: Session, user_id: int, hashed_refresh_token: str, expires_at: datetime):
+    def upsert_token(db: Session, user_id: UUID, hashed_refresh_token: str, expires_at: datetime):
         """토큰 업데이트 + 생성"""
         token = db.scalars(select(Token).where(Token.user_id == user_id)).one_or_none()
         if token:

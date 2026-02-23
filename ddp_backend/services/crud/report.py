@@ -2,6 +2,7 @@
 Report CRUD
 """
 
+from uuid import UUID
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -19,8 +20,8 @@ __all__ = [
 
 
 class FastReportCreate(BaseModel):
-    user_id: int
-    result_id: int
+    user_id: UUID
+    result_id: UUID
     freq_result: Result
     freq_conf: float
     freq_image: str
@@ -32,8 +33,8 @@ class FastReportCreate(BaseModel):
 
 
 class DeepReportCreate(BaseModel):
-    user_id: int
-    result_id: int
+    user_id: UUID
+    result_id: UUID
     unite_result: Result
     unite_conf: float
 
@@ -62,7 +63,7 @@ class CRUDFastReport:
 
     # 사용 : FastReport 상세 결과 조회
     @staticmethod
-    def get_by_result(db: Session, result_id: int):
+    def get_by_result(db: Session, result_id: UUID):
         """result_id로 Fast 리포트 조회"""
         query = select(FastReport).where(FastReport.result_id == result_id)
         return db.scalars(query).one_or_none()
@@ -86,7 +87,7 @@ class CRUDDeepReport:
 
     # 사용 : DeepReport 상세 결과 조회
     @staticmethod
-    def get_by_result(db: Session, result_id: int):
+    def get_by_result(db: Session, result_id: UUID):
         """result_id로 Deep 리포트 조회"""
         query = select(DeepReport).where(DeepReport.result_id == result_id)
         return db.scalars(query).one_or_none()
