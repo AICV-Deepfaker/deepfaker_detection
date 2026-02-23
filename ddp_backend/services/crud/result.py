@@ -6,6 +6,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from ddp_backend.models import Result
+from ddp_backend.schemas.enums import Result as ResultEnum
 
 __all__ = [
     "ResultCreate",
@@ -16,7 +17,7 @@ __all__ = [
 class ResultCreate(BaseModel):
     user_id: int
     video_id: int
-    is_fake: bool
+    total_result: ResultEnum
     is_fast: bool
 
 
@@ -29,7 +30,7 @@ class CRUDResult:
             user_id=result_info.user_id,
             video_id=result_info.video_id,
             is_fast=result_info.is_fast,
-            is_fake=result_info.is_fake,
+            total_result=result_info.total_result,
         )
         db.add(db_result)
         db.commit()

@@ -28,6 +28,7 @@ class Status(StrEnum):
 class Result(StrEnum):
     REAL = "REAL"
     FAKE = "FAKE"
+    UNKNOWN = "UNKNOWN"
 
 
 class AnalyzeMode(StrEnum):
@@ -36,30 +37,30 @@ class AnalyzeMode(StrEnum):
 
 
 class LoginMethod(StrEnum):
-    local = "local"
-    google = "google"
+    LOCAL = "local"
+    GOOGLE = "google"
 
 
 class Affiliation(StrEnum):
-    ind = "개인"
-    org = "기관"
-    com = "회사"
+    IND = "개인"
+    ORG = "기관"
+    COM = "회사"
 
 
 class VideoStatus(StrEnum):  # 필요하지 않을 경우 삭제
-    pending = "pending"
-    processing = "processing"
-    completed = "completed"
-    failed = "failed"
+    PENDING = "pending"
+    PROCESSING = "processing"
+    COMPLETED = "completed"
+    FAILED = "failed"
 
 
 class OriginPath(StrEnum):
-    link = "link"
-    upload = "upload"
+    LINK = "link"
+    UPLOAD = "upload"
 
 
 class STTRiskLevel(StrEnum):
-    high = "high"
-    medium = "medium"
-    low = "low"
-    none = "none"
+    HIGH = "high"
+    MEDIUM = "medium"
+    LOW = "low"
+    NONE = "none"

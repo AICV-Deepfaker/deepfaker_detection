@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 
-from .enums import AnalyzeMode, Status
+from .enums import AnalyzeMode, Status, Result
 from .report import STTReport, VideoReport
 
 __all__ = [
@@ -14,6 +14,7 @@ class BaseAPIOutput(BaseModel):
     status: Status
     error_msg: str | None = None
     analysis_mode: AnalyzeMode
+    result: Result
 
 
 class APIOutputFast(BaseAPIOutput):

@@ -30,4 +30,7 @@ dependencies = [
     "passlib>=1.7.4",
     "python-jose[cryptography]>=3.5.0",
     "apscheduler>=3.11.2",
+    "taskiq>=0.12.1",
+    "taskiq-redis>=1.2.2",
+    "taskiq-fastapi>=0.4.0",
 ]

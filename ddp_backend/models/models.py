@@ -139,17 +139,17 @@ class Video(Base):
     origin_path: Mapped[OriginPath] = mapped_column(Enum(OriginPath), nullable=False)
     source_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     status: Mapped[VideoStatus] = mapped_column(
-        Enum(VideoStatus), server_default=VideoStatus.pending.value, init=False
+        Enum(VideoStatus), server_default=VideoStatus.PENDING.value, init=False
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), init=False
     )
     # Relationships
     user: Mapped[User] = relationship("User", back_populates="videos", init=False)
-    sources: Mapped[Source] = relationship(
+    source: Mapped[Source | None] = relationship(
         "Source", back_populates="video", cascade="all, delete-orphan", init=False
     )
-    results: Mapped[list[Result]] = relationship(
+    result: Mapped[Result | None] = relationship(
         "Result", back_populates="video", cascade="all, delete-orphan", init=False
     )
 
@@ -161,7 +161,7 @@ class Source(Base):  # S3 관리용 (일정 시간 후 삭제 대상)
         BigInteger, primary_key=True, autoincrement=True, init=False,
     )
     video_id: Mapped[int] = mapped_column(
-        BigInteger, ForeignKey("videos.video_id", ondelete="CASCADE")
+        BigInteger, ForeignKey("videos.video_id", ondelete="CASCADE"), unique=True,
     )
     s3_path: Mapped[str] = mapped_column(String(500), nullable=False)
     expires_at: Mapped[datetime] = mapped_column(
@@ -184,10 +184,10 @@ class Result(Base):
         BigInteger, ForeignKey("users.user_id", ondelete="CASCADE")
     )
     video_id: Mapped[int] = mapped_column(
-        BigInteger, ForeignKey("videos.video_id", ondelete="CASCADE")
+        BigInteger, ForeignKey("videos.video_id", ondelete="CASCADE"), unique=True,
     )
     is_fast: Mapped[bool] = mapped_column(Boolean)
-    is_fake: Mapped[bool] = mapped_column(Boolean)
+    total_result: Mapped[ResultEnum] = mapped_column(Enum(ResultEnum))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), init=False
     )

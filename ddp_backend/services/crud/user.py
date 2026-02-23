@@ -41,7 +41,7 @@ class CRUDUser:
         """유저 생성"""
         db_user = User(  # 객체
             email=user_info.email,
-            login_method=LoginMethod.local,
+            login_method=LoginMethod.LOCAL,
             hashed_password=user_info.hashed_password,  # service에서 입력
             name=user_info.name,
             nickname=user_info.nickname,

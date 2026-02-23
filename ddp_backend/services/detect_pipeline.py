@@ -3,7 +3,7 @@ from pathlib import Path
 from ddp_backend.detectors.audio import STTDetector
 from ddp_backend.detectors.visual import RPPGDetector, UniteDetector, WaveletDetector
 from ddp_backend.schemas.api import APIOutputDeep, APIOutputFast
-from ddp_backend.schemas.enums import AnalyzeMode, Status
+from ddp_backend.schemas.enums import AnalyzeMode, Status, Result
 
 
 class DetectionPipeline:
@@ -31,9 +31,18 @@ class DetectionPipeline:
             r_ppg_report = self.r_ppg_detector.analyze(file_path)
             stt_report = self.stt_detector.analyze(file_path)
 
+            result:Result
+            if wavelet_report.result > r_ppg_report.result:
+                result = wavelet_report.result
+            elif wavelet_report.result < r_ppg_report.result:
+                result = r_ppg_report.result
+            else:
+                result = Result.UNKNOWN
+
             return APIOutputFast(
                 status=Status.SUCCESS,
                 analysis_mode=AnalyzeMode.FAST,
+                result=result,
                 wavelet=wavelet_report,
                 r_ppg=r_ppg_report,
                 stt=stt_report,
@@ -42,6 +51,7 @@ class DetectionPipeline:
             return APIOutputFast(
                 status=Status.ERROR,
                 error_msg=str(e),
+                result=Result.UNKNOWN,
                 analysis_mode=AnalyzeMode.FAST,
             )
 
@@ -51,11 +61,13 @@ class DetectionPipeline:
             return APIOutputDeep(
                 status=Status.SUCCESS,
                 analysis_mode=AnalyzeMode.DEEP,
+                result=unite_report.result,
                 unite=unite_report,
             )
         except Exception as e:
             return APIOutputDeep(
                 status=Status.ERROR,
                 error_msg=str(e),
+                result=Result.UNKNOWN,
                 analysis_mode=AnalyzeMode.DEEP,
             )

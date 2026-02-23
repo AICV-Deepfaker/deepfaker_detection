@@ -1,3 +1,4 @@
+from pathlib import Path
 # AWS s3
 
 
@@ -18,3 +19,7 @@ def delete_video_from_s3(url: str):
     pass  # 이후 개발 예정
 
 # 예외사항 반드시 넣기
+
+def download_video_from_s3(url: str, download_path: Path) -> Path:
+    return download_path
+    pass
