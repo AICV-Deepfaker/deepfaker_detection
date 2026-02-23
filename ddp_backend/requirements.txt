@@ -40,3 +40,6 @@ psycopg2-binary
 
 # Scheduler
 APScheduler
+
+# 이메일
+pydantic[email]

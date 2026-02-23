@@ -3,11 +3,11 @@ import sys
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-import torch
+# import torch
 import uvicorn
 
-# from core.database import engine
-# from models.models import Base
+from ddp_backend.core.database import engine
+from ddp_backend.models.models import Base
 from ddp_backend.core.scheduler import start_schedular, shutdown_schedular
 
 # ==========================================
@@ -17,8 +17,8 @@ from dotenv import load_dotenv
 from fastapi import FastAPI
 from pyngrok import ngrok # type: ignore
 
-from ddp_backend.services.dependencies import load_all_model
-from ddp_backend.routers import detection
+# from ddp_backend.services.dependencies import load_all_model
+# from ddp_backend.routers import detection
 from ddp_backend.routers import auth
 from ddp_backend.routers import user
 
@@ -33,30 +33,30 @@ load_dotenv(_BACKEND_DIR / ".env")
 Base.metadata.create_all(bind=engine)
 
 
-# ==========================================
-# STT 파이프라인 설정
-# ==========================================
-_STT_DIR = Path(__file__).parent.parent / "STT"
-sys.path.insert(0, str(_STT_DIR))
+# # ==========================================
+# # STT 파이프라인 설정
+# # ==========================================
+# _STT_DIR = Path(__file__).parent.parent / "STT"
+# sys.path.insert(0, str(_STT_DIR))
 
-# STT .env도 추가 로드 (GROQ_API_KEY, TAVILY_API_KEY가 backend .env에 없을 경우 대비)
-load_dotenv(_STT_DIR / ".env")
+# # STT .env도 추가 로드 (GROQ_API_KEY, TAVILY_API_KEY가 backend .env에 없을 경우 대비)
+# load_dotenv(_STT_DIR / ".env")
 
-_VIDEO_EXTENSIONS = {".mp4", ".avi", ".mov", ".mkv", ".wmv", ".flv", ".webm", ".m4v"}
-
-
-def _is_video(filename: str) -> bool:
-    return Path(filename).suffix.lower() in _VIDEO_EXTENSIONS
+# _VIDEO_EXTENSIONS = {".mp4", ".avi", ".mov", ".mkv", ".wmv", ".flv", ".webm", ".m4v"}
 
 
-# 모델 및 환경 변수
-DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+# def _is_video(filename: str) -> bool:
+#     return Path(filename).suffix.lower() in _VIDEO_EXTENSIONS
+
+
+# # 모델 및 환경 변수
+# DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 NGROK_AUTH_TOKEN = os.environ.get("NGROK_AUTH_TOKEN", "")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):  # pyright: ignore[reportUnusedParameter]
-    load_all_model()
+    # load_all_model()
     public_url = None
 
     start_schedular() # 스케쥴러 : 30일 지난 토큰 만료 처리
@@ -83,7 +83,7 @@ async def lifespan(app: FastAPI):  # pyright: ignore[reportUnusedParameter]
 
 
 app = FastAPI(lifespan=lifespan)
-app.include_router(detection.router)
+# app.include_router(detection.router)
 app.include_router(auth.router)
 app.include_router(user.router)
 

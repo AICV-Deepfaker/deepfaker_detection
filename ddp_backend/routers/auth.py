@@ -21,8 +21,6 @@ GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
 GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
 GOOGLE_USERINFO_URL = "https://www.googleapis.com/oauth2/v3/userinfo"
 
-# Bearer 토큰 자동 추출 (Swagger 자물쇠 버튼 생성)
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
 # 로컬 로그인 - 이메일/비밀번호 검증 후 access/refresh 토큰 발급
 @router.post("/login", response_model=TokenResponse)

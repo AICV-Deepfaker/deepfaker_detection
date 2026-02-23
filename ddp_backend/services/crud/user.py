@@ -20,7 +20,7 @@ __all__ = [
 
 class UserCreate(BaseModel):
     email: str
-    login_method: LoginMethod = LoginMethod.local
+    login_method: LoginMethod = LoginMethod.LOCAL
     hashed_password: str | None = None 
     name: str
     nickname: str
