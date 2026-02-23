@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from datetime import date, datetime, timedelta
+from enum import Enum as _Enum
 from typing import Any
 
 from ddp_backend.core.database import Base
@@ -57,6 +58,9 @@ class PydanticJSONType[T: BaseModel](TypeDecorator[T]):
         return self.pydantic_model.model_validate(value)
 
 
+def enum_to_value(x: list[_Enum]):
+    return [str(e.value) for e in x]
+
 
 # 1. Users table
 class User(Base):
@@ -64,19 +68,21 @@ class User(Base):
     user_id: Mapped[int] = mapped_column(
         BigInteger, primary_key=True, index=True, autoincrement=True, init=False
     )  # 효율성을 위해 user만 index=True
-    # ✅ 기본값 없는 필드 먼저
+    # 기본값 없는 필드 먼저
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
-    login_method: Mapped[LoginMethod] = mapped_column(Enum(LoginMethod), nullable=False)
+    login_method: Mapped[LoginMethod] = mapped_column(
+        Enum(LoginMethod, values_callable=enum_to_value), nullable=False
+    )
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     nickname: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
-    # ✅ 기본값 있는 필드 나중에
-    hashed_password: Mapped[str | None] = mapped_column(String(255), nullable=True, default=None)
+    # 기본값 없는 필드 나중에
+    hashed_password: Mapped[str | None] = mapped_column(String(255), nullable=True, default=None)  # 자체 로그인 시에만 사용
     birth: Mapped[date | None] = mapped_column(Date, nullable=True, default=None)
     profile_image: Mapped[str | None] = mapped_column(
         String(500), nullable=True, default=None
     )  # 필요 없을 경우 삭제
     affiliation: Mapped[Affiliation | None] = mapped_column(
-        Enum(Affiliation), nullable=True, default=None
+        Enum(Affiliation, values_callable=enum_to_value), nullable=True, default=None
     )
     activation_points: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
@@ -136,10 +142,10 @@ class Video(Base):
     user_id: Mapped[int] = mapped_column(
         BigInteger, ForeignKey("users.user_id", ondelete="CASCADE")
     )
-    origin_path: Mapped[OriginPath] = mapped_column(Enum(OriginPath), nullable=False)
+    origin_path: Mapped[OriginPath] = mapped_column(Enum(OriginPath, values_callable=enum_to_value), nullable=False)
     source_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     status: Mapped[VideoStatus] = mapped_column(
-        Enum(VideoStatus), server_default=VideoStatus.PENDING.value, init=False
+        Enum(VideoStatus, values_callable=enum_to_value), server_default=VideoStatus.PENDING, init=False
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), init=False
@@ -187,7 +193,7 @@ class Result(Base):
         BigInteger, ForeignKey("videos.video_id", ondelete="CASCADE"), unique=True,
     )
     is_fast: Mapped[bool] = mapped_column(Boolean)
-    total_result: Mapped[ResultEnum] = mapped_column(Enum(ResultEnum))
+    total_result: Mapped[ResultEnum] = mapped_column(Enum(ResultEnum, values_callable=enum_to_value), values_callable=enum_to_value)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), init=False
     )
@@ -223,14 +229,14 @@ class FastReport(Base):
     result_id: Mapped[int] = mapped_column(
         BigInteger, ForeignKey("results.result_id", ondelete="CASCADE")
     )
-    freq_result: Mapped[ResultEnum] = mapped_column(Enum(ResultEnum), nullable=False)
+    freq_result: Mapped[ResultEnum] = mapped_column(Enum(ResultEnum, values_callable=enum_to_value), nullable=False)
     freq_conf: Mapped[float] = mapped_column(Float, nullable=False)
     freq_image: Mapped[str] = mapped_column(String(255), nullable=False)
-    rppg_result: Mapped[ResultEnum] = mapped_column(Enum(ResultEnum), nullable=False)
+    rppg_result: Mapped[ResultEnum] = mapped_column(Enum(ResultEnum, values_callable=enum_to_value), nullable=False)
     rppg_conf: Mapped[float] = mapped_column(Float, nullable=False)
     rppg_image: Mapped[str] = mapped_column(String(255), nullable=False)
     stt_risk_level: Mapped[STTRiskLevel] = mapped_column(
-        Enum(STTRiskLevel), nullable=False
+        Enum(STTRiskLevel, values_callable=enum_to_value), nullable=False
     )
     stt_script: Mapped[STTScript] = mapped_column(
         PydanticJSONType(STTScript), nullable=False
@@ -254,7 +260,7 @@ class DeepReport(Base):
     result_id: Mapped[int] = mapped_column(
         BigInteger, ForeignKey("results.result_id", ondelete="CASCADE")
     )
-    unite_result: Mapped[ResultEnum] = mapped_column(Enum(ResultEnum), nullable=False)
+    unite_result: Mapped[ResultEnum] = mapped_column(Enum(ResultEnum, values_callable=enum_to_value), nullable=False)
     unite_conf: Mapped[float] = mapped_column(Float, nullable=False)
     # Relationships
     user: Mapped[User] = relationship("User", back_populates="deep_reports", init=False)

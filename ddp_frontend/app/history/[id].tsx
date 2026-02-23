@@ -2,34 +2,27 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Image } from 'expo-image';
 import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import React, { useCallback, useMemo, useState } from 'react';
+import { ScrollView, StyleSheet, TouchableOpacity, View, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
-import { useAnalysis } from '@/contexts/analysis-context';
-import { POINTS_PER_REPORT } from '@/contexts/analysis-context';
-import { useCallback } from 'react';
+import {
+  useAnalysis,
+  POINTS_PER_REPORT,
+  GIFT_THRESHOLD,
+  getBadgeForPoints,
+} from '@/contexts/analysis-context';
 
 const ACCENT_GREEN = '#00CF90';
+const ACCENT_GREEN_DARK = '#00B87A';
 const TEXT_COLOR = '#111';
 const SECONDARY_TEXT_COLOR = '#687076';
+const DANGER = '#E53935';
 
 const extractFakeProbPercent = (text?: string) => {
   if (!text) return null;
-
-  // 예: "딥페이크 확률: 73.12%"
   const m = text.match(/딥페이크\s*확률\s*:\s*([0-9]+(?:\.[0-9]+)?)\s*%/);
-  if (!m) return null;
-
-  const n = Number(m[1]);
-  if (!Number.isFinite(n)) return null;
-  return Math.min(100, Math.max(0, n));
-};
-
-const extractConfidencePercent = (text?: string) => {
-  if (!text) return null;
-  const m = text.match(/분석\s*신뢰도\s*:\s*([0-9]+(?:\.[0-9]+)?)\s*%/);
   if (!m) return null;
   const n = Number(m[1]);
   if (!Number.isFinite(n)) return null;
@@ -48,24 +41,13 @@ const formatKoreanDateTime = (d: string | number | Date) => {
 };
 
 const getContentLabel = (item: any) => {
-  // 프로젝트에 따라 필드명이 다를 수 있어서 최대한 커버
-  const t =
-    item?.contentType ||
-    item?.inputType ||
-    item?.sourceType ||
-    item?.type ||
-    item?.kind ||
-    '';
-
+  const t = item?.contentType || item?.inputType || item?.sourceType || item?.type || item?.kind || '';
   const s = String(t).toLowerCase();
-
-  // 문자열 기반 타입
   if (s.includes('link') || s.includes('url')) return '링크';
   if (s.includes('video') || s.includes('mp4') || s.includes('mov')) return '영상 파일';
   if (s.includes('image') || s.includes('jpg') || s.includes('png') || s.includes('jpeg'))
     return '이미지 파일';
 
-  // 값이 없을 때, url/파일명으로 유추
   const url = item?.url || item?.link || '';
   if (typeof url === 'string' && url.startsWith('http')) return '링크';
 
@@ -81,24 +63,22 @@ export default function HistoryDetailScreen() {
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
 
-  // useAnalysis는 여기서 "한 번만" 꺼내기
-  const { history, addPoints, incrementReportCount } = useAnalysis();
+  const { history, addPoints, incrementReportCount, totalPoints } = useAnalysis();
 
   const [showConfirm, setShowConfirm] = useState(false);
   const [showDone, setShowDone] = useState(false);
-  const [doneMessage, setDoneMessage] = useState('');
   const [reported, setReported] = useState(false);
 
   const item = useMemo(() => history.find((h) => h.id === id), [history, id]);
 
   const isFake = item?.resultType === 'FAKE';
-  const isReal = item?.resultType === 'REAL';
   const percent = extractFakeProbPercent(item?.result) ?? 0;
 
-  // ✅ 신고 여부 로컬 저장 키
   const storageKey = id ? `reported:${id}` : '';
 
-  // ✅ 신고 confirm 처리(모달 "신고하기" 버튼에서 호출)
+  // ✅ 신고 이후 포인트 반영된 등급을 보여주고 싶어서 +POINTS_PER_REPORT 기준으로 계산
+  const { current: currentBadge } = getBadgeForPoints((totalPoints ?? 0) + (reported ? 0 : POINTS_PER_REPORT));
+
   const onConfirmReport = useCallback(async () => {
     if (!id) return;
 
@@ -116,7 +96,6 @@ export default function HistoryDetailScreen() {
     addPoints(POINTS_PER_REPORT);
     incrementReportCount();
 
-    setDoneMessage(`신고가 접수되었습니다.\n${POINTS_PER_REPORT}P가 지급되었습니다.`);
     setShowDone(true);
   }, [id, addPoints, incrementReportCount]);
 
@@ -135,9 +114,7 @@ export default function HistoryDetailScreen() {
     return (
       <View style={styles.container}>
         <View style={styles.center}>
-          <ThemedText style={{ color: SECONDARY_TEXT_COLOR }}>
-            해당 히스토리를 찾을 수 없습니다.
-          </ThemedText>
+          <ThemedText style={{ color: SECONDARY_TEXT_COLOR }}>해당 히스토리를 찾을 수 없습니다.</ThemedText>
         </View>
       </View>
     );
@@ -147,6 +124,15 @@ export default function HistoryDetailScreen() {
 
   return (
     <View style={styles.container}>
+        {/* ✅ Header */}
+        <View style={[styles.header, { paddingTop: insets.top }]}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.headerBack} activeOpacity={0.8}>
+            <MaterialIcons name="arrow-back" size={24} color={TEXT_COLOR} />
+          </TouchableOpacity>
+
+          <ThemedText style={styles.headerTitle}>분석 대시보드</ThemedText>
+          <View style={styles.headerRightSpace} />
+        </View>
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
@@ -248,11 +234,10 @@ export default function HistoryDetailScreen() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
             <View style={styles.modalIconWrap}>
-              <MaterialIcons name="warning" size={32} color="#FF4D4F" />
+              <MaterialIcons name="warning-amber" size={34} color={DANGER} />
             </View>
 
             <ThemedText style={styles.modalTitle}>신고 확인</ThemedText>
-
             <ThemedText style={styles.modalText}>이 콘텐츠를 신고하시겠습니까?</ThemedText>
 
             <View style={styles.modalButtons}>
@@ -263,9 +248,8 @@ export default function HistoryDetailScreen() {
               <TouchableOpacity
                 style={styles.modalConfirm}
                 onPress={async () => {
-                  // 모달 닫고 신고 처리
                   setShowConfirm(false);
-                  await onConfirmReport(); // ✅ Alert 없는 신고 처리 함수로 연결
+                  await onConfirmReport();
                 }}
               >
                 <ThemedText style={styles.modalConfirmText}>신고하기</ThemedText>
@@ -274,35 +258,49 @@ export default function HistoryDetailScreen() {
           </View>
         </View>
       )}
-      {/* ✅ Done Modal */}
+
+      {/* ✅ Done Modal (요청한 UI로 업그레이드) */}
       {showDone && (
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
-            <View style={styles.modalIconWrap}>
-              <MaterialIcons name="check-circle" size={34} color={ACCENT_GREEN} />
+        <View style={styles.successOverlay}>
+          <View style={styles.successCard}>
+            {/* 폭죽(이미지 없으니 이모지 기본) */}
+            <View style={styles.confettiWrap}>
+              <ThemedText style={styles.confettiEmoji}>🎉🎉🎉</ThemedText>
             </View>
 
-            <ThemedText style={styles.modalTitle}>신고 완료</ThemedText>
-
-            <ThemedText style={styles.modalText}>{doneMessage}</ThemedText>
-
-            <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={[styles.modalConfirm, { flex: 1 }]}
-                onPress={() => setShowDone(false)}
-              >
-                <ThemedText style={styles.modalConfirmText}>확인</ThemedText>
-              </TouchableOpacity>
+            <View style={styles.successCheckWrap}>
+              <MaterialIcons name="check-circle" size={40} color={ACCENT_GREEN} />
             </View>
+
+            <ThemedText style={styles.successTitle}>신고 완료</ThemedText>
+
+            <ThemedText style={styles.successPoints}>
+              +{POINTS_PER_REPORT.toLocaleString()} 포인트가 추가되었습니다!
+            </ThemedText>
+
+            <ThemedText style={styles.successSubtext}>
+              {GIFT_THRESHOLD.toLocaleString()} 포인트를 모으면 스타벅스 아메리카노 기프티콘을 받을 수 있어요.
+            </ThemedText>
+
+            {/* 뱃지/등급 */}
+            <View style={styles.successBadgeRow}>
+              <ThemedText style={styles.successBadgeEmoji}>{currentBadge.icon}</ThemedText>
+              <ThemedText style={styles.successBadgeName}>{currentBadge.name}</ThemedText>
+            </View>
+
+            <TouchableOpacity
+              style={styles.successButton}
+              onPress={() => setShowDone(false)}
+              activeOpacity={0.85}
+            >
+              <ThemedText style={styles.successButtonText}>확인</ThemedText>
+            </TouchableOpacity>
           </View>
         </View>
       )}
-
     </View>
   );
 }
-
-
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F5F5F5' },
@@ -390,7 +388,37 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: TEXT_COLOR,
     lineHeight: 20,
-    // RN에서는 whiteSpace 무시됨 (기존 코드 제거)
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingBottom: 12,
+    backgroundColor: '#F5F5F5',
+  },
+
+  headerBack: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.06)',
+  },
+
+  headerTitle: {
+    flex: 1,
+    textAlign: 'center',
+    fontSize: 16,
+    fontWeight: '800',
+    color: TEXT_COLOR,
+  },
+
+  headerRightSpace: {
+    width: 40,
+    height: 40,
   },
 
   buttonWrap: { marginHorizontal: 16, marginBottom: 16 },
@@ -406,6 +434,8 @@ const styles = StyleSheet.create({
   },
   reportDone: { backgroundColor: 'rgba(0,0,0,0.35)' },
   reportButtonText: { color: '#fff', fontSize: 15, fontWeight: '700' },
+
+  // ===== 기존 confirm modal =====
   modalOverlay: {
     position: 'absolute',
     top: 0,
@@ -417,19 +447,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 24,
   },
-
   modalCard: {
     width: '100%',
     backgroundColor: '#fff',
     borderRadius: 20,
     padding: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.06)',
   },
-
   modalIconWrap: {
     alignItems: 'center',
     marginBottom: 14,
   },
-
   modalTitle: {
     fontSize: 18,
     fontWeight: '800',
@@ -437,19 +466,16 @@ const styles = StyleSheet.create({
     color: '#111',
     marginBottom: 8,
   },
-
   modalText: {
     fontSize: 14,
     textAlign: 'center',
     color: '#687076',
     marginBottom: 24,
   },
-
   modalButtons: {
     flexDirection: 'row',
     gap: 12,
   },
-
   modalCancel: {
     flex: 1,
     paddingVertical: 14,
@@ -458,21 +484,93 @@ const styles = StyleSheet.create({
     borderColor: '#E0E0E0',
     alignItems: 'center',
   },
-
   modalCancelText: {
     fontWeight: '700',
     color: '#687076',
   },
-
   modalConfirm: {
     flex: 1,
     paddingVertical: 14,
     borderRadius: 14,
-    backgroundColor: '#00CF90',
+    backgroundColor: ACCENT_GREEN,
     alignItems: 'center',
   },
-
   modalConfirmText: {
+    fontWeight: '800',
+    color: '#fff',
+  },
+
+  // ===== ✅ 신고 완료(새 UI) =====
+  successOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  successCard: {
+    width: '100%',
+    maxWidth: 340,
+    backgroundColor: '#fff',
+    borderRadius: 24,
+    padding: 24,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.06)',
+  },
+  confettiWrap: { width: '100%', alignItems: 'center', marginBottom: 4 },
+  confettiEmoji: { fontSize: 20 },
+
+  successCheckWrap: { marginTop: 6, paddingVertical: 2, marginBottom: 12 },
+
+  successTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: TEXT_COLOR,
+    marginBottom: 10,
+  },
+  successPoints: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: ACCENT_GREEN_DARK,
+    marginBottom: 8,
+  },
+  successSubtext: {
+    fontSize: 13,
+    color: SECONDARY_TEXT_COLOR,
+    textAlign: 'center',
+    lineHeight: 18,
+    marginBottom: 14,
+  },
+  successBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: 'rgba(0, 207, 144, 0.10)',
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    marginBottom: 18,
+  },
+  successBadgeEmoji: { fontSize: 20 },
+  successBadgeName: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: ACCENT_GREEN_DARK,
+  },
+  successButton: {
+    width: '100%',
+    backgroundColor: ACCENT_GREEN,
+    paddingVertical: 14,
+    borderRadius: 14,
+    alignItems: 'center',
+  },
+  successButtonText: {
+    fontSize: 16,
     fontWeight: '800',
     color: '#fff',
   },

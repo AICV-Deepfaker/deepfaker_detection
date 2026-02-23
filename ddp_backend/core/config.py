@@ -4,9 +4,10 @@ from dotenv import load_dotenv
 
 from pydantic_settings import BaseSettings
 
+
 # .env 파일의 내용을 환경 변수로 부르기 
-_CONFIG_DIR = Path(__file__).parent.parent  # ddp_backend/
-load_dotenv(_CONFIG_DIR / ".env")
+BASE_DIR = Path(__file__).parent.parent  # ddp_backend/core/ -> ddp_backend/ -> 루트
+load_dotenv(BASE_DIR / ".env") 
 
 # JWT 토큰 생성을 위한 환경 설정
 class Settings(BaseSettings):

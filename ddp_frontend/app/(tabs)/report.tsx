@@ -20,7 +20,6 @@ export default function ReportHistoryScreen() {
       let mounted = true;
 
       (async () => {
-        // history가 많지 않다는 전제에서: Promise.all로 한번에 체크
         const pairs = await Promise.all(
           history.map(async (h) => {
             const v = await AsyncStorage.getItem(`reported:${h.id}`);
@@ -57,9 +56,23 @@ export default function ReportHistoryScreen() {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
+      {/* ✅ Header: 뒤로가기(나가기) 버튼 추가 */}
       <View style={styles.header}>
-        <ThemedText style={styles.headerTitle}>신고내역</ThemedText>
-        <ThemedText style={styles.headerSub}>신고 완료한 기록만 모아봤어요</ThemedText>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={styles.headerBack}
+          activeOpacity={0.8}
+        >
+          <MaterialIcons name="arrow-back" size={24} color="#111" />
+        </TouchableOpacity>
+
+        <View style={styles.headerCenter}>
+          <ThemedText style={styles.headerTitle}>신고내역</ThemedText>
+          <ThemedText style={styles.headerSub}>신고 완료한 기록만 모아봤어요</ThemedText>
+        </View>
+
+        {/* 오른쪽 여백 맞추기용 더미 */}
+        <View style={styles.headerRightDummy} />
       </View>
 
       {/* ✅ 리워드/등급 카드 */}
@@ -133,15 +146,22 @@ export default function ReportHistoryScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F5F5F5' },
 
+  // ✅ Header (뒤로가기 포함)
   header: {
-    paddingHorizontal: 20,
-    paddingVertical: 18,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 12,
     backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(0,0,0,0.06)',
   },
-  headerTitle: { fontSize: 22, fontWeight: '800', color: '#111' },
-  headerSub: { marginTop: 4, fontSize: 13, color: '#687076' },
+  headerBack: { padding: 8 },
+  headerCenter: { flex: 1, alignItems: 'center' },
+  headerRightDummy: { width: 40 }, // headerBack(대략 40)와 균형 맞춤
+
+  headerTitle: { fontSize: 18, fontWeight: '800', color: '#111' },
+  headerSub: { marginTop: 3, fontSize: 12, color: '#687076' },
 
   rewardCard: {
     backgroundColor: '#fff',

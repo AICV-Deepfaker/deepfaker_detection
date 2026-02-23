@@ -18,7 +18,11 @@ from fastapi import FastAPI
 from pyngrok import ngrok # type: ignore
 
 # from ddp_backend.services.dependencies import load_all_model
+<<<<<<< HEAD
 # from ddp_backend.routers import detection
+=======
+from ddp_backend.routers import detection
+>>>>>>> 830642b74543f91a36011a97bd53068587d698e2
 from ddp_backend.routers import auth
 from ddp_backend.routers import user
 
