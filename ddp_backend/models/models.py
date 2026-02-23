@@ -1,7 +1,7 @@
 # 테이블이 4개 정도이므로 하나의 파일로 테이블 구성
 from __future__ import annotations
 
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from enum import Enum as _Enum
 from typing import Any
 
@@ -23,6 +23,8 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 from sqlalchemy.types import TypeDecorator
+from sqlalchemy.dialects.postgresql import UUID
+import uuid
 
 from ddp_backend.schemas.enums import (
     LoginMethod,
@@ -62,11 +64,18 @@ def enum_to_value(x: list[_Enum]):
     return [str(e.value) for e in x]
 
 
+
+# 0. source default expires_at : 12시간
+    # DB 내에 생성하면 DB 문법에 의존해야하므로 python 함수로 계산
+def source_def_expire() -> datetime:
+    return datetime.now(timezone.utc) + timedelta(hours=12)
+
+
 # 1. Users table
 class User(Base):
     __tablename__ = "users"
-    user_id: Mapped[int] = mapped_column(
-        BigInteger, primary_key=True, index=True, autoincrement=True, init=False
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, index=True, default=uuid.uuid4, init=False
     )  # 효율성을 위해 user만 index=True
     # 기본값 없는 필드 먼저
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
@@ -115,12 +124,12 @@ class Token(Base):
     token_id: Mapped[int] = mapped_column(
         BigInteger, primary_key=True, autoincrement=True, init=False
     )
-    user_id: Mapped[int] = mapped_column(
-        BigInteger, ForeignKey("users.user_id", ondelete="CASCADE")
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.user_id", ondelete="CASCADE")
     )  # ondelete = 유저 삭제 시 함께 삭제
     refresh_token: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
     # device_uuid:Mapped[str] = mapped_column(String(255)) # 토큰 보안과 연관 (필요 없을 경우 삭제) # 추후 개발
-    expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)  # 토큰 만료
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)  # 토큰 만료
     created_at: Mapped[datetime] = mapped_column( # refresh 토큰 생성 시간
         DateTime(timezone=True), server_default=func.now(), init=False
     )
@@ -136,11 +145,11 @@ class Token(Base):
 # 3. Videos table
 class Video(Base):
     __tablename__ = "videos"
-    video_id: Mapped[int] = mapped_column(
-        BigInteger, primary_key=True, autoincrement=True, init=False,
+    video_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, init=False,
     )
-    user_id: Mapped[int] = mapped_column(
-        BigInteger, ForeignKey("users.user_id", ondelete="CASCADE")
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.user_id", ondelete="CASCADE")
     )
     origin_path: Mapped[OriginPath] = mapped_column(Enum(OriginPath, values_callable=enum_to_value), nullable=False)
     source_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
@@ -163,16 +172,16 @@ class Video(Base):
 # 4. Sources table (12시간이 지난 video 테이블, s3는 삭제)
 class Source(Base):  # S3 관리용 (일정 시간 후 삭제 대상)
     __tablename__ = "sources"
-    source_id: Mapped[int] = mapped_column(
-        BigInteger, primary_key=True, autoincrement=True, init=False,
+    source_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, init=False,
     )
-    video_id: Mapped[int] = mapped_column(
-        BigInteger, ForeignKey("videos.video_id", ondelete="CASCADE"), unique=True,
+    video_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("videos.video_id", ondelete="CASCADE"), unique=True,
     )
     s3_path: Mapped[str] = mapped_column(String(500), nullable=False)
     expires_at: Mapped[datetime] = mapped_column(
-        DateTime, server_default=func.now() + timedelta(hours=12), nullable=False, init=False,
-    )  # 12시간 후 만료 등
+        DateTime(timezone=True), default=source_def_expire, nullable=False, init=False,
+    )  # 12시간 후 만료 등 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), init=False
     )
@@ -183,17 +192,17 @@ class Source(Base):  # S3 관리용 (일정 시간 후 삭제 대상)
 # 5. Results table
 class Result(Base):
     __tablename__ = "results"
-    result_id: Mapped[int] = mapped_column(
-        BigInteger, primary_key=True, autoincrement=True, init=False,
+    result_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, init=False,
     )
-    user_id: Mapped[int] = mapped_column(
-        BigInteger, ForeignKey("users.user_id", ondelete="CASCADE")
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.user_id", ondelete="CASCADE")
     )
-    video_id: Mapped[int] = mapped_column(
-        BigInteger, ForeignKey("videos.video_id", ondelete="CASCADE"), unique=True,
+    video_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("videos.video_id", ondelete="CASCADE"), unique=True,
     )
     is_fast: Mapped[bool] = mapped_column(Boolean)
-    total_result: Mapped[ResultEnum] = mapped_column(Enum(ResultEnum, values_callable=enum_to_value), values_callable=enum_to_value)
+    total_result: Mapped[ResultEnum] = mapped_column(Enum(ResultEnum, values_callable=enum_to_value))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), init=False
     )
@@ -223,11 +232,11 @@ class FastReport(Base):
     fast_id: Mapped[int] = mapped_column(
         BigInteger, primary_key=True, autoincrement=True, init=False,
     )
-    user_id: Mapped[int] = mapped_column(
-        BigInteger, ForeignKey("users.user_id", ondelete="CASCADE")
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.user_id", ondelete="CASCADE")
     )
-    result_id: Mapped[int] = mapped_column(
-        BigInteger, ForeignKey("results.result_id", ondelete="CASCADE")
+    result_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("results.result_id", ondelete="CASCADE")
     )
     freq_result: Mapped[ResultEnum] = mapped_column(Enum(ResultEnum, values_callable=enum_to_value), nullable=False)
     freq_conf: Mapped[float] = mapped_column(Float, nullable=False)
@@ -254,11 +263,11 @@ class DeepReport(Base):
     deep_id: Mapped[int] = mapped_column(
         BigInteger, primary_key=True, autoincrement=True, init=False,
     )
-    user_id: Mapped[int] = mapped_column(
-        BigInteger, ForeignKey("users.user_id", ondelete="CASCADE")
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.user_id", ondelete="CASCADE")
     )
-    result_id: Mapped[int] = mapped_column(
-        BigInteger, ForeignKey("results.result_id", ondelete="CASCADE")
+    result_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("results.result_id", ondelete="CASCADE")
     )
     unite_result: Mapped[ResultEnum] = mapped_column(Enum(ResultEnum, values_callable=enum_to_value), nullable=False)
     unite_conf: Mapped[float] = mapped_column(Float, nullable=False)
@@ -275,11 +284,11 @@ class Alert(Base):  # 신고하기
     alert_id: Mapped[int] = mapped_column(
         BigInteger, primary_key=True, autoincrement=True, init=False,
     )
-    user_id: Mapped[int] = mapped_column(
-        BigInteger, ForeignKey("users.user_id", ondelete="CASCADE")
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.user_id", ondelete="CASCADE")
     )
-    result_id: Mapped[int | None] = mapped_column(
-    BigInteger, ForeignKey("results.result_id", ondelete="SET NULL"), nullable=True
+    result_id: Mapped[uuid.UUID | None] = mapped_column(
+    UUID(as_uuid=True), ForeignKey("results.result_id", ondelete="SET NULL"), nullable=True
     )
     alerted_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), init=False
