@@ -21,7 +21,7 @@ from ddp_backend.core.scheduler import shutdown_schedular, start_schedular
 from ddp_backend.core.tk_broker import broker
 from ddp_backend.models.models import Base
 from ddp_backend.routers import auth, detection, user, websocket
-from ddp_backend.services.dependencies import load_all_model
+from ddp_backend.core.model import load_all_model
 
 _BACKEND_DIR = Path(__file__).parent
 load_dotenv(_BACKEND_DIR / ".env")

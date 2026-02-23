@@ -22,7 +22,7 @@ from ddp_backend.services.crud import (
     FastReportCreate,
 )
 from ddp_backend.services.crud.result import ResultCreate
-from ddp_backend.services.dependencies import detection_pipeline
+from ddp_backend.core.model import detection_pipeline
 
 _redis = Redis.from_url(REDIS_URL, db=1)
 
