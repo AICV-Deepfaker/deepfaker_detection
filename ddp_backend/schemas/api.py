@@ -7,6 +7,7 @@ __all__ = [
     "BaseAPIOutput",
     "APIOutputFast",
     "APIOutputDeep",
+    "WorkerPubSubAPI",
 ]
 
 
@@ -25,3 +26,7 @@ class APIOutputFast(BaseAPIOutput):
 
 class APIOutputDeep(BaseAPIOutput):
     unite: VideoReport | None = None
+
+class WorkerPubSubAPI(BaseModel):
+    user_id: int
+    result_id: int

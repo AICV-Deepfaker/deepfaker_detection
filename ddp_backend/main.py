@@ -1,3 +1,4 @@
+import asyncio
 import os
 import sys
 from contextlib import asynccontextmanager
@@ -6,22 +7,21 @@ from pathlib import Path
 import torch
 import uvicorn
 
-from ddp_backend.core.database import engine
-from ddp_backend.models.models import Base
-from ddp_backend.core.scheduler import start_schedular, shutdown_schedular
-
 # ==========================================
 # .env 로드
 # ==========================================
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from pyngrok import ngrok # type: ignore
+from pyngrok import ngrok  # type: ignore
 
+from ddp_backend.core.database import engine
+from ddp_backend.core.redis_bridge import redis_connector
+from ddp_backend.core.scheduler import shutdown_schedular, start_schedular
+from ddp_backend.core.tk_broker import broker
+from ddp_backend.models.models import Base
+from ddp_backend.routers import auth, detection, user, websocket
 from ddp_backend.services.dependencies import load_all_model
-from ddp_backend.routers import detection
-from ddp_backend.routers import auth
-from ddp_backend.routers import user
 
 _BACKEND_DIR = Path(__file__).parent
 load_dotenv(_BACKEND_DIR / ".env")
@@ -56,11 +56,17 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 NGROK_AUTH_TOKEN = os.environ.get("NGROK_AUTH_TOKEN", "")
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):  # pyright: ignore[reportUnusedParameter]
+async def lifespan(app: FastAPI):
     load_all_model()
     public_url = None
 
     start_schedular() # 스케쥴러 : 30일 지난 토큰 만료 처리
+
+    if not broker.is_worker_process:
+        await broker.startup()
+
+    loop = asyncio.get_event_loop()
+    task = loop.create_task(redis_connector(app))
 
     if NGROK_AUTH_TOKEN:
         ngrok.set_auth_token(NGROK_AUTH_TOKEN)
@@ -74,8 +80,13 @@ async def lifespan(app: FastAPI):  # pyright: ignore[reportUnusedParameter]
 
     yield
 
+    task.cancel()
     # [Shutdown] 서버 종료 시 실행
     shutdown_schedular()  # 스케줄러 종료
+
+    if not broker.is_worker_process:
+        await broker.shutdown()
+
     if public_url:
         print("\n🛠️ ngrok 터널을 종료 중입니다...")
         ngrok.disconnect(public_url)
@@ -97,6 +108,7 @@ app.add_middleware(
 app.include_router(detection.router)
 app.include_router(auth.router)
 app.include_router(user.router)
+app.include_router(websocket.router)
 
 
 # ==========================================
