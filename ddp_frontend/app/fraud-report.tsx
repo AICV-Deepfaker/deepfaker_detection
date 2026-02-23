@@ -325,9 +325,9 @@ export default function FraudReportScreen() {
             <View style={styles.successIconWrap}>
               <ThemedText style={styles.successEmoji}>🎉</ThemedText>
             </View>
-            <ThemedText style={styles.successTitle}>신고가 접수되었습니다</ThemedText>
+            <ThemedText style={styles.successTitle}>신고 완료</ThemedText>
             <ThemedText style={styles.successPoints}>
-              +{successPoints.toLocaleString()} 포인트가 추가되었습니다!
+              +{successPoints.toLocaleString()} 포인트가 지급되었습니다!
             </ThemedText>
             <ThemedText style={styles.successSubtext}>
               {GIFT_THRESHOLD.toLocaleString()}포인트를 모으면 스타벅스 아메리카노 기프티콘을 제공합니다.
