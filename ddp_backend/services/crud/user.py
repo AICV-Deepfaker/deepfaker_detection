@@ -20,10 +20,11 @@ __all__ = [
 
 class UserCreate(BaseModel):
     email: str
-    hashed_password: str
+    login_method: LoginMethod = LoginMethod.local
+    hashed_password: str | None = None 
     name: str
     nickname: str
-    birth: date
+    birth: date | None = None # 로컬만 서비스에서 필수 처리
     profile_image: str | None = None
     affiliation: Affiliation | None = None
 
@@ -70,7 +71,7 @@ class CRUDUser:
         query = select(User).where(User.nickname == nickname)
         return db.scalars(
             query
-        ).first()  # There might be duplicated nickname; should we really use this?
+        ).one_or_none()
 
     # 사용 : user_id로 조회
     @staticmethod

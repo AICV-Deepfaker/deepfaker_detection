@@ -8,6 +8,10 @@ bcrypt==4.0.1
 python-jose[cryptography]
 python-multipart
 
+# google login
+httpx
+authlib
+
 # Web Server & Tunneling
 fastapi
 uvicorn
@@ -33,8 +37,6 @@ pyyaml
 # DB
 sqlalchemy
 psycopg2-binary
-passlib[bcrypt]  # 비밀번호 암호화(hashing)
-python-jose[cryptography]  # JWT 토큰
 
 # Scheduler
 APScheduler

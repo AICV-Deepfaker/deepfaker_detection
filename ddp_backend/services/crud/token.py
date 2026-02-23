@@ -11,16 +11,8 @@ from sqlalchemy.orm import Session
 from ddp_backend.models import Token
 
 __all__ = [
-    "TokenCreate",
     "CRUDToken",
 ]
-
-
-class TokenCreate(BaseModel):
-    user_id: int
-    hashed_refresh_token: str
-    # device_uuid: str
-    expires_at: datetime
 
 
 class CRUDToken:

@@ -52,13 +52,13 @@ def reissue_token(db: Session, refresh_token: str):
         raise HTTPException(
             status_code=401, detail="사용자 정보가 일치하지 않습니다"
             )
-        
-    # 토큰 만료되었을 때 (refresh 토큰 30일 경과)
+    
+    # revoked = True 시
     if token.revoked:
         raise HTTPException(
-            status_code=401, 
-            detail="세션이 만료되었습니다. 다시 로그인해주세요"
-            )
+            status_code=401,
+            detail="이미 로그아웃된 토큰입니다. 다시 로그인해주세요"
+        )
     
     # refresh 유효
     if datetime.now(timezone.utc) < token.expires_at:
@@ -72,13 +72,12 @@ def reissue_token(db: Session, refresh_token: str):
                 timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
         )
         return {"access_token": new_access_token, "refresh_token": new_refresh_token}
-    
-    # refresh 만료 → 재로그인
-    CRUDToken.set_revoked(db, hashed)
+
+    # 토큰 만료되었을 때 (refresh 토큰 30일 경과)
     raise HTTPException(
-        status_code=401, 
-        detail="세션이 만료되었습니다. 다시 로그인해주세요"
-        )
+            status_code=401, 
+            detail="세션이 만료되었습니다. 다시 로그인해주세요"
+            )    
 
 # =========
 # 로그인

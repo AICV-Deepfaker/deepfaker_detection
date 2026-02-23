@@ -2,8 +2,8 @@
 # Pydantic을 사용하여 회원가입 시 받을 이메일, 비밀번호 형식 등을 정의
 
 from datetime import date, datetime
-from pydantic import BaseModel, EmailStr, Field
-from .enums import Affiliation
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from .enums import  Affiliation
 
 __all__ = [
     "UserCreate",
@@ -11,6 +11,7 @@ __all__ = [
     "CheckNickname",
     "UserLogin",
     "UserEdit",
+    "DeleteProfileImage",
     "FindId",
     "FindPassword",
     "UserResponse",
@@ -27,7 +28,7 @@ class UserCreate(BaseModel):  # Login_method는 서비스 로직에서
     password: str = Field(..., min_length=8)  # 최소 8자 이상
     name: str = Field(..., min_length=2)
     nickname: str
-    birth: date
+    birth: date | None = None
     profile_image: str | None = None
     affiliation: Affiliation | None = None
 
@@ -74,6 +75,8 @@ class FindPassword(BaseModel):  # 요청
 # Response
 # 회원가입 완료
 class UserResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     user_id: int
     email: EmailStr
     name: str
@@ -87,6 +90,8 @@ class DuplicateCheckResponse(BaseModel):
 
 # 로그인 완료 : 토큰
 class TokenResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     access_token: str
     refresh_token: str
     token_type: str = "bearer"  # jwt
@@ -97,6 +102,8 @@ class TokenResponse(BaseModel):
 
 # 회원정보 수정 완료
 class UserEditResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     changed_password: bool = False
     changed_profile_image: str | None = None  # 프로필 이미지 업데이트
     deleted_profile_image: bool = False # 프로필이미지 삭제 요청
@@ -105,6 +112,8 @@ class UserEditResponse(BaseModel):
 
 # 아이디 찾기
 class FindIdResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     email: str  # 마스킹된 문자열로 보낼 예정
 
 # 비밀번호는 200만 반환하면 됨

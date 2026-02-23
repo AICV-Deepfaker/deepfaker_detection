@@ -16,7 +16,7 @@ __all__ = [
 
 class AlertCreate(BaseModel):
     user_id: int
-    result_id: int
+    result_id: int | None = None
 
 
 class CRUDAlert:
