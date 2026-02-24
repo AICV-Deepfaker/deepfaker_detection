@@ -71,7 +71,9 @@ def google_callback(code: str, db: Session = Depends(get_db)):
         }).json()
 
         if "access_token" not in token_data:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="구글 인증에 실패했습니다")
+            # code 재사용 등 Google 인증 실패 → 앱 에러 화면으로 redirect
+            error_msg = urllib.parse.quote(token_data.get("error_description", "구글 인증에 실패했습니다"))
+            return RedirectResponse(f"ddp://auth?error={error_msg}", status_code=302)
 
         userinfo = client.get(
             GOOGLE_USERINFO_URL,

@@ -88,6 +88,13 @@ export default function LoginScreen() {
 
       if (result.type === 'success') {
         const p = parseDeepLinkParams(result.url);
+
+        // 서버에서 error 파라미터를 보낸 경우 (code 재사용 등)
+        if (p.error) {
+          Alert.alert('Google 로그인 실패', decodeURIComponent(p.error));
+          return;
+        }
+
         const { access_token, refresh_token, user_id, email: userEmail, nickname } = p;
 
         if (!access_token || !refresh_token || !user_id || !userEmail) {
