@@ -1,7 +1,6 @@
 # services/auth.py (비즈니스 로직)
 # 토큰 생성, 토큰 갱신, 비밀번호 검증, 로그인, 로그아웃
 
-
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
 from datetime import datetime, timezone, timedelta
@@ -10,9 +9,13 @@ from uuid import UUID
 from ddp_backend.core.config import settings
 from ddp_backend.core.security import hash_refresh_token, create_access_token, create_refresh_token, decode_token, verify_password
 
-from ddp_backend.schemas.user import UserLogin, TokenResponse
+from ddp_backend.schemas.user import UserLogin, TokenResponse, UserCreate
+from ddp_backend.schemas.enums import LoginMethod
 from ddp_backend.services.crud.user import CRUDUser
 from ddp_backend.services.crud.token import CRUDToken
+from ddp_backend.services.user import register
+
+import httpx
 
 # =========
 # 생성된 토큰 저장
@@ -91,7 +94,7 @@ def reissue_token(db: Session, refresh_token: str):
             )    
 
 # =========
-# 로그인
+# 로컬 로그인
 # =========
 def login(db:Session, user_info: UserLogin) -> TokenResponse:
     # 1. 유저 조회 + 비밀번호 확인
@@ -125,6 +128,70 @@ def login(db:Session, user_info: UserLogin) -> TokenResponse:
         nickname=user.nickname
     )
 
+
+# =========
+# 구글 로그인
+# =========
+# 1. 구글에 로그인 요청
+def get_google_auth_url() -> str:
+    params = {
+        "client_id": settings.GOOGLE_CLIENT_ID,
+        "redirect_uri": settings.GOOGLE_REDIRECT_URI,
+        "response_type": "code",
+        "scope": "openid email profile",
+    }
+    query = "&".join(f"{k}={v}" for k, v in params.items())
+    return f"{settings.GOOGLE_AUTH_URL}?{query}"
+
+# 2. 구글 유저 정보 받기
+def get_google_userinfo(code: str) -> UserCreate:
+    with httpx.Client() as client:
+        token_data = client.post(settings.GOOGLE_TOKEN_URL, data={
+            "code": code,
+            "client_id": settings.GOOGLE_CLIENT_ID,
+            "client_secret": settings.GOOGLE_CLIENT_SECRET,
+            "redirect_uri": settings.GOOGLE_REDIRECT_URI,
+            "grant_type": "authorization_code",
+        }).json()
+
+        if "access_token" not in token_data:
+            raise HTTPException(status_code=400, detail="구글 인증에 실패했습니다")
+
+        userinfo = client.get(
+            settings.GOOGLE_USERINFO_URL,
+            headers={"Authorization": f"Bearer {token_data['access_token']}"}
+        ).json()
+
+    return UserCreate(
+        email=userinfo["email"],
+        name=userinfo.get("name", ""),
+        password=None,
+        profile_image=userinfo.get("picture"),
+    )
+
+# 3. 구글 로그인 (DDP 서버)
+def google_login(db: Session, user_info: UserCreate) -> TokenResponse:
+    # 1. 회원가입 또는 기존 유저 조회
+    user = register(db, user_info, LoginMethod.GOOGLE)
+
+    # 2. 토큰 발급
+    access_token = create_access_token(user.user_id)
+    refresh_token = create_refresh_token(user.user_id)
+    save_refresh_token(
+        db,
+        user_id=user.user_id,
+        refresh_token=refresh_token,
+        expires_at=datetime.now(timezone.utc) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
+    )
+    return TokenResponse(
+        access_token=access_token,
+        refresh_token=refresh_token,
+        user_id=user.user_id,
+        email=user.email,
+        nickname=user.nickname
+    )
+
+
 # =========
 # 로그아웃
 # =========
@@ -151,3 +218,4 @@ def logout(db: Session, refresh_token: str) -> bool:
     # 3. revoked=True
     CRUDToken.set_revoked(db, hashed)
     return True
+

@@ -43,3 +43,11 @@ APScheduler
 
 # 이메일
 pydantic[email]
+
+# Redis
+redis
+
+# Task Queue
+taskiq
+taskiq-fastapi
+taskiq-redis

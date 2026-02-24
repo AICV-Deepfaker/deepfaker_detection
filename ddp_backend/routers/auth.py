@@ -1,17 +1,12 @@
 # routers/auth_router.py
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
-from datetime import datetime, timezone, timedelta
-import httpx
 
-from ddp_backend.core.config import settings
 from ddp_backend.core.database import get_db
-from ddp_backend.core.security import create_access_token, create_refresh_token, oauth2_scheme
-from ddp_backend.schemas.user import UserLogin, TokenResponse, UserCreate
-from ddp_backend.schemas.enums import LoginMethod
-from ddp_backend.services.auth import login, logout, reissue_token, save_refresh_token
-from ddp_backend.services.user import register
+from ddp_backend.core.security import oauth2_scheme
+from ddp_backend.schemas.user import UserLogin, TokenResponse
+from ddp_backend.services.auth import login, logout, reissue_token, get_google_auth_url, get_google_userinfo, google_login
 
 # 구글 로그인, 로그아웃, 탈퇴 진행되는지 확인
 
@@ -44,60 +39,57 @@ def reissue_route(
 ):
     return reissue_token(db, refresh_token)
 
-# Google OAuth 시작
+# Google OAuth 시작 # 구글에 요청
 @router.get("/google")
 def google_auth():
-    params = {
-        "client_id": settings.GOOGLE_CLIENT_ID,
-        "redirect_uri": settings.GOOGLE_REDIRECT_URI,
-        "response_type": "code",
-        "scope": "openid email profile",
-    }
-    query = "&".join(f"{k}={v}" for k, v in params.items())
-    return RedirectResponse(f"{GOOGLE_AUTH_URL}?{query}")
+    return RedirectResponse(get_google_auth_url())
 
-# Google OAuth 콜백
+# Google OAuth 콜백 # 구글 응답 받음
 @router.get("/google/callback", response_model=TokenResponse)
 def google_callback(code: str, db: Session = Depends(get_db)):
-    with httpx.Client() as client:
-        token_data = client.post(GOOGLE_TOKEN_URL, data={
-            "code": code,
-            "client_id": settings.GOOGLE_CLIENT_ID,
-            "client_secret": settings.GOOGLE_CLIENT_SECRET,
-            "redirect_uri": settings.GOOGLE_REDIRECT_URI,
-            "grant_type": "authorization_code",
-        }).json()
+    user_info = get_google_userinfo(code)
+    return google_login(db, user_info)
+# @router.get("/google/callback", response_model=TokenResponse)
+# def google_callback(code: str, db: Session = Depends(get_db)):
+#     with httpx.Client() as client:
+#         token_data = client.post(GOOGLE_TOKEN_URL, data={
+#             "code": code,
+#             "client_id": settings.GOOGLE_CLIENT_ID,
+#             "client_secret": settings.GOOGLE_CLIENT_SECRET,
+#             "redirect_uri": settings.GOOGLE_REDIRECT_URI,
+#             "grant_type": "authorization_code",
+#         }).json()
 
-        if "access_token" not in token_data:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="구글 인증에 실패했습니다")
+#         if "access_token" not in token_data:
+#             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="구글 인증에 실패했습니다")
 
-        userinfo = client.get(
-            GOOGLE_USERINFO_URL,
-            headers={"Authorization": f"Bearer {token_data['access_token']}"}
-        ).json()
+#         userinfo = client.get(
+#             GOOGLE_USERINFO_URL,
+#             headers={"Authorization": f"Bearer {token_data['access_token']}"}
+#         ).json()
 
-    # 회원가입 또는 기존 유저 조회
-    user_info = UserCreate(
-        email=userinfo["email"],
-        name=userinfo.get("name", ""),
-        password=None, # google이 None이 들어올 수 있음 (service에서 처리)
-        profile_image=userinfo.get("picture"),
-    )
-    user = register(db, user_info, LoginMethod.GOOGLE)
+#     # 회원가입 또는 기존 유저 조회
+#     user_info = UserCreate(
+#         email=userinfo["email"],
+#         name=userinfo.get("name", ""),
+#         password=None, # google이 None이 들어올 수 있음 (service에서 처리)
+#         profile_image=userinfo.get("picture"),
+#     )
+#     user = register(db, user_info, LoginMethod.GOOGLE)
 
-    # 토큰 발급
-    access_token = create_access_token(user.user_id)
-    refresh_token = create_refresh_token(user.user_id)
-    save_refresh_token(
-        db,
-        user_id=user.user_id,
-        refresh_token=refresh_token,
-        expires_at=datetime.now(timezone.utc) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
-    )
-    return TokenResponse(
-        access_token=access_token,
-        refresh_token=refresh_token,
-        user_id=user.user_id,
-        email=user.email,
-        nickname=user.nickname
-    )
+#     # 토큰 발급
+#     access_token = create_access_token(user.user_id)
+#     refresh_token = create_refresh_token(user.user_id)
+#     save_refresh_token(
+#         db,
+#         user_id=user.user_id,
+#         refresh_token=refresh_token,
+#         expires_at=datetime.now(timezone.utc) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
+#     )
+#     return TokenResponse(
+#         access_token=access_token,
+#         refresh_token=refresh_token,
+#         user_id=user.user_id,
+#         email=user.email,
+#         nickname=user.nickname
+#     )
