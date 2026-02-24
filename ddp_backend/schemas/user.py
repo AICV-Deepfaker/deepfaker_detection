@@ -15,7 +15,7 @@ __all__ = [
     "UserEdit",
     "FindId",
     "FindPassword",
-    "UserResponse",
+    "UserCreateResponse",
     "DuplicateCheckResponse",
     "TokenResponse",
     "UserMeResponse",
@@ -56,7 +56,6 @@ class UserLogin(BaseModel):
 class UserEdit(BaseModel):  # 이외에 변경 불가
     new_password: SecretStr | None = Field(None, min_length=8)  # 최소 8자 이상
     new_profile_image: str | None = None
-    delete_profile_image: bool = False  # True면 이미지 삭제
     new_affiliation: Affiliation | None = None
 
 
@@ -75,7 +74,7 @@ class FindPassword(BaseModel):  # 요청
 
 # Response
 # 회원가입 완료
-class UserResponse(BaseModel):
+class UserCreateResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     user_id: UUID
@@ -120,9 +119,7 @@ class UserEditResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     changed_password: bool = False
-    changed_profile_image: str | None = None  # 프로필 이미지 업데이트
-    deleted_profile_image: bool = False # 프로필이미지 삭제 요청
-    changed_affiliation: Affiliation | None = None # 수정 안 하면 None
+    latest_user_info: UserMeResponse
 
 
 # 아이디 찾기
@@ -132,6 +129,8 @@ class FindIdResponse(BaseModel):
     email: str  # 마스킹된 문자열로 보낼 예정
 
 # 비밀번호는 200만 반환하면 됨
+
+# 프로필 이미지 삭제는 별도 endpoint 사용 
 
 # 탈퇴는 schema 없음
 

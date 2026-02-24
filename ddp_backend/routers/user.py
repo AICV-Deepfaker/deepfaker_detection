@@ -7,7 +7,7 @@ from ddp_backend.core.database import get_db
 from ddp_backend.core.security import get_current_user
 from ddp_backend.models import User
 from ddp_backend.schemas.user import (
-    UserCreate, UserResponse,
+    UserCreate, UserCreateResponse,
     FindId, FindIdResponse,
     FindPassword, DuplicateCheckResponse,
     CheckEmail, CheckNickname,
@@ -41,7 +41,7 @@ def check_nickname_route(body: CheckNickname, db: Session = Depends(get_db)):
     return DuplicateCheckResponse(is_duplicate=check_nickname_duplicate(db, body.nickname))
 
 # 회원가입 - 이메일/닉네임 중복 확인 후 유저 생성 (로컬)
-@router.post("/register", response_model=UserResponse)
+@router.post("/register", response_model=UserCreateResponse)
 def register_route(user_info: UserCreate, db: Session = Depends(get_db)):
     return register(db, user_info, LoginMethod.LOCAL)
 
@@ -65,7 +65,7 @@ def edit_route(
     return edit_user(db, current_user.user_id, update_info)
 
 # 프로필 이미지 삭제 - delete_profile_image=True 요청 시 이미지 삭제 (토큰 필요)
-@router.delete("/profile/delete", response_model=UserEditResponse)
+@router.delete("/profile/delete", response_model=UserMeResponse)
 def delete_profile_route(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)

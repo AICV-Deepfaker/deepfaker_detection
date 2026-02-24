@@ -8,7 +8,7 @@ from ddp_backend.core.mailer import send_temp_pwd
 # from ddp_backend.core.s3 import upload_image_to_s3, delete_image_from_s3, delete_video_from_s3 # 개발 예정
 from ddp_backend.schemas.enums import Affiliation
 
-from ddp_backend.schemas.user import UserCreate, UserResponse, FindId, FindIdResponse, FindPassword, UserEdit, UserEditResponse
+from ddp_backend.schemas.user import UserCreate, UserCreateResponse, UserMeResponse, FindId, FindIdResponse, FindPassword, UserEdit, UserEditResponse
 from ddp_backend.services.crud.user import CRUDUser, UserCreate as UserCreateCRUD, UserUpdate
 
 from ddp_backend.schemas.enums import LoginMethod
@@ -44,7 +44,7 @@ def check_nickname_duplicate(db: Session, nickname: str) -> bool:
 # =========
 # 회원가입
 # =========
-def register(db: Session, user_info: UserCreate, login_method: LoginMethod = LoginMethod.LOCAL) -> UserResponse:
+def register(db: Session, user_info: UserCreate, login_method: LoginMethod = LoginMethod.LOCAL) -> UserCreateResponse:
     # 1. 이미 가입된 유저인지 확인
     existing_user = CRUDUser.get_by_email(db, user_info.email)
     if existing_user:
@@ -54,7 +54,7 @@ def register(db: Session, user_info: UserCreate, login_method: LoginMethod = Log
             detail="소셜 로그인으로 가입된 이메일입니다"
             )
         if login_method == LoginMethod.GOOGLE:
-            return UserResponse.model_validate(existing_user)  # 2) 로그인 방법이 맞는데 구글일 경우 -> 재로그인 통과
+            return UserCreateResponse.model_validate(existing_user)  # 2) 로그인 방법이 맞는데 구글일 경우 -> 재로그인 통과
         raise HTTPException( # 3) 로그인 방법이 맞는데 Local일 경우 -> 에러 반환
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="이미 사용 중인 이메일입니다"
@@ -104,7 +104,7 @@ def register(db: Session, user_info: UserCreate, login_method: LoginMethod = Log
         profile_image=user_info.profile_image,
         affiliation=user_info.affiliation,
     ))
-    return UserResponse.model_validate(new_user)
+    return UserCreateResponse.model_validate(new_user)
 
 # =========
 # 아이디 찾기
@@ -185,12 +185,13 @@ def edit_user(db: Session, user_id: UUID, update_info: UserEdit) -> UserEditResp
             detail="유저를 찾을 수 없습니다"
             )
     
-    response = UserEditResponse()
     hashed_password: str | None = None
     profile_image: str | None = None
     affiliation: Affiliation | None = None  # 추가
 
+
     # 비밀번호 변경
+    changed_password = False # 디폴트
     if update_info.new_password:
         if user.login_method != LoginMethod.LOCAL:
             raise HTTPException(
@@ -198,17 +199,15 @@ def edit_user(db: Session, user_id: UUID, update_info: UserEdit) -> UserEditResp
             detail="소셜 로그인 계정은 비밀번호를 변경할 수 없습니다"
             )
         hashed_password = get_password_hash(update_info.new_password)
-        response.changed_password = True
+        changed_password = True #번경
     
     # 프로필 이미지 변경
     if update_info.new_profile_image:
         profile_image = update_info.new_profile_image
-        response.changed_profile_image = update_info.new_profile_image
     
     # 소속 변경
     if update_info.new_affiliation:
         affiliation = update_info.new_affiliation  
-        response.changed_affiliation = update_info.new_affiliation
     
     if not any([hashed_password, profile_image, affiliation]):
         raise HTTPException(
@@ -216,18 +215,22 @@ def edit_user(db: Session, user_id: UUID, update_info: UserEdit) -> UserEditResp
             detail="변경할 정보가 없습니다"
             )
 
-    CRUDUser.update(db, user_id, UserUpdate(
+    CRUDUser.update(db, user_id, UserUpdate( #db.commit() 포함
         hashed_password=hashed_password,
         profile_image=profile_image,
         affiliation=affiliation
     ))
-    return response
+    db.refresh(user)
+    return UserEditResponse(
+        changed_password=changed_password,
+        latest_user_info=UserMeResponse.model_validate(user)
+    )
 
 
 # =========
 # 프로필 이미지 삭제
 # =========
-def delete_profile_image(db: Session, user_id: UUID) -> UserEditResponse:
+def delete_profile_image(db: Session, user_id: UUID) -> UserMeResponse:
     user = CRUDUser.get_by_id(db, user_id)
     
     if not user:
@@ -238,8 +241,8 @@ def delete_profile_image(db: Session, user_id: UUID) -> UserEditResponse:
     # S3 변경
     # delete_image_from_s3(user.profile_image)  # 이후 개발 예정
     CRUDUser.delete_profile_image(db, user_id) # DB 삭제
-
-    return UserEditResponse(deleted_profile_image=True)
+    db.refresh(user)  # 삭제 후 최신 상태로 갱신
+    return UserMeResponse.model_validate(user)
 
 
 # =========
