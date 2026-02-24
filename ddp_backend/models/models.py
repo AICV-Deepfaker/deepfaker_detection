@@ -142,14 +142,14 @@ class Token(Base):
 class Video(Base):
     __tablename__ = "videos"
     video_id: Mapped[int] = mapped_column(
-        BigInteger, primary_key=True, autoincrement=True, init=False,
+        Integer, primary_key=True, autoincrement=True, init=False,
     )
     user_id: Mapped[int] = mapped_column(
-        BigInteger, ForeignKey("users.user_id", ondelete="CASCADE")
+        Integer, ForeignKey("users.user_id", ondelete="CASCADE")
     )
     origin_path: Mapped[OriginPath] = mapped_column(Enum(OriginPath, values_callable=enum_to_value), nullable=False)
     source_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
-    sstatus: Mapped[VideoStatus] = mapped_column(
+    status: Mapped[VideoStatus] = mapped_column(
         Enum(VideoStatus, values_callable=enum_to_value),
         server_default=text(f"'{VideoStatus.PENDING.value}'"),
         init=False,
@@ -171,10 +171,10 @@ class Video(Base):
 class Source(Base):  # S3 관리용 (일정 시간 후 삭제 대상)
     __tablename__ = "sources"
     source_id: Mapped[int] = mapped_column(
-        BigInteger, primary_key=True, autoincrement=True, init=False,
+        Integer, primary_key=True, autoincrement=True, init=False,
     )
     video_id: Mapped[int] = mapped_column(
-        BigInteger, ForeignKey("videos.video_id", ondelete="CASCADE"), unique=True,
+        Integer, ForeignKey("videos.video_id", ondelete="CASCADE"), unique=True,
     )
     s3_path: Mapped[str] = mapped_column(String(500), nullable=False)
     expires_at: Mapped[datetime] = mapped_column(
@@ -233,13 +233,13 @@ class Result(Base):
 class FastReport(Base):
     __tablename__ = "fast_reports"
     fast_id: Mapped[int] = mapped_column(
-        BigInteger, primary_key=True, autoincrement=True, init=False,
+        Integer, primary_key=True, autoincrement=True, init=False,
     )
     user_id: Mapped[int] = mapped_column(
-        BigInteger, ForeignKey("users.user_id", ondelete="CASCADE")
+        Integer, ForeignKey("users.user_id", ondelete="CASCADE")
     )
     result_id: Mapped[int] = mapped_column(
-        BigInteger, ForeignKey("results.result_id", ondelete="CASCADE")
+        Integer, ForeignKey("results.result_id", ondelete="CASCADE")
     )
     freq_result: Mapped[ResultEnum] = mapped_column(Enum(ResultEnum, values_callable=enum_to_value), nullable=False)
     freq_conf: Mapped[float] = mapped_column(Float, nullable=False)
@@ -264,13 +264,13 @@ class FastReport(Base):
 class DeepReport(Base):
     __tablename__ = "deep_reports"
     deep_id: Mapped[int] = mapped_column(
-        BigInteger, primary_key=True, autoincrement=True, init=False,
+        Integer, primary_key=True, autoincrement=True, init=False,
     )
     user_id: Mapped[int] = mapped_column(
-        BigInteger, ForeignKey("users.user_id", ondelete="CASCADE")
+        Integer, ForeignKey("users.user_id", ondelete="CASCADE")
     )
     result_id: Mapped[int] = mapped_column(
-        BigInteger, ForeignKey("results.result_id", ondelete="CASCADE")
+        Integer, ForeignKey("results.result_id", ondelete="CASCADE")
     )
     unite_result: Mapped[ResultEnum] = mapped_column(Enum(ResultEnum, values_callable=enum_to_value), nullable=False)
     unite_conf: Mapped[float] = mapped_column(Float, nullable=False)
@@ -285,13 +285,13 @@ class DeepReport(Base):
 class Alert(Base):  # 신고하기
     __tablename__ = "alerts"
     alert_id: Mapped[int] = mapped_column(
-        BigInteger, primary_key=True, autoincrement=True, init=False,
+        Integer, primary_key=True, autoincrement=True, init=False,
     )
     user_id: Mapped[int] = mapped_column(
-        BigInteger, ForeignKey("users.user_id", ondelete="CASCADE")
+        Integer, ForeignKey("users.user_id", ondelete="CASCADE")
     )
     result_id: Mapped[int | None] = mapped_column(
-    BigInteger, ForeignKey("results.result_id", ondelete="SET NULL"), nullable=True
+    Integer, ForeignKey("results.result_id", ondelete="SET NULL"), nullable=True
     )
     alerted_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), init=False

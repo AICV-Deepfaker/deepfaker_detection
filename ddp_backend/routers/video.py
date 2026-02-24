@@ -71,11 +71,14 @@ def link_video(
 ):
     user_id = _get_user_id_for_now()
 
-    video = Video(user_id=user_id, origin_path=OriginPath.link, source_url=str(payload.url))
+    video = Video(user_id=user_id, origin_path=OriginPath.LINK, source_url=str(payload.url))
     db.add(video)
     db.commit()
     db.refresh(video)
 
-    background_tasks.add_task(process_youtube_video, video.video_id)
+    # ✅ 업로드랑 동일하게 pending으로 명시 (일관성 + 디버깅 쉬움)
+    video.status = VideoStatus.PENDING
+    db.commit()
 
+    background_tasks.add_task(process_youtube_video, video.video_id)
     return {"video_id": video.video_id, "queued": True}

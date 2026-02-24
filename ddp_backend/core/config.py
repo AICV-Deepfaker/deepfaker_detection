@@ -1,7 +1,7 @@
 import os 
 from pathlib import Path
 from dotenv import load_dotenv
-
+load_dotenv()
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -9,6 +9,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 BASE_DIR = Path(__file__).parent.parent  # ddp_backend/core/ -> ddp_backend/ -> 루트
 load_dotenv(BASE_DIR / ".env") 
 
+S3_BUCKET = os.getenv("S3_BUCKET")
 # JWT 토큰 생성을 위한 환경 설정
 class Settings(BaseSettings):
     DATABASE_URL: str
@@ -23,6 +24,16 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
     #class Config:
     #  env_file = ".env"
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="forbid",   # 그대로 두고 싶으면 forbid 유지
+    )
+    DATABASE_URL: str = "sqlite:///./test.db"
+    S3_BUCKET: str | None = None
+    AWS_REGION: str | None = None
+    AWS_ACCESS_KEY_ID: str | None = None
+    AWS_SECRET_ACCESS_KEY: str | None = None
 
 settings = Settings()
 

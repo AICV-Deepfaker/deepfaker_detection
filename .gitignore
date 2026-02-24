@@ -35,4 +35,4 @@ node_modules/
 *.onnx.*
 # datasets/
 
-.expo/
+.expo/*.db
