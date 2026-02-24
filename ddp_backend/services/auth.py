@@ -5,6 +5,7 @@
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
 from datetime import datetime, timezone, timedelta
+from uuid import UUID
 
 from ddp_backend.core.config import settings
 from ddp_backend.core.security import hash_refresh_token, create_access_token, create_refresh_token, decode_token, verify_password
@@ -18,7 +19,7 @@ from ddp_backend.services.crud.token import CRUDToken
 # =========
 def save_refresh_token(
         db: Session, 
-        user_id: int, 
+        user_id: UUID, 
         refresh_token: str, 
         expires_at: datetime
         ) -> None:
@@ -29,15 +30,25 @@ def save_refresh_token(
 # 토큰 갱신
 # =========
 def reissue_token(db: Session, refresh_token: str):
+    # 1. DB 조회 전
     # JWT 검증
-    try:
-        payload = decode_token(refresh_token)
-    except Exception:
-        raise HTTPException(
-            status_code=401, 
-            detail="유효하지 않은 토큰입니다"
-            )
+    payload = decode_token(refresh_token)
+    
+    user_id_str = payload.get("user_id")
+    if user_id_str is None:
+        raise HTTPException(status_code=401, detail="유효하지 않은 토큰입니다")
 
+    # resfresh 토큰 타입이 아닐 때
+    if payload.get("type") != "refresh":
+        raise HTTPException(status_code=401, detail="refresh 토큰이 아닙니다")
+    
+    # payload user_id -> UUID 변환
+    try:
+        user_id = UUID(user_id_str)
+    except (ValueError, TypeError):
+        raise HTTPException(status_code=401, detail="유효하지 않은 토큰입니다")
+    
+    # 2. DB 조회
     hashed = hash_refresh_token(refresh_token) # 리프레시 토큰 해시
     token = CRUDToken.get_by_refresh(db, hashed) # a row from token table
 
@@ -48,7 +59,7 @@ def reissue_token(db: Session, refresh_token: str):
             )
     
     # payload의 user_id와 token의 user_id와 일치하지 않을경우
-    if payload.get("user_id") != token.user_id:
+    if user_id != token.user_id:
         raise HTTPException(
             status_code=401, detail="사용자 정보가 일치하지 않습니다"
             )
@@ -118,10 +129,14 @@ def login(db:Session, user_info: UserLogin) -> TokenResponse:
 # 로그아웃
 # =========
 def logout(db: Session, refresh_token: str) -> bool:
-    # 1. 해시 후 조회
+    # 1. DB 조회 전
+    payload = decode_token(refresh_token)
+    if payload.get("type") != "refresh":
+        raise HTTPException(status_code=401, detail="refresh 토큰이 아닙니다")
+    
+    # 2. 해시 후 DB 조회
     hashed = hash_refresh_token(refresh_token)
     token = CRUDToken.get_by_refresh(db, hashed)
-    
     if not token:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, 
@@ -133,6 +148,6 @@ def logout(db: Session, refresh_token: str) -> bool:
             detail="이미 로그아웃된 토큰입니다"
             )
     
-    # 2. revoked=True
+    # 3. revoked=True
     CRUDToken.set_revoked(db, hashed)
     return True

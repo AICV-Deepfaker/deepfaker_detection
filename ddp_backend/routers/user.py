@@ -1,6 +1,6 @@
 # 프론트 연결
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from ddp_backend.schemas.enums import LoginMethod
 from ddp_backend.core.database import get_db
@@ -12,7 +12,7 @@ from ddp_backend.schemas.user import (
     FindPassword, DuplicateCheckResponse,
     CheckEmail, CheckNickname,
     UserEdit, UserEditResponse,
-    DeleteProfileImage, UserMeResponse
+    UserMeResponse
 )
 from ddp_backend.services.user import (
     check_email_duplicate, check_nickname_duplicate,
@@ -65,14 +65,11 @@ def edit_route(
     return edit_user(db, current_user.user_id, update_info)
 
 # 프로필 이미지 삭제 - delete_profile_image=True 요청 시 이미지 삭제 (토큰 필요)
-@router.delete("/profile", response_model=UserEditResponse)
+@router.delete("/profile/delete", response_model=UserEditResponse)
 def delete_profile_route(
-    request: DeleteProfileImage,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    if not request.delete_profile_image:
-        raise HTTPException(status_code=400, detail="삭제 요청이 아닙니다")
     return delete_profile_image(db, current_user.user_id)
 
 # 회원탈퇴 - 유저 삭제 (cascade로 관련 데이터 모두 삭제) (토큰 필요)

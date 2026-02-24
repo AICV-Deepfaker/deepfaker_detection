@@ -1,5 +1,5 @@
 # routers/auth_router.py
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 from datetime import datetime, timezone, timedelta
@@ -12,6 +12,8 @@ from ddp_backend.schemas.user import UserLogin, TokenResponse, UserCreate
 from ddp_backend.schemas.enums import LoginMethod
 from ddp_backend.services.auth import login, logout, reissue_token, save_refresh_token
 from ddp_backend.services.user import register
+
+# 구글 로그인, 로그아웃, 탈퇴 진행되는지 확인
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -65,6 +67,9 @@ def google_callback(code: str, db: Session = Depends(get_db)):
             "redirect_uri": settings.GOOGLE_REDIRECT_URI,
             "grant_type": "authorization_code",
         }).json()
+
+        if "access_token" not in token_data:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="구글 인증에 실패했습니다")
 
         userinfo = client.get(
             GOOGLE_USERINFO_URL,

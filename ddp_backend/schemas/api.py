@@ -1,4 +1,5 @@
 from typing import Literal
+from uuid import UUID
 
 from pydantic import BaseModel
 
@@ -33,5 +34,5 @@ class APIOutputDeep(BaseAPIOutput):
 
 
 class WorkerPubSubAPI(BaseModel):
-    user_id: int
-    result_id: int
+    user_id: UUID
+    result_id: UUID

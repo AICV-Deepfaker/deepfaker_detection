@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
 from pydantic import SecretStr
+from uuid import UUID
 
 from ddp_backend.core.security import get_password_hash
 from ddp_backend.core.mailer import send_temp_pwd
@@ -47,9 +48,14 @@ def register(db: Session, user_info: UserCreate, login_method: LoginMethod = Log
     # 1. 이미 가입된 유저인지 확인
     existing_user = CRUDUser.get_by_email(db, user_info.email)
     if existing_user:
+        if existing_user.login_method != login_method: # 1) 로그인 방법이 맞지 않을 경우 (ex. Local - Google)
+            raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="소셜 로그인으로 가입된 이메일입니다"
+            )
         if login_method == LoginMethod.GOOGLE:
-            return UserResponse.model_validate(existing_user)  # Google은 재로그인 처리
-        raise HTTPException(
+            return UserResponse.model_validate(existing_user)  # 2) 로그인 방법이 맞는데 구글일 경우 -> 재로그인 통과
+        raise HTTPException( # 3) 로그인 방법이 맞는데 Local일 경우 -> 에러 반환
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="이미 사용 중인 이메일입니다"
         )
@@ -64,29 +70,30 @@ def register(db: Session, user_info: UserCreate, login_method: LoginMethod = Log
 
     # 3. 로컬만 체크
     if login_method == LoginMethod.LOCAL:
+        # 비밀번호 체크
         if user_info.password is None:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="비밀번호를 입력해주세요"
             )
+        else:
+            hashed_password = get_password_hash(user_info.password)
+        # 생년월일 체크
         if user_info.birth is None:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="생년월일을 입력해주세요"
             )
+        # 닉네임 체크
         if check_nickname_duplicate(db, nickname):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="이미 사용 중인 닉네임입니다"
             )
-
-    # 4. 유저 생성
-    if login_method == LoginMethod.LOCAL:
-        assert user_info.password is not None # local의 password는 무조건 있어야 함
-        hashed_password = get_password_hash(user_info.password)  
     else:
         hashed_password = None
 
+    # 4. 유저 생성
     new_user = CRUDUser.create(db, UserCreateCRUD(
         email=user_info.email,
         login_method=login_method,
@@ -140,6 +147,11 @@ def find_password(db: Session, user_info: FindPassword) -> bool:
             detail="유저를 찾을 수 없습니다"
             )
     
+    if user.login_method != LoginMethod.LOCAL:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+            detail="소셜 로그인 계정입니다"
+            )
+    
     # 1. 임시 비밀번호 생성
     temp_password = ''.join(
         random.choices(
@@ -164,7 +176,7 @@ def find_password(db: Session, user_info: FindPassword) -> bool:
 # =========
 # 회원 정보 수정
 # =========
-def edit_user(db: Session, user_id: int, update_info: UserEdit) -> UserEditResponse:
+def edit_user(db: Session, user_id: UUID, update_info: UserEdit) -> UserEditResponse:
     user = CRUDUser.get_by_id(db, user_id)
 
     if not user:
@@ -180,6 +192,11 @@ def edit_user(db: Session, user_id: int, update_info: UserEdit) -> UserEditRespo
 
     # 비밀번호 변경
     if update_info.new_password:
+        if user.login_method != LoginMethod.LOCAL:
+            raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="소셜 로그인 계정은 비밀번호를 변경할 수 없습니다"
+            )
         hashed_password = get_password_hash(update_info.new_password)
         response.changed_password = True
     
@@ -210,7 +227,7 @@ def edit_user(db: Session, user_id: int, update_info: UserEdit) -> UserEditRespo
 # =========
 # 프로필 이미지 삭제
 # =========
-def delete_profile_image(db: Session, user_id: int) -> UserEditResponse:
+def delete_profile_image(db: Session, user_id: UUID) -> UserEditResponse:
     user = CRUDUser.get_by_id(db, user_id)
     
     if not user:
@@ -220,7 +237,7 @@ def delete_profile_image(db: Session, user_id: int) -> UserEditResponse:
     
     # S3 변경
     # delete_image_from_s3(user.profile_image)  # 이후 개발 예정
-    CRUDUser.delete_profile_image(db, user_id)
+    CRUDUser.delete_profile_image(db, user_id) # DB 삭제
 
     return UserEditResponse(deleted_profile_image=True)
 
@@ -228,7 +245,7 @@ def delete_profile_image(db: Session, user_id: int) -> UserEditResponse:
 # =========
 # 회원 탈퇴
 # =========
-def delete_user(db: Session, user_id: int) -> bool:
+def delete_user(db: Session, user_id: UUID) -> bool:
     user = CRUDUser.get_by_id(db, user_id)
 
     if not user:

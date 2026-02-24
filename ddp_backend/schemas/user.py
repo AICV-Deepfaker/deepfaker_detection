@@ -1,6 +1,8 @@
 # schemas/user.py (데이터 규격 정의)
 # Pydantic을 사용하여 회원가입 시 받을 이메일, 비밀번호 형식 등을 정의
 
+from uuid import UUID
+
 from datetime import date, datetime
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, SecretStr # 비밀번호 "***"로 표시
 from .enums import  Affiliation
@@ -11,12 +13,12 @@ __all__ = [
     "CheckNickname",
     "UserLogin",
     "UserEdit",
-    "DeleteProfileImage",
     "FindId",
     "FindPassword",
     "UserResponse",
     "DuplicateCheckResponse",
     "TokenResponse",
+    "UserMeResponse",
     "UserEditResponse",
     "FindIdResponse",
 ]
@@ -57,10 +59,6 @@ class UserEdit(BaseModel):  # 이외에 변경 불가
     delete_profile_image: bool = False  # True면 이미지 삭제
     new_affiliation: Affiliation | None = None
 
-# 프로필 이미지 삭제
-class DeleteProfileImage(BaseModel):  
-    delete_profile_image: bool = False
-
 
 # 아이디 찾기
 class FindId(BaseModel):
@@ -80,7 +78,7 @@ class FindPassword(BaseModel):  # 요청
 class UserResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
-    user_id: int
+    user_id: UUID
     email: EmailStr
     name: str
     nickname: str
@@ -98,9 +96,23 @@ class TokenResponse(BaseModel):
     access_token: str
     refresh_token: str
     token_type: str = "bearer"  # jwt
-    user_id: int
+    user_id: UUID
     email: EmailStr
     nickname: str
+
+
+# 내 정보 조회
+class UserMeResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    user_id: UUID
+    email: EmailStr
+    name: str
+    nickname: str
+    birth: date | None = None
+    affiliation: Affiliation | None = None
+    profile_image: str | None = None
+    created_at: datetime
 
 
 # 회원정보 수정 완료
@@ -123,15 +135,3 @@ class FindIdResponse(BaseModel):
 
 # 탈퇴는 schema 없음
 
-# 내 정보 조회
-class UserMeResponse(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
-    user_id: int
-    email: EmailStr
-    name: str
-    nickname: str
-    birth: date | None = None
-    affiliation: Affiliation | None = None
-    profile_image: str | None = None
-    created_at: datetime
