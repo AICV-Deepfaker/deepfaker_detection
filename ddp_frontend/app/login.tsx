@@ -14,6 +14,7 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
 
 import { ThemedText } from '@/components/themed-text';
@@ -79,11 +80,14 @@ export default function LoginScreen() {
     }
     setGoogleLoading(true);
     try {
+      // Expo Go: exp://192.168.x.x:8081/--/auth, 빌드: ddp://auth
+      const appRedirectUri = Linking.createURL('auth');
+
       // 백엔드의 서버 사이드 Google OAuth 시작
-      // 서버가 Google → callback → ddp://auth?access_token=...&refresh_token=... 로 redirect
+      // 서버가 Google → callback → appRedirectUri?access_token=...&refresh_token=... 로 redirect
       const result = await WebBrowser.openAuthSessionAsync(
-        `${API_BASE}/auth/google`,
-        'ddp://auth'
+        `${API_BASE}/auth/google?app_redirect=${encodeURIComponent(appRedirectUri)}`,
+        appRedirectUri
       );
 
       if (result.type === 'success') {

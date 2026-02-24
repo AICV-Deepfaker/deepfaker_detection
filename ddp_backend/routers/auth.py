@@ -46,21 +46,26 @@ def reissue_route(
     return reissue_token(db, refresh_token)
 
 # Google OAuth 시작
+# app_redirect: 프론트엔드가 실행 중인 Expo 주소 (Expo Go: exp://..., 빌드: ddp://auth)
 @router.get("/google")
-def google_auth():
+def google_auth(app_redirect: str = "ddp://auth"):
+    # app_redirect를 OAuth state에 담아 Google → callback까지 전달
     params = {
         "client_id": settings.GOOGLE_CLIENT_ID,
         "redirect_uri": settings.GOOGLE_REDIRECT_URI,
         "response_type": "code",
         "scope": "openid email profile",
+        "state": urllib.parse.quote(app_redirect, safe=""),
     }
-    # urllib.parse.urlencode으로 redirect_uri 등 특수문자 포함 값을 올바르게 인코딩
     query = urllib.parse.urlencode(params)
     return RedirectResponse(f"{GOOGLE_AUTH_URL}?{query}")
 
-# Google OAuth 콜백 - 토큰 발급 후 앱 deep link로 redirect
+# Google OAuth 콜백 - 토큰 발급 후 앱 주소로 redirect
 @router.get("/google/callback")
-def google_callback(code: str, db: Session = Depends(get_db)):
+def google_callback(code: str, state: str = "ddp://auth", db: Session = Depends(get_db)):
+    # state에서 프론트엔드 주소 복원
+    app_redirect = urllib.parse.unquote(state)
+
     with httpx.Client() as client:
         token_data = client.post(GOOGLE_TOKEN_URL, data={
             "code": code,
@@ -71,9 +76,9 @@ def google_callback(code: str, db: Session = Depends(get_db)):
         }).json()
 
         if "access_token" not in token_data:
-            # code 재사용 등 Google 인증 실패 → 앱 에러 화면으로 redirect
-            error_msg = urllib.parse.quote(token_data.get("error_description", "구글 인증에 실패했습니다"))
-            return RedirectResponse(f"ddp://auth?error={error_msg}", status_code=302)
+            # code 재사용 등 실패 → 앱으로 에러 전달
+            error_msg = urllib.parse.quote(token_data.get("error_description", "구글 인증에 실패했습니다"), safe="")
+            return RedirectResponse(f"{app_redirect}?error={error_msg}", status_code=302)
 
         userinfo = client.get(
             GOOGLE_USERINFO_URL,
@@ -99,13 +104,12 @@ def google_callback(code: str, db: Session = Depends(get_db)):
         expires_at=datetime.now(timezone.utc) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
     )
 
-    # 앱의 deep link로 redirect하여 토큰 전달
-    # WebBrowser.openAuthSessionAsync가 'ddp://auth?...' URL을 감지하고 앱으로 반환
-    query = urllib.parse.urlencode({
+    # 프론트엔드의 Expo 주소로 토큰 전달
+    token_query = urllib.parse.urlencode({
         "access_token": access_token,
         "refresh_token": refresh_token,
         "user_id": str(user.user_id),
         "email": user.email,
         "nickname": user.nickname or "",
     })
-    return RedirectResponse(f"ddp://auth?{query}", status_code=302)
+    return RedirectResponse(f"{app_redirect}?{token_query}", status_code=302)
