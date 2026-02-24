@@ -52,6 +52,10 @@ class UserMeResponse(UserBase):
     user_id: uuid.UUID
     created_at: datetime
 
+class UserRead(UserBase):
+    user_id: uuid.UUID
+    created_at: datetime
+
 
 # 이메일 중복 확인 요청
 class CheckEmail(BaseModel):

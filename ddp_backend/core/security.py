@@ -18,6 +18,7 @@ from uuid import UUID
 from ddp_backend.core.config import settings  # 수정
 from ddp_backend.core.database import get_db
 from ddp_backend.services.crud.user import CRUDUser
+from ddp_backend.schemas.user import UserRead
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -123,7 +124,7 @@ def get_current_user(
     if user.token and user.token.revoked:
         raise HTTPException(status_code=401, detail="비정상적인 접근입니다. 다시 로그인해주세요")
     
-    return user # 보통 객체를 받아서 라우터 내부에서 user_id 뽑음
+    return UserRead.model_validate(user) # 보통 객체를 받아서 라우터 내부에서 user_id 뽑음
 
 
 # =========
