@@ -5,37 +5,25 @@ import uuid
 from pathlib import Path
 
 from sqlmodel.orm.session import Session
-from sqlmodel import select
 
 from ddp_backend.core.database import SessionLocal
 from ddp_backend.core.s3 import upload_file_to_s3, download_file_from_s3
 from ddp_backend.models.models import Video, Source, Result
 from ddp_backend.schemas.enums import VideoStatus
 from ddp_backend.schemas.enums import Result as ResultEnum
+from ddp_backend.services.crud import CRUDSource, CRUDVideo, CRUDResult
 import subprocess
 import shutil
 
 def _set_video_status(db: Session, video: Video, status: VideoStatus) -> None:
-    video.status = status
-    db.add(video)
-    db.commit()
-    db.refresh(video)  # 선택이지만 추천
+    CRUDVideo.update_status(db, video.video_id, status)
 
 
 def _upsert_source(db: Session, video_id: uuid.UUID, s3_key: str) -> Source:
     """
     sources.video_id 는 UNIQUE라서, 있으면 업데이트 / 없으면 생성
     """
-    query = select(Source).where(Source.video_id == video_id)
-    src = db.scalars(query).first()
-    if src:
-        src.s3_path = s3_key
-    else:
-        src = Source(video_id=video_id, s3_path=s3_key)
-        db.add(src)
-    db.commit()
-    return src
-
+    return CRUDSource.upsert_source(db, video_id, s3_key)
 
 def _upsert_result(
     db: Session,
@@ -48,16 +36,14 @@ def _upsert_result(
     """
     results.video_id 는 UNIQUE라서, 있으면 업데이트 / 없으면 생성
     """
-    query = select(Result).where(Result.video_id == video_id)
-    row = db.scalars(query).first()
+    row = CRUDResult.get_by_video_id(db, video_id)
     if row:
-        row.is_fast = is_fast
-        row.total_result = total_result
-    else:
-        row = Result(user_id=user_id, video_id=video_id, is_fast=is_fast, total_result=total_result)
-        db.add(row)
-    db.commit()
-    return row
+        row_res = CRUDResult.update(db, row.result_id, is_fast, total_result) 
+        assert row_res is not None
+        return row_res
+    
+    row = Result(user_id=user_id, video_id=video_id, is_fast=is_fast, total_result=total_result)
+    return CRUDResult.create(db, row)
 
 
 def _run_dummy_inference(video_path: Path) -> ResultEnum:
@@ -78,15 +64,13 @@ def process_uploaded_video(video_id: uuid.UUID) -> None:
     """
     db = SessionLocal()
     try:
-        query = select(Video).where(Video.video_id == video_id)
-        video = db.scalars(query).first()
+        video = CRUDVideo.get_by_id(db, video_id)
         if not video:
             return
 
         _set_video_status(db, video, VideoStatus.PROCESSING)
 
-        query = select(Source).where(Source.video_id == video_id)
-        source = db.scalars(query).first()
+        source = CRUDSource.get_by_video(db, video_id)
         if not source:
             _set_video_status(db, video, VideoStatus.FAILED)
             return
@@ -108,8 +92,7 @@ def process_uploaded_video(video_id: uuid.UUID) -> None:
         _set_video_status(db, video, VideoStatus.COMPLETED)
 
     except Exception:
-        query = select(Video).where(Video.video_id == video_id)
-        video = db.scalars(query).first()
+        video = CRUDVideo.get_by_id(db, video_id)
         if video:
             _set_video_status(db, video, VideoStatus.FAILED)
         raise
@@ -190,8 +173,7 @@ def process_youtube_video(video_id: uuid.UUID) -> None:
     """
     db = SessionLocal()
     try:
-        query = select(Video).where(Video.video_id == video_id)
-        video = db.scalars(query).first()
+        video = CRUDVideo.get_by_id(db, video_id)
         if not video:
             return
 
@@ -232,8 +214,7 @@ def process_youtube_video(video_id: uuid.UUID) -> None:
         _set_video_status(db, video, VideoStatus.COMPLETED)
 
     except Exception:
-        query = select(Video).where(Video.video_id == video_id)
-        video = db.scalars(query).first()
+        video = CRUDVideo.get_by_id(db, video_id)
         if video:
             _set_video_status(db, video, VideoStatus.FAILED)
         raise

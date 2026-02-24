@@ -1,4 +1,5 @@
 from typing import Annotated
+import uuid
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from pydantic import Field
@@ -7,11 +8,10 @@ from sqlmodel.orm.session import Session
 from ddp_backend.core.database import get_db
 from ddp_backend.core.s3 import upload_video_to_s3
 from ddp_backend.core.security import get_current_user
-from ddp_backend.models import Source, Video
+from ddp_backend.models import Source, Video, User
 from ddp_backend.schemas.api import APIOutputDeep, APIOutputFast
 from ddp_backend.schemas.enums import AnalyzeMode, ModelName, OriginPath, Result, Status
 from ddp_backend.schemas.report import STTReport, VideoReport
-from ddp_backend.schemas.user import UserRead
 from ddp_backend.services.crud import CRUDResult, CRUDVideo
 from ddp_backend.services.crud.source import CRUDSource
 from ddp_backend.task.detection import predict_deepfake_deep, predict_deepfake_fast
@@ -20,20 +20,19 @@ router = APIRouter(prefix="/prediction", tags=["prediction"])
 
 
 # ✅ user_id만 뽑아서 int로 반환 (OpenAPI도 깔끔)
-def get_current_user_id(current_user: User = Depends(get_current_user)) -> int:
+def get_current_user_id(current_user: User = Depends(get_current_user)) -> uuid.UUID:
     return current_user.user_id
 
 
 @router.post(path="/{mode}", status_code=status.HTTP_202_ACCEPTED)
 async def predict_deepfake(
     file: Annotated[UploadFile, File(...)],
-    user: Annotated[
-        UserRead, Depends(get_current_user)
-    ],  # TODO add dependency gives user id from JWT token
+    user_id: Annotated[
+        uuid.UUID, Depends(get_current_user_id)
+    ],
     db: Annotated[Session, Depends(get_db)],
     mode: AnalyzeMode,
 ) -> None:
-    user_id = user.user_id
     video = CRUDVideo.create(
         db,
         Video(
@@ -74,14 +73,14 @@ def conf_to_prob(conf: float, result: Result) -> float:
 
 @router.get(path="/result/{result_id}", response_model=ResultType)
 async def get_result(
-    result_id: int,
-    user: Annotated[UserRead, Depends(get_current_user)],
+    result_id: uuid.UUID,
+    user_id: Annotated[uuid.UUID, Depends(get_current_user_id)],
     db: Annotated[Session, Depends(get_db)],
 ):
     result = CRUDResult.get_by_id(db, result_id)
     if result is None:
         raise HTTPException(404, "Item not found")
-    if result.user_id != user.user_id:
+    if result.user_id != user_id:
         raise HTTPException(403, "Forbidden")
 
     if result.is_fast:

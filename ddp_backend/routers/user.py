@@ -1,16 +1,16 @@
 # 프론트 연결
 
-from typing import Optional
-from fastapi import APIRouter, Depends, File, Form, UploadFile, HTTPException
+from fastapi import APIRouter, Depends, File, Form, UploadFile
+from pydantic.types import SecretStr
 from sqlmodel.orm.session import Session
 
 from ddp_backend.core.database import get_db
 from ddp_backend.core.security import get_current_user
-from ddp_backend.schemas.enums import LoginMethod
+from ddp_backend.models import User
+from ddp_backend.schemas.enums import Affiliation, LoginMethod
 from ddp_backend.schemas.user import (
     CheckEmail,
     CheckNickname,
-    DeleteProfileImage,
     DuplicateCheckResponse,
     FindId,
     FindIdResponse,
@@ -20,7 +20,6 @@ from ddp_backend.schemas.user import (
     UserEdit,
     UserEditResponse,
     UserMeResponse,
-    UserRead,
 )
 from ddp_backend.services.user import (
     check_email_duplicate,
@@ -39,7 +38,7 @@ router = APIRouter(prefix="/user", tags=["user"])
 @router.get("/me", response_model=UserMeResponse)
 def get_me_route(
     db: Session = Depends(get_db),
-    current_user: UserRead = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     return UserMeResponse.model_validate(current_user)
 
@@ -71,11 +70,11 @@ def find_password_route(user_info: FindPassword, db: Session = Depends(get_db)):
 # 회원정보수정 - multipart/form-data (비밀번호/소속/프로필이미지) (토큰 필요)
 @router.patch("/edit", response_model=UserEditResponse)
 async def edit_route(
-    new_password: Optional[str] = Form(None),
-    new_affiliation: Optional[str] = Form(None),
-    new_profile_image: Optional[UploadFile] = File(None),
+    new_password: SecretStr | None = Form(None),
+    new_affiliation: Affiliation | None = Form(None),
+    new_profile_image: UploadFile | None = File(None),
     db: Session = Depends(get_db),
-    current_user: UserRead = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     update_info = UserEdit(
         new_password=new_password if new_password else None,
@@ -87,7 +86,7 @@ async def edit_route(
 @router.delete("/profile/delete", response_model=UserMeResponse)
 def delete_profile_route(
     db: Session = Depends(get_db),
-    current_user: UserRead = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     return delete_profile_image(db, current_user.user_id)
 
@@ -95,6 +94,6 @@ def delete_profile_route(
 @router.delete("/withdraw")
 def withdraw_route(
     db: Session = Depends(get_db),
-    current_user: UserRead = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     return delete_user(db, current_user.user_id)

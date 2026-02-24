@@ -5,7 +5,7 @@ Token CRUD
 from uuid import UUID
 from datetime import datetime
 
-from sqlmodel import select
+from sqlmodel import select, update, col
 from sqlmodel.orm.session import Session
 
 from ddp_backend.models import Token
@@ -55,3 +55,16 @@ class CRUDToken:
         token.revoked = True
         db.commit()
         return True
+
+    @staticmethod
+    def bulk_revoke_expired(db: Session):
+        expired = datetime.now()
+        query = (
+            update(Token)
+            .where(col(Token.revoked) == False)
+            .where(col(Token.expires_at) < expired)
+            .values(revoked=True)
+        )
+        db.exec(query, execution_options={'synchronize_session': False})
+
+        db.commit()

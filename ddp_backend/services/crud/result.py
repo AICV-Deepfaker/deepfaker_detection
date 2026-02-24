@@ -3,9 +3,12 @@ Result CRUD
 """
 
 from uuid import UUID
+
+from sqlmodel import select
 from sqlmodel.orm.session import Session
 
 from ddp_backend.models import Result
+from ddp_backend.schemas.enums import Result as ResultEnum
 
 __all__ = [
     "CRUDResult",
@@ -28,16 +31,28 @@ class CRUDResult:
         """result_id로 결과 조회"""
         return db.get(Result, result_id)
 
-    # 참조 : 링크를 상세결과에만 포함할 경우
-    #       아래의 쿼리 대신 result.video.source_url 사용 (in service.py)
+    @staticmethod
+    def get_by_video_id(db: Session, video_id: UUID):
+        query = select(Result).where(Result.video_id == video_id)
+        return db.scalars(query).one_or_none()
 
-    # 사용 : 히스토리 목록에 링크 첨부 (필요시)
-    # def get_result_with_video(db: Session, result_id: int):
-    #     """ result_id로 결과 + 비디오(링크 호출용) 조회 """
-    #     return db.query(Result)\
-    #              .options(joinedload(Result.video))\
-    #              .filter(Result.result_id == result_id)\
-    #              .first()
+    @staticmethod
+    def update(
+        db: Session,
+        result_id: UUID,
+        is_fast: bool | None = None,
+        total_result: ResultEnum | None = None,
+    ):
+        res = CRUDResult.get_by_id(db, result_id)
+        if res is None:
+            return None
+        if is_fast is not None:
+            res.is_fast = is_fast
+        if total_result is not None:
+            res.total_result = total_result
+        db.commit()
+        db.refresh(res)
+        return res
 
     # 사용 : 히스토리 삭제
     @staticmethod

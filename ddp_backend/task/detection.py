@@ -1,3 +1,4 @@
+import uuid
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
@@ -10,7 +11,7 @@ from ddp_backend.core.model import detection_pipeline
 from ddp_backend.core.redis_bridge import NOTIFY_CHANNEL, REDIS_URL
 from ddp_backend.core.s3 import download_video_from_s3
 from ddp_backend.core.tk_broker import broker
-from ddp_backend.models import Result, FastReport, DeepReport
+from ddp_backend.models import DeepReport, FastReport, Result
 from ddp_backend.schemas.api import WorkerPubSubAPI
 from ddp_backend.schemas.enums import Status, VideoStatus
 from ddp_backend.schemas.report import STTScript
@@ -22,7 +23,7 @@ from ddp_backend.services.crud import (
     CRUDVideo,
 )
 
-_redis = Redis.from_url(REDIS_URL, db=1)
+_redis = Redis.from_url(REDIS_URL if REDIS_URL is not None else "", db=1)
 
 
 def publish_notification(msg: WorkerPubSubAPI):
@@ -31,9 +32,9 @@ def publish_notification(msg: WorkerPubSubAPI):
 
 @broker.task
 def predict_deepfake_fast(
-    video_id: int,
+    video_id: uuid.UUID,
     db: Session = TaskiqDepends(get_db),
-) -> int | None:
+) -> uuid.UUID | None:
     src = CRUDSource.get_by_video(db, video_id)
     if src is None:
         return None
@@ -90,9 +91,9 @@ def predict_deepfake_fast(
 
 @broker.task()
 def predict_deepfake_deep(
-    video_id: int,
+    video_id: uuid.UUID,
     db: Session = TaskiqDepends(get_db),
-) -> int | None:
+) -> uuid.UUID | None:
     src = CRUDSource.get_by_video(db, video_id)
     if src is None:
         return None

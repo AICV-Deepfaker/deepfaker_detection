@@ -4,7 +4,7 @@
 
 from sqlmodel.orm.session import Session
 from fastapi import HTTPException, status
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta
 from uuid import UUID
 
 from ddp_backend.core.config import settings

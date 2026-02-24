@@ -24,9 +24,9 @@ class CRUDVideo:
         db.refresh(db_video)  # video_id 포함
         return db_video  # video_id가 채워진 객체 반환
 
-    # def get_video_by_id(db: Session, video_id: int): # 필요시 주석 해제
-    #     """ video_id로 비디오 조회 """
-    #     return db.query(Video).filter(Video.video_id == video_id).first()
+    @staticmethod
+    def get_by_id(db: Session, video_id: UUID):
+        return db.get(Video, video_id)
 
     # 사용 : 히스토리(url)
     @staticmethod

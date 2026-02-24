@@ -32,3 +32,22 @@ class CRUDSource:
         """video_id로 S3 경로 조회"""
         query = select(Source).where(Source.video_id == video_id)
         return db.scalars(query).one_or_none()
+
+    @staticmethod
+    def update_s3(db: Session, video_id: UUID, s3_path: str):
+        src = CRUDSource.get_by_video(db, video_id)
+        if src is None:
+            return None
+        src.s3_path = s3_path
+
+        db.commit()
+        db.refresh(src)
+        return src
+
+    @staticmethod
+    def upsert_source(db: Session, video_id: UUID, s3_path: str):
+        src = CRUDSource.update_s3(db, video_id, s3_path)
+        if src:
+            return src
+        return CRUDSource.create(db, Source(video_id=video_id, s3_path=s3_path))
+        
