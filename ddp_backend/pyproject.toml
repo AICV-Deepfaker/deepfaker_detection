@@ -33,8 +33,10 @@ dependencies = [
     "taskiq>=0.12.1",
     "taskiq-redis>=1.2.2",
     "taskiq-fastapi>=0.4.0",
-    "pydantic>=2.12.5",
+    "pydantic[email]>=2.12.5",
     "redis>=7.2.0",
     "types-redis>=4.6.0.20241004",
     "sqlmodel>=0.0.37",
+    "boto3>=1.42.55",
+    "psycopg2-binary>=2.9.11",
 ]
