@@ -211,17 +211,13 @@ export default function MypageScreen() {
           <RowItem
             icon="description"
             label="서비스 이용약관"
-            onPress={() => {
-              // TODO: 약관 화면
-            }}
+            onPress={() => router.push('/terms-of-service')}
           />
           <View style={styles.divider} />
           <RowItem
             icon="policy"
             label="개인정보 처리방침"
-            onPress={() => {
-              // TODO: 개인정보 화면
-            }}
+            onPress={() => router.push('/privacy-policy')}
           />
           <View style={styles.divider} />
           <RowItem
