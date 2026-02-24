@@ -2,6 +2,8 @@ import base64
 from io import BytesIO
 from pathlib import Path
 from typing import Any, Self, cast, override
+from pathlib import Path
+import warnings
 
 import cv2
 import matplotlib.pyplot as plt
@@ -70,6 +72,18 @@ class WaveletDetector(BaseVideoDetector[WaveletConfigParam]):
 
     @override
     def load_model(self):
+        ckpt_path = Path(self.config.model_path)
+
+        if not ckpt_path.exists():
+            warnings.warn(
+            f"[WaveletDetector] checkpoint not found: {ckpt_path}. "
+            "Wavelet detector will be disabled (server will still start)."
+        )
+            self.model = None
+            return
+
+        ckpt: dict[str, Any] = torch.load(self.config.model_path, map_location=self.device)
+    
         print(f"Loading on device: {self.device}...")
         wavelet_config: WaveletConfig = {
             "mean": self.config.mean,

@@ -1,7 +1,9 @@
 from pathlib import Path
 
 from ddp_backend.detectors.audio import STTDetector
-from ddp_backend.detectors.visual import RPPGDetector, UniteDetector, WaveletDetector
+from ddp_backend.detectors.visual import RPPGDetector
+#WaveletDetector
+#UniteDetector
 from ddp_backend.schemas.api import APIOutputDeep, APIOutputFast
 from ddp_backend.schemas.enums import AnalyzeMode, Status, Result
 
@@ -22,6 +24,10 @@ class DetectionPipeline:
 
     def load_all_models(self):
         self.unite_detector.load_model()
+        try:
+            self.wavelet_detector.load_model()
+        except Exception as e:
+            print(f"[WARN] Wavelet model load failed: {e}")
         self.wavelet_detector.load_model()
         self.r_ppg_detector.load_model()
 

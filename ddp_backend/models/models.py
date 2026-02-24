@@ -4,6 +4,7 @@ from __future__ import annotations
 from datetime import date, datetime, timedelta
 from enum import Enum as _Enum
 from typing import Any
+from sqlalchemy import text
 
 from ddp_backend.core.database import Base
 from pydantic import BaseModel
@@ -120,7 +121,11 @@ class Token(Base):
     )  # ondelete = 유저 삭제 시 함께 삭제
     refresh_token: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
     # device_uuid:Mapped[str] = mapped_column(String(255)) # 토큰 보안과 연관 (필요 없을 경우 삭제) # 추후 개발
-    expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)  # 토큰 만료
+    expires_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.utcnow() + timedelta(hours=12),
+        nullable=False,
+        init=False,)  # 토큰 만료
     created_at: Mapped[datetime] = mapped_column( # refresh 토큰 생성 시간
         DateTime(timezone=True), server_default=func.now(), init=False
     )
@@ -144,8 +149,10 @@ class Video(Base):
     )
     origin_path: Mapped[OriginPath] = mapped_column(Enum(OriginPath, values_callable=enum_to_value), nullable=False)
     source_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
-    status: Mapped[VideoStatus] = mapped_column(
-        Enum(VideoStatus, values_callable=enum_to_value), server_default=VideoStatus.PENDING, init=False
+    sstatus: Mapped[VideoStatus] = mapped_column(
+        Enum(VideoStatus, values_callable=enum_to_value),
+        server_default=text(f"'{VideoStatus.PENDING.value}'"),
+        init=False,
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), init=False
@@ -171,7 +178,10 @@ class Source(Base):  # S3 관리용 (일정 시간 후 삭제 대상)
     )
     s3_path: Mapped[str] = mapped_column(String(500), nullable=False)
     expires_at: Mapped[datetime] = mapped_column(
-        DateTime, server_default=func.now() + timedelta(hours=12), nullable=False, init=False,
+        DateTime(timezone=True),
+        default=lambda: datetime.utcnow() + timedelta(hours=12),
+        nullable=False,
+        init=False,
     )  # 12시간 후 만료 등
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), init=False
@@ -184,16 +194,18 @@ class Source(Base):  # S3 관리용 (일정 시간 후 삭제 대상)
 class Result(Base):
     __tablename__ = "results"
     result_id: Mapped[int] = mapped_column(
-        BigInteger, primary_key=True, autoincrement=True, init=False,
+        Integer, primary_key=True, autoincrement=True, init=False,
     )
     user_id: Mapped[int] = mapped_column(
-        BigInteger, ForeignKey("users.user_id", ondelete="CASCADE")
+        Integer, ForeignKey("users.user_id", ondelete="CASCADE")
     )
     video_id: Mapped[int] = mapped_column(
-        BigInteger, ForeignKey("videos.video_id", ondelete="CASCADE"), unique=True,
+        Integer, ForeignKey("videos.video_id", ondelete="CASCADE"), unique=True,
     )
     is_fast: Mapped[bool] = mapped_column(Boolean)
-    total_result: Mapped[ResultEnum] = mapped_column(Enum(ResultEnum, values_callable=enum_to_value), values_callable=enum_to_value)
+    total_result: Mapped[ResultEnum] = mapped_column(
+        Enum(ResultEnum, values_callable=enum_to_value),
+        nullable=False,)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), init=False
     )

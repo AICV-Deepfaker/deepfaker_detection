@@ -3,7 +3,7 @@ import sys
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-# import torch
+import torch
 import uvicorn
 
 from ddp_backend.core.database import engine
@@ -18,14 +18,15 @@ from fastapi import FastAPI
 from pyngrok import ngrok # type: ignore
 
 # from ddp_backend.services.dependencies import load_all_model
-from ddp_backend.routers import detection
-from ddp_backend.routers import auth
-from ddp_backend.routers import user
+from ddp_backend.routers import detection, auth, user, video, alert
 
 _BACKEND_DIR = Path(__file__).parent
 load_dotenv(_BACKEND_DIR / ".env")
 
-
+try:
+    from ddp_backend.services.dependencies import load_all_model
+except Exception:
+    load_all_model = None
 # ==========================================
 # DB 생성
 # ==========================================
@@ -53,12 +54,17 @@ def _is_video(filename: str) -> bool:
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 NGROK_AUTH_TOKEN = os.environ.get("NGROK_AUTH_TOKEN", "")
-
+try:
+    from ddp_backend.services.dependencies import load_all_model
+except Exception:
+    load_all_model = None
 @asynccontextmanager
 async def lifespan(app: FastAPI):  # pyright: ignore[reportUnusedParameter]
-    load_all_model()
+    if load_all_model:
+        load_all_model()
+    else:
+        print("[STARTUP] load_all_model() skipped (not available)")
     public_url = None
-
     start_schedular() # 스케쥴러 : 30일 지난 토큰 만료 처리
 
     if NGROK_AUTH_TOKEN:
@@ -83,10 +89,14 @@ async def lifespan(app: FastAPI):  # pyright: ignore[reportUnusedParameter]
 
 
 app = FastAPI(lifespan=lifespan)
+@app.get("/health")
+def health():
+    return{"ok": True}
 app.include_router(detection.router)
 app.include_router(auth.router)
 app.include_router(user.router)
-
+app.include_router(video.router)
+app.include_router(alert.router)
 
 # ==========================================
 # 6. 메인 실행부
