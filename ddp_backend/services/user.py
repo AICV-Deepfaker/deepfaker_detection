@@ -1,14 +1,15 @@
-from sqlalchemy.orm import Session
+from sqlmodel.orm.session import Session
 from fastapi import HTTPException, status
 from pydantic import SecretStr
 
 from ddp_backend.core.security import get_password_hash
 from ddp_backend.core.mailer import send_temp_pwd
 # from ddp_backend.core.s3 import upload_image_to_s3, delete_image_from_s3, delete_video_from_s3 # 개발 예정
+from ddp_backend.schemas.user import UserCreate, UserCreateCRUD
 from ddp_backend.schemas.enums import Affiliation
 
-from ddp_backend.schemas.user import UserCreate, UserResponse, FindId, FindIdResponse, FindPassword, UserEdit, UserEditResponse
-from ddp_backend.services.crud.user import CRUDUser, UserCreate as UserCreateCRUD, UserUpdate
+from ddp_backend.schemas.user import UserCreateResponse, FindId, FindIdResponse, FindPassword, UserEdit, UserEditResponse
+from ddp_backend.services.crud.user import CRUDUser, UserUpdate
 
 from ddp_backend.schemas.enums import LoginMethod
 
@@ -43,12 +44,12 @@ def check_nickname_duplicate(db: Session, nickname: str) -> bool:
 # =========
 # 회원가입
 # =========
-def register(db: Session, user_info: UserCreate, login_method: LoginMethod = LoginMethod.LOCAL) -> UserResponse:
+def register(db: Session, user_info: UserCreate, login_method: LoginMethod = LoginMethod.LOCAL) -> UserCreateResponse:
     # 1. 이미 가입된 유저인지 확인
     existing_user = CRUDUser.get_by_email(db, user_info.email)
     if existing_user:
         if login_method == LoginMethod.GOOGLE:
-            return UserResponse.model_validate(existing_user)  # Google은 재로그인 처리
+            return UserCreateResponse.model_validate(existing_user)  # Google은 재로그인 처리
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="이미 사용 중인 이메일입니다"
@@ -97,7 +98,7 @@ def register(db: Session, user_info: UserCreate, login_method: LoginMethod = Log
         profile_image=user_info.profile_image,
         affiliation=user_info.affiliation,
     ))
-    return UserResponse.model_validate(new_user)
+    return UserCreateResponse.model_validate(new_user)
 
 # =========
 # 아이디 찾기

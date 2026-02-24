@@ -2,7 +2,7 @@
 # 토큰 생성, 토큰 갱신, 비밀번호 검증, 로그인, 로그아웃
 
 
-from sqlalchemy.orm import Session
+from sqlmodel.orm.session import Session
 from fastapi import HTTPException, status
 from datetime import datetime, timezone, timedelta
 

@@ -15,7 +15,6 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pyngrok import ngrok  # type: ignore
 
-<<<<<<< Updated upstream
 from ddp_backend.core.database import engine
 from ddp_backend.core.redis_bridge import redis_connector
 from ddp_backend.core.scheduler import shutdown_schedular, start_schedular
@@ -23,12 +22,6 @@ from ddp_backend.core.tk_broker import broker
 from ddp_backend.models.models import Base
 from ddp_backend.routers import auth, detection, user, websocket
 from ddp_backend.core.model import load_all_model
-=======
-# from ddp_backend.services.dependencies import load_all_model
-# from ddp_backend.routers import detection
-from ddp_backend.routers import auth
-from ddp_backend.routers import user
->>>>>>> Stashed changes
 
 _BACKEND_DIR = Path(__file__).parent
 load_dotenv(_BACKEND_DIR / ".env")
@@ -63,7 +56,6 @@ Base.metadata.create_all(bind=engine)
 # NGROK_AUTH_TOKEN = os.environ.get("NGROK_AUTH_TOKEN", "")
 
 @asynccontextmanager
-<<<<<<< Updated upstream
 async def lifespan(app: FastAPI):
     load_all_model()
     public_url = None
@@ -83,21 +75,6 @@ async def lifespan(app: FastAPI):
         print(f"\n🚀 외부 접속 주소 (ngrok): {public_url}/predict")
     else:
         print("\n⚠️ NGROK 토큰이 설정되지 않았습니다. 로컬에서만 접속 가능합니다.")
-=======
-async def lifespan(app: FastAPI):  # pyright: ignore[reportUnusedParameter]
-    # load_all_model()
-    # public_url = None
-
-    start_schedular() # 스케쥴러 : 30일 지난 토큰 만료 처리
-
-    # if NGROK_AUTH_TOKEN:
-    #     ngrok.set_auth_token(NGROK_AUTH_TOKEN)
-    #     tunnel = ngrok.connect("8000")
-    #     public_url = tunnel.public_url
-    #     print(f"\n🚀 외부 접속 주소 (ngrok): {public_url}/predict")
-    # else:
-    #     print("\n⚠️ NGROK 토큰이 설정되지 않았습니다. 로컬에서만 접속 가능합니다.")
->>>>>>> Stashed changes
 
     print("🚀 FastAPI 서버를 시작합니다 (Port: 8000)...")
 
@@ -106,7 +83,6 @@ async def lifespan(app: FastAPI):  # pyright: ignore[reportUnusedParameter]
     task.cancel()
     # [Shutdown] 서버 종료 시 실행
     shutdown_schedular()  # 스케줄러 종료
-<<<<<<< Updated upstream
 
     if not broker.is_worker_process:
         await broker.shutdown()
@@ -116,13 +92,6 @@ async def lifespan(app: FastAPI):  # pyright: ignore[reportUnusedParameter]
         ngrok.disconnect(public_url)
         ngrok.kill()
         print("✅ ngrok이 종료되었습니다.")
-=======
-    # if public_url:
-    #     print("\n🛠️ ngrok 터널을 종료 중입니다...")
-    #     ngrok.disconnect(public_url)
-    #     ngrok.kill()
-    #     print("✅ ngrok이 종료되었습니다.")
->>>>>>> Stashed changes
 
 
 app = FastAPI(lifespan=lifespan)

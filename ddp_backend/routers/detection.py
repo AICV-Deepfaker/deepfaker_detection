@@ -2,17 +2,17 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from pydantic import Field
-from sqlalchemy.orm import Session
+from sqlmodel.orm.session import Session
 
 from ddp_backend.core.database import get_db
 from ddp_backend.core.s3 import upload_video_to_s3
 from ddp_backend.core.security import get_current_user
-from ddp_backend.models import User
+from ddp_backend.models import Source, User, Video
 from ddp_backend.schemas.api import APIOutputDeep, APIOutputFast
 from ddp_backend.schemas.enums import AnalyzeMode, ModelName, OriginPath, Result, Status
 from ddp_backend.schemas.report import STTReport, VideoReport
-from ddp_backend.services.crud import CRUDResult, CRUDVideo, VideoCreate
-from ddp_backend.services.crud.source import CRUDSource, SourceCreate
+from ddp_backend.services.crud import CRUDResult, CRUDVideo
+from ddp_backend.services.crud.source import CRUDSource
 from ddp_backend.task.detection import predict_deepfake_deep, predict_deepfake_fast
 
 router = APIRouter(prefix="/prediction", tags=["prediction"])
@@ -30,7 +30,7 @@ async def predict_deepfake(
     user_id = user.user_id
     video = CRUDVideo.create(
         db,
-        VideoCreate(
+        Video(
             user_id=user_id,
             origin_path=OriginPath.UPLOAD,
         ),
@@ -39,7 +39,7 @@ async def predict_deepfake(
     s3_path = upload_video_to_s3(file.file, filename)
     CRUDSource.create(
         db,
-        SourceCreate(
+        Source(
             video_id=video.video_id,
             s3_path=s3_path,
         ),

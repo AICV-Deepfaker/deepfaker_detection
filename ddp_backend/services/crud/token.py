@@ -5,8 +5,8 @@ Token CRUD
 from uuid import UUID
 from datetime import datetime
 
-from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlmodel import select
+from sqlmodel.orm.session import Session
 
 from ddp_backend.models import Token
 

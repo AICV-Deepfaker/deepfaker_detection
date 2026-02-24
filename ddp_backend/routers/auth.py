@@ -1,7 +1,7 @@
 # routers/auth_router.py
 from fastapi import APIRouter, Depends
 from fastapi.responses import RedirectResponse
-from sqlalchemy.orm import Session
+from sqlmodel.orm.session import Session
 from datetime import datetime, timezone, timedelta
 import httpx
 

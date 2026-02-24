@@ -3,36 +3,20 @@ Result CRUD
 """
 
 from uuid import UUID
-from pydantic import BaseModel
-from sqlalchemy.orm import Session
+from sqlmodel.orm.session import Session
 
 from ddp_backend.models import Result
-from ddp_backend.schemas.enums import Result as ResultEnum
 
 __all__ = [
-    "ResultCreate",
     "CRUDResult",
 ]
-
-
-class ResultCreate(BaseModel):
-    user_id: UUID
-    video_id: UUID
-    total_result: ResultEnum
-    is_fast: bool
 
 
 class CRUDResult:
     # 사용 : AI 분석 결과 저장
     @staticmethod
-    def create(db: Session, result_info: ResultCreate):
+    def create(db: Session, db_result: Result):
         """분석 결과 생성"""
-        db_result = Result(
-            user_id=result_info.user_id,
-            video_id=result_info.video_id,
-            is_fast=result_info.is_fast,
-            total_result=result_info.total_result,
-        )
         db.add(db_result)
         db.commit()
         db.refresh(db_result)

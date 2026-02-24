@@ -10,7 +10,7 @@ from datetime import datetime, timezone, timedelta
 from jose import JWTError, jwt, ExpiredSignatureError
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
-from sqlalchemy.orm import Session
+from sqlmodel.orm.session import Session
 from pydantic import SecretStr
 
 from uuid import UUID
@@ -120,7 +120,7 @@ def get_current_user(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="존재하지 않는 유저입니다")
     
     # 로그아웃된 토큰 사용 시
-    if user.tokens and user.tokens.revoked:
+    if user.token and user.token.revoked:
         raise HTTPException(status_code=401, detail="비정상적인 접근입니다. 다시 로그인해주세요")
     
     return user # 보통 객체를 받아서 라우터 내부에서 user_id 뽑음
