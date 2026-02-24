@@ -1,7 +1,10 @@
 # 프론트 연결
 
-from fastapi import APIRouter, Depends
+from typing import Optional
+
+from fastapi import APIRouter, Depends, File, Form, UploadFile
 from sqlalchemy.orm import Session
+
 from ddp_backend.schemas.enums import LoginMethod
 from ddp_backend.core.database import get_db
 from ddp_backend.core.security import get_current_user
@@ -40,10 +43,27 @@ def check_email_route(body: CheckEmail, db: Session = Depends(get_db)):
 def check_nickname_route(body: CheckNickname, db: Session = Depends(get_db)):
     return DuplicateCheckResponse(is_duplicate=check_nickname_duplicate(db, body.nickname))
 
-# 회원가입 - 이메일/닉네임 중복 확인 후 유저 생성 (로컬)
+# 회원가입 - multipart/form-data (텍스트 필드 + 선택적 이미지 파일)
 @router.post("/register", response_model=UserCreateResponse)
-def register_route(user_info: UserCreate, db: Session = Depends(get_db)):
-    return register(db, user_info, LoginMethod.LOCAL)
+async def register_route(
+    email: str = Form(...),
+    password: str = Form(...),
+    name: str = Form(...),
+    nickname: str = Form(...),
+    birth: Optional[str] = Form(None),
+    affiliation: Optional[str] = Form(None),
+    profile_image: Optional[UploadFile] = File(None),
+    db: Session = Depends(get_db)
+):
+    user_info = UserCreate(
+        email=email,
+        password=password,
+        name=name,
+        nickname=nickname,
+        birth=birth if birth else None,
+        affiliation=affiliation if affiliation else None,
+    )
+    return register(db, user_info, LoginMethod.LOCAL, profile_image_file=profile_image)
 
 # 아이디 찾기 - 이름/생년월일로 이메일 조회 (마스킹 처리)
 @router.post("/find-id", response_model=FindIdResponse)
@@ -55,16 +75,22 @@ def find_id_route(user_info: FindId, db: Session = Depends(get_db)):
 def find_password_route(user_info: FindPassword, db: Session = Depends(get_db)):
     return find_password(db, user_info)
 
-# 회원정보수정 - 비밀번호/프로필이미지/소속 변경 (토큰 필요)
+# 회원정보수정 - multipart/form-data (비밀번호/소속/프로필이미지) (토큰 필요)
 @router.patch("/edit", response_model=UserEditResponse)
-def edit_route(
-    update_info: UserEdit,
+async def edit_route(
+    new_password: Optional[str] = Form(None),
+    new_affiliation: Optional[str] = Form(None),
+    new_profile_image: Optional[UploadFile] = File(None),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    return edit_user(db, current_user.user_id, update_info)
+    update_info = UserEdit(
+        new_password=new_password if new_password else None,
+        new_affiliation=new_affiliation if new_affiliation else None,
+    )
+    return edit_user(db, current_user.user_id, update_info, profile_image_file=new_profile_image)
 
-# 프로필 이미지 삭제 - delete_profile_image=True 요청 시 이미지 삭제 (토큰 필요)
+# 프로필 이미지 삭제 (토큰 필요)
 @router.delete("/profile/delete", response_model=UserMeResponse)
 def delete_profile_route(
     db: Session = Depends(get_db),

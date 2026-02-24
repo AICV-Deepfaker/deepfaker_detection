@@ -114,8 +114,16 @@ export default function MemberInfoScreen() {
   const handleSaveProfile = async () => {
     if (!authEmail) return;
     setSaving(true);
+    // 기존 S3 URL과 다른 로컬 URI일 때만 업로드
+    const hasNewPhoto = !!editPhotoUri && editPhotoUri !== profile?.profile_image;
     try {
-      await withAuth((token) => editUser(token, { new_affiliation: editAffiliation }));
+      await withAuth((token) =>
+        editUser(
+          token,
+          { new_affiliation: editAffiliation },
+          hasNewPhoto ? editPhotoUri : undefined
+        )
+      );
       await load();
       setEditMode(false);
       Alert.alert('저장 완료', '프로필이 업데이트되었습니다.');
