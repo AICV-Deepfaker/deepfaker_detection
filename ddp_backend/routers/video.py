@@ -9,15 +9,13 @@ from sqlalchemy.orm import Session
 
 from ddp_backend.core.database import get_db
 from ddp_backend.core.s3 import upload_file_to_s3
+from ddp_backend.core.security import get_current_user
 from ddp_backend.models.models import Video, Source
 from ddp_backend.schemas.enums import OriginPath, VideoStatus
 
+from ddp_backend.schemas.user import UserRead
 from ddp_backend.task.video_processing import process_uploaded_video, process_youtube_video
 
-# 팀 프로젝트에 이미 인증 dependency가 있다면 교체해야 함
-# 일단은 테스트용으로 user_id를 1로 고정하는 임시 버전도 아래에 넣어둠
-def _get_user_id_for_now():
-    return 1
 
 router = APIRouter(prefix="/videos", tags=["videos"])
 
@@ -30,9 +28,10 @@ class LinkRequest(BaseModel):
 def upload_video(
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
+    user: UserRead = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    user_id = _get_user_id_for_now()
+    user_id = user.user_id
 
     # 1) videos 생성
     video = Video(user_id=user_id, origin_path=OriginPath.UPLOAD, source_url=None)
@@ -67,9 +66,10 @@ def upload_video(
 def link_video(
     payload: LinkRequest,
     background_tasks: BackgroundTasks,
+    user: UserRead = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    user_id = _get_user_id_for_now()
+    user_id = user.user_id
 
     video = Video(user_id=user_id, origin_path=OriginPath.LINK, source_url=str(payload.url))
     db.add(video)

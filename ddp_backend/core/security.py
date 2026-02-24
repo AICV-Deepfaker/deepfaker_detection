@@ -10,7 +10,7 @@ from datetime import datetime, timezone, timedelta
 from jose import JWTError, jwt, ExpiredSignatureError
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
-from sqlalchemy.orm import Session
+from sqlmodel.orm.session import Session
 from pydantic import SecretStr
 
 from uuid import UUID
@@ -18,6 +18,7 @@ from uuid import UUID
 from ddp_backend.core.config import settings  # 수정
 from ddp_backend.core.database import get_db
 from ddp_backend.services.crud.user import CRUDUser
+from ddp_backend.schemas.user import UserRead
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -27,10 +28,10 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 # jwt access 토큰 생성
 # =========
 def create_access_token(user_id: UUID, expires_delta: timedelta | None = None):
-    expire = datetime.now(timezone.utc) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES) # 기본값
+    expire = datetime.now() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES) # 기본값
 
     if expires_delta: # 만료기간을 따로 지정할 경우
-        expire = datetime.now(timezone.utc) + expires_delta # 덮어씌움
+        expire = datetime.now() + expires_delta # 덮어씌움
 
     encoded_jwt = jwt.encode(
             {
@@ -49,10 +50,10 @@ def create_access_token(user_id: UUID, expires_delta: timedelta | None = None):
 # jwt refresh 토큰 생성
 # =========
 def create_refresh_token(user_id: UUID, expires_delta: timedelta | None = None):
-    expire = datetime.now(timezone.utc) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS) # 기본값
+    expire = datetime.now() + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS) # 기본값
 
     if expires_delta: # 만료기간을 따로 지정할 경우
-        expire = datetime.now(timezone.utc) + expires_delta # 덮어씌움
+        expire = datetime.now() + expires_delta # 덮어씌움
 
     encoded_jwt = jwt.encode(
             {
@@ -120,10 +121,10 @@ def get_current_user(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="존재하지 않는 유저입니다")
     
     # 로그아웃된 토큰 사용 시
-    if user.tokens and user.tokens.revoked:
+    if user.token and user.token.revoked:
         raise HTTPException(status_code=401, detail="비정상적인 접근입니다. 다시 로그인해주세요")
     
-    return user # 보통 객체를 받아서 라우터 내부에서 user_id 뽑음
+    return UserRead.model_validate(user) # 보통 객체를 받아서 라우터 내부에서 user_id 뽑음
 
 
 # =========

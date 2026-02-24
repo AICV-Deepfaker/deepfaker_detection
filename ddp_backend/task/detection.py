@@ -2,7 +2,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from redis import Redis
-from sqlalchemy.orm import Session
+from sqlmodel.orm.session import Session
 from taskiq import TaskiqDepends
 
 from ddp_backend.core.database import get_db
@@ -10,6 +10,7 @@ from ddp_backend.core.model import detection_pipeline
 from ddp_backend.core.redis_bridge import NOTIFY_CHANNEL, REDIS_URL
 from ddp_backend.core.s3 import download_video_from_s3
 from ddp_backend.core.tk_broker import broker
+from ddp_backend.models import Result, FastReport, DeepReport
 from ddp_backend.schemas.api import WorkerPubSubAPI
 from ddp_backend.schemas.enums import Status, VideoStatus
 from ddp_backend.schemas.report import STTScript
@@ -19,10 +20,7 @@ from ddp_backend.services.crud import (
     CRUDResult,
     CRUDSource,
     CRUDVideo,
-    DeepReportCreate,
-    FastReportCreate,
 )
-from ddp_backend.services.crud.result import ResultCreate
 
 _redis = Redis.from_url(REDIS_URL, db=1)
 
@@ -53,7 +51,7 @@ def predict_deepfake_fast(
 
         result = CRUDResult.create(
             db,
-            ResultCreate(
+            Result(
                 user_id=src.video.user_id,
                 video_id=src.video.video_id,
                 total_result=output.result,
@@ -62,7 +60,7 @@ def predict_deepfake_fast(
         )
         CRUDFastReport.create(
             db,
-            FastReportCreate(
+            FastReport(
                 user_id=src.video.user_id,
                 result_id=result.result_id,
                 freq_result=output.wavelet.result,
@@ -112,7 +110,7 @@ def predict_deepfake_deep(
 
         result = CRUDResult.create(
             db,
-            ResultCreate(
+            Result(
                 user_id=src.video.user_id,
                 video_id=src.video.video_id,
                 total_result=output.result,
@@ -121,7 +119,7 @@ def predict_deepfake_deep(
         )
         CRUDDeepReport.create(
             db,
-            DeepReportCreate(
+            DeepReport(
                 user_id=src.video.user_id,
                 result_id=result.result_id,
                 unite_result=output.unite.result,

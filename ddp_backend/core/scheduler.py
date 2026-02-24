@@ -4,12 +4,13 @@ from datetime import datetime, timezone
 from ddp_backend.core.database import SessionLocal # DB에서 직접 처리
 from ddp_backend.models.models import Token
 
+# TODO fit it to sqlalchemy 2.0 style
 
 def revoke_expired_tokens():
     """30일 이상 미사용 토큰 revoked=True 처리"""
     db = SessionLocal()
     try:
-        expired = datetime.now(timezone.utc)
+        expired = datetime.now()
 
         db.query(Token)\
             .filter(Token.revoked == False)\

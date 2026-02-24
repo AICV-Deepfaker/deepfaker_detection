@@ -7,6 +7,7 @@ from ddp_backend.models.models import Alert, Result, User
 
 ALERT_POINT = 1000  # 정책: 신고 1회 1000점
 
+# TODO FIXME
 
 def create_alert(db: Session, user_id: int, result_id: int) -> dict:
     # result 존재 확인

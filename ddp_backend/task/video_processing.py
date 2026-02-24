@@ -1,18 +1,17 @@
 from __future__ import annotations
 
 import tempfile
+import uuid
 from pathlib import Path
-from typing import Optional
 
-from sqlalchemy.orm import Session
+from sqlmodel.orm.session import Session
+from sqlmodel import select
 
 from ddp_backend.core.database import SessionLocal
 from ddp_backend.core.s3 import upload_file_to_s3, download_file_from_s3
 from ddp_backend.models.models import Video, Source, Result
-from ddp_backend.schemas.enums import VideoStatus, OriginPath
+from ddp_backend.schemas.enums import VideoStatus
 from ddp_backend.schemas.enums import Result as ResultEnum
-from ddp_backend.models.models import ResultEnum
-from pathlib import Path
 import subprocess
 import shutil
 
@@ -23,11 +22,12 @@ def _set_video_status(db: Session, video: Video, status: VideoStatus) -> None:
     db.refresh(video)  # 선택이지만 추천
 
 
-def _upsert_source(db: Session, video_id: int, s3_key: str) -> Source:
+def _upsert_source(db: Session, video_id: uuid.UUID, s3_key: str) -> Source:
     """
     sources.video_id 는 UNIQUE라서, 있으면 업데이트 / 없으면 생성
     """
-    src = db.query(Source).filter(Source.video_id == video_id).first()
+    query = select(Source).where(Source.video_id == video_id)
+    src = db.scalars(query).first()
     if src:
         src.s3_path = s3_key
     else:
@@ -40,15 +40,16 @@ def _upsert_source(db: Session, video_id: int, s3_key: str) -> Source:
 def _upsert_result(
     db: Session,
     *,
-    user_id: int,
-    video_id: int,
+    user_id: uuid.UUID,
+    video_id: uuid.UUID,
     is_fast: bool,
     total_result: ResultEnum,
 ) -> Result:
     """
     results.video_id 는 UNIQUE라서, 있으면 업데이트 / 없으면 생성
     """
-    row = db.query(Result).filter(Result.video_id == video_id).first()
+    query = select(Result).where(Result.video_id == video_id)
+    row = db.scalars(query).first()
     if row:
         row.is_fast = is_fast
         row.total_result = total_result
@@ -68,7 +69,7 @@ def _run_dummy_inference(video_path: Path) -> ResultEnum:
     return ResultEnum.REAL
 
 
-def process_uploaded_video(video_id: int) -> None:
+def process_uploaded_video(video_id: uuid.UUID) -> None:
     """
     업로드된 영상 처리:
     - S3에서 다운로드
@@ -77,13 +78,15 @@ def process_uploaded_video(video_id: int) -> None:
     """
     db = SessionLocal()
     try:
-        video = db.query(Video).filter(Video.video_id == video_id).first()
+        query = select(Video).where(Video.video_id == video_id)
+        video = db.scalars(query).first()
         if not video:
             return
 
         _set_video_status(db, video, VideoStatus.PROCESSING)
 
-        source = db.query(Source).filter(Source.video_id == video_id).first()
+        query = select(Source).where(Source.video_id == video_id)
+        source = db.scalars(query).first()
         if not source:
             _set_video_status(db, video, VideoStatus.FAILED)
             return
@@ -105,7 +108,8 @@ def process_uploaded_video(video_id: int) -> None:
         _set_video_status(db, video, VideoStatus.COMPLETED)
 
     except Exception:
-        video = db.query(Video).filter(Video.video_id == video_id).first()
+        query = select(Video).where(Video.video_id == video_id)
+        video = db.scalars(query).first()
         if video:
             _set_video_status(db, video, VideoStatus.FAILED)
         raise
@@ -174,7 +178,7 @@ def _download_youtube_to_path(url: str, local_path: str | Path) -> str:
     return str(p)
 
 
-def process_youtube_video(video_id: int) -> None:
+def process_youtube_video(video_id: uuid.UUID) -> None:
     print(f"[BG] process_youtube_video start video_id={video_id}")
     """
     유튜브 링크 처리:
@@ -186,7 +190,8 @@ def process_youtube_video(video_id: int) -> None:
     """
     db = SessionLocal()
     try:
-        video = db.query(Video).filter(Video.video_id == video_id).first()
+        query = select(Video).where(Video.video_id == video_id)
+        video = db.scalars(query).first()
         if not video:
             return
 
@@ -227,7 +232,8 @@ def process_youtube_video(video_id: int) -> None:
         _set_video_status(db, video, VideoStatus.COMPLETED)
 
     except Exception:
-        video = db.query(Video).filter(Video.video_id == video_id).first()
+        query = select(Video).where(Video.video_id == video_id)
+        video = db.scalars(query).first()
         if video:
             _set_video_status(db, video, VideoStatus.FAILED)
         raise

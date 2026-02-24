@@ -3,31 +3,23 @@ Source CRUD
 """
 
 from uuid import UUID
-from pydantic import BaseModel
-from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlmodel import select
+from sqlmodel.orm.session import Session
 
 from ddp_backend.models import Source
 
 __all__ = [
-    "SourceCreate",
     "CRUDSource",
 ]
-
-
-class SourceCreate(BaseModel):
-    video_id: UUID
-    s3_path: str
-
 
 class CRUDSource:
     # 사용 : s3 업로드 후 video_id와 함께 저장
     @staticmethod
-    def create(db: Session, source_info: SourceCreate):
+    def create(db: Session, db_source: Source):
         """S3 경로 저장"""
         db_source = Source(
-            video_id=source_info.video_id,
-            s3_path=source_info.s3_path,
+            video_id=db_source.video_id,
+            s3_path=db_source.s3_path,
         )
         db.add(db_source)
         db.commit()

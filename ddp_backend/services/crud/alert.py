@@ -3,29 +3,21 @@ Alert CRUD
 """
 
 from uuid import UUID
-from pydantic import BaseModel
-from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlmodel import select
+from sqlmodel.orm.session import Session
 
 from ddp_backend.models import Alert
 
 __all__ = [
-    "AlertCreate",
     "CRUDAlert",
 ]
-
-
-class AlertCreate(BaseModel):
-    user_id: UUID
-    result_id: UUID | None = None
 
 
 class CRUDAlert:
     # 사용 : 신고하기
     @staticmethod
-    def create(db: Session, alert_info: AlertCreate):
+    def create(db: Session, db_alert: Alert):
         """신고 생성"""
-        db_alert = Alert(user_id=alert_info.user_id, result_id=alert_info.result_id)
         db.add(db_alert)
         db.commit()
         db.refresh(db_alert)

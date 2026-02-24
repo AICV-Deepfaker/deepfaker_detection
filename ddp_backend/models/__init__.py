@@ -5,9 +5,10 @@ from .models import (
     Result,
     Source,
     Token,
-    User,
     Video,
 )
+
+from .user import User
 
 
 __all__ = [

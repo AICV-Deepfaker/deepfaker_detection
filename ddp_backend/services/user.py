@@ -1,15 +1,15 @@
-from sqlalchemy.orm import Session
-from fastapi import HTTPException, UploadFile, status
+from sqlmodel.orm.session import Session
+from fastapi import HTTPException, status, UploadFile
 from pydantic import SecretStr
 from uuid import UUID
 
 from ddp_backend.core.security import get_password_hash
 from ddp_backend.core.mailer import send_temp_pwd
 from ddp_backend.core.s3 import upload_image_to_s3, delete_image_from_s3, delete_video_from_s3
+from ddp_backend.schemas.user import UserCreate, UserCreateCRUD, UserCreateResponse, UserMeResponse, FindId, FindIdResponse, FindPassword, UserEdit, UserEditResponse
 from ddp_backend.schemas.enums import Affiliation
 
-from ddp_backend.schemas.user import UserCreate, UserCreateResponse, UserMeResponse, FindId, FindIdResponse, FindPassword, UserEdit, UserEditResponse
-from ddp_backend.services.crud.user import CRUDUser, UserCreate as UserCreateCRUD, UserUpdate
+from ddp_backend.services.crud.user import CRUDUser, UserUpdate
 
 from ddp_backend.schemas.enums import LoginMethod
 
@@ -106,6 +106,7 @@ def register(
         profile_image=user_info.profile_image,  # Google OAuth: URL 문자열
         affiliation=user_info.affiliation,
     ))
+    assert new_user.user_id is not None
 
     # 5. 프로필 이미지 파일 S3 업로드 (로컬 회원가입)
     if profile_image_file:
@@ -155,6 +156,7 @@ def find_password(db: Session, user_info: FindPassword) -> bool:
             status_code=status.HTTP_404_NOT_FOUND,
             detail="유저를 찾을 수 없습니다"
             )
+    assert user.user_id is not None
 
     if user.login_method != LoginMethod.LOCAL:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,

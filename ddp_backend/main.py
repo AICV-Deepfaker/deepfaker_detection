@@ -19,11 +19,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pyngrok import ngrok  # type: ignore
 
-from ddp_backend.core.database import engine
 from ddp_backend.core.redis_bridge import redis_connector
-from ddp_backend.core.scheduler import shutdown_schedular, start_schedular
 from ddp_backend.core.tk_broker import broker
-from ddp_backend.models.models import Base
 from ddp_backend.routers import auth, detection, user, websocket
 from ddp_backend.core.model import load_all_model
 
@@ -31,7 +28,7 @@ _BACKEND_DIR = Path(__file__).parent
 load_dotenv(_BACKEND_DIR / ".env")
 
 try:
-    from ddp_backend.services.dependencies import load_all_model
+    from ddp_backend.core.model import load_all_model
 except Exception:
     load_all_model = None
 # ==========================================

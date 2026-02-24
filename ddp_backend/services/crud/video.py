@@ -3,35 +3,22 @@ Video CRUD
 """
 
 from uuid import UUID
-from pydantic import BaseModel
-from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlmodel import select
+from sqlmodel.orm.session import Session
 
 from ddp_backend.models import Video
-from ddp_backend.schemas.enums import OriginPath, VideoStatus
+from ddp_backend.schemas.enums import VideoStatus
 
 __all__ = [
-    "VideoCreate",
     "CRUDVideo",
 ]
-
-
-class VideoCreate(BaseModel):
-    user_id: UUID
-    origin_path: OriginPath
-    source_url: str | None = None
 
 
 class CRUDVideo:
     # 사용 : 비디오 url/업로드 입력
     @staticmethod
-    def create(db: Session, video_info: VideoCreate):
+    def create(db: Session, db_video: Video):
         """비디오 생성"""
-        db_video = Video(  # 객체
-            user_id=video_info.user_id,
-            origin_path=video_info.origin_path,
-            source_url=video_info.source_url,  # 링크 입력 시
-        )
         db.add(db_video)
         db.commit()
         db.refresh(db_video)  # video_id 포함

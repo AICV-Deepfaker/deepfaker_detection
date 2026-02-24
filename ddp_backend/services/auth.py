@@ -1,7 +1,8 @@
 # services/auth.py (비즈니스 로직)
 # 토큰 생성, 토큰 갱신, 비밀번호 검증, 로그인, 로그아웃
 
-from sqlalchemy.orm import Session
+
+from sqlmodel.orm.session import Session
 from fastapi import HTTPException, status
 from datetime import datetime, timezone, timedelta
 from uuid import UUID
@@ -75,14 +76,14 @@ def reissue_token(db: Session, refresh_token: str):
         )
     
     # refresh 유효
-    if datetime.now(timezone.utc) < token.expires_at:
+    if datetime.now() < token.expires_at:
         new_access_token = create_access_token(token.user_id) 
         new_refresh_token = create_refresh_token(token.user_id) 
         save_refresh_token(
             db,
             user_id=token.user_id,
             refresh_token=new_refresh_token,
-            expires_at=datetime.now(timezone.utc) + 
+            expires_at=datetime.now() + 
                 timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
         )
         return {"access_token": new_access_token, "refresh_token": new_refresh_token}
@@ -108,6 +109,7 @@ def login(db:Session, user_info: UserLogin) -> TokenResponse:
             )
 
     # 2. 토큰 발급
+    assert user.user_id is not None
     access_token = create_access_token(user.user_id)
     refresh_token = create_refresh_token(user.user_id)
 
@@ -116,7 +118,7 @@ def login(db:Session, user_info: UserLogin) -> TokenResponse:
         db,
         user_id=user.user_id,
         refresh_token=refresh_token,
-        expires_at=datetime.now(timezone.utc) + 
+        expires_at=datetime.now() + 
             timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
     )
     
@@ -181,7 +183,7 @@ def google_login(db: Session, user_info: UserCreate) -> TokenResponse:
         db,
         user_id=user.user_id,
         refresh_token=refresh_token,
-        expires_at=datetime.now(timezone.utc) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
+        expires_at=datetime.now() + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
     )
     return TokenResponse(
         access_token=access_token,

@@ -2,24 +2,35 @@
 
 from typing import Optional
 from fastapi import APIRouter, Depends, File, Form, UploadFile, HTTPException
-from sqlalchemy.orm import Session
+from sqlmodel.orm.session import Session
 
-from ddp_backend.schemas.enums import LoginMethod
 from ddp_backend.core.database import get_db
 from ddp_backend.core.security import get_current_user
-from ddp_backend.models import User
+from ddp_backend.schemas.enums import LoginMethod
 from ddp_backend.schemas.user import (
-    UserCreate, UserCreateResponse,
-    FindId, FindIdResponse,
-    FindPassword, DuplicateCheckResponse,
-    CheckEmail, CheckNickname,
-    UserEdit, UserEditResponse,
-    UserMeResponse
+    CheckEmail,
+    CheckNickname,
+    DeleteProfileImage,
+    DuplicateCheckResponse,
+    FindId,
+    FindIdResponse,
+    FindPassword,
+    UserCreate,
+    UserCreateResponse,
+    UserEdit,
+    UserEditResponse,
+    UserMeResponse,
+    UserRead,
 )
 from ddp_backend.services.user import (
-    check_email_duplicate, check_nickname_duplicate,
-    register, edit_user, delete_user,
-    find_id, find_password, delete_profile_image
+    check_email_duplicate,
+    check_nickname_duplicate,
+    delete_profile_image,
+    delete_user,
+    edit_user,
+    find_id,
+    find_password,
+    register,
 )
 
 router = APIRouter(prefix="/user", tags=["user"])
@@ -28,7 +39,7 @@ router = APIRouter(prefix="/user", tags=["user"])
 @router.get("/me", response_model=UserMeResponse)
 def get_me_route(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: UserRead = Depends(get_current_user)
 ):
     return UserMeResponse.model_validate(current_user)
 
@@ -43,7 +54,7 @@ def check_nickname_route(body: CheckNickname, db: Session = Depends(get_db)):
     return DuplicateCheckResponse(is_duplicate=check_nickname_duplicate(db, body.nickname))
 
 # 회원가입 - 이메일/닉네임 중복 확인 후 유저 생성 (로컬)
-@router.post("/register", response_model=UserResponse)
+@router.post("/register", response_model=UserCreateResponse)
 def register_route(user_info: UserCreate, db: Session = Depends(get_db)):
     return register(db, user_info, LoginMethod.LOCAL)
 
@@ -64,7 +75,7 @@ async def edit_route(
     new_affiliation: Optional[str] = Form(None),
     new_profile_image: Optional[UploadFile] = File(None),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: UserRead = Depends(get_current_user)
 ):
     update_info = UserEdit(
         new_password=new_password if new_password else None,
@@ -76,7 +87,7 @@ async def edit_route(
 @router.delete("/profile/delete", response_model=UserMeResponse)
 def delete_profile_route(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: UserRead = Depends(get_current_user)
 ):
     return delete_profile_image(db, current_user.user_id)
 
@@ -84,6 +95,6 @@ def delete_profile_route(
 @router.delete("/withdraw")
 def withdraw_route(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: UserRead = Depends(get_current_user)
 ):
     return delete_user(db, current_user.user_id)

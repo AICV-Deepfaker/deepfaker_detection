@@ -6,28 +6,18 @@ from uuid import UUID
 from datetime import date
 
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlmodel import select
 from sqlalchemy.exc import NoResultFound
-from sqlalchemy.orm import Session
+from sqlmodel.orm.session import Session
 
 from ddp_backend.models import User
-from ddp_backend.schemas.enums import Affiliation, LoginMethod
+from ddp_backend.schemas.user import UserCreateCRUD
+from ddp_backend.schemas.enums import Affiliation
 
 __all__ = [
-    "UserCreate",
     "CRUDUser",
 ]
 
-
-class UserCreate(BaseModel):
-    email: str
-    login_method: LoginMethod = LoginMethod.LOCAL
-    hashed_password: str | None = None 
-    name: str
-    nickname: str
-    birth: date | None = None # 로컬만 서비스에서 필수 처리
-    profile_image: str | None = None
-    affiliation: Affiliation | None = None
 
 
 class UserUpdate(BaseModel):
@@ -39,20 +29,9 @@ class UserUpdate(BaseModel):
 class CRUDUser:
     # 사용 : 회원가입
     @staticmethod
-    def create(db: Session, user_info: UserCreate):
+    def create(db: Session, user_create: UserCreateCRUD):
         """유저 생성"""
-        db_user = User(  # 객체
-            email=user_info.email,
-            login_method=user_info.login_method,
-            hashed_password=user_info.hashed_password,  # service에서 입력
-            name=user_info.name,
-            nickname=user_info.nickname,
-            birth=user_info.birth,
-            profile_image=user_info.profile_image,  # s3 url, option
-            affiliation=user_info.affiliation,  # option
-            activation_points=0,
-        )
-
+        db_user = User.model_validate(user_create)
         db.add(db_user)  # db_user에 추가
         db.commit()  # DB에 저장
         db.refresh(db_user)  # DB에서 다시 읽기

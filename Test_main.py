@@ -32,7 +32,7 @@
 # #     token = Token(
 # #         user_id=user.user_id,
 # #         refresh_token="test_refresh_token",
-# #         expires_at=datetime.now(timezone.utc) + timedelta(days=7),
+# #         expires_at=datetime.now() + timedelta(days=7),
 # #     )
     
 # #     db.add(token)
@@ -55,7 +55,7 @@
 # #     oauth_token = Token(
 # #     user_id=oauth_user.user_id,
 # #     refresh_token="oauth_refresh_token",
-# #     expires_at=datetime.now(timezone.utc) + timedelta(days=7),
+# #     expires_at=datetime.now() + timedelta(days=7),
 # #     )
 
 # #     db.add(oauth_token)  # 이것도 빠져있었음
@@ -90,7 +90,7 @@
 # # source = Source(
 # #     video_id=video.video_id,
 # #     s3_path="s3://bucket/test/video.mp4",
-# #     expires_at=datetime.now(timezone.utc) + timedelta(hours=12),
+# #     expires_at=datetime.now() + timedelta(hours=12),
 # # )
 # # db.add(source)
 # # db.commit()

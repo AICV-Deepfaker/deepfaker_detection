@@ -1,41 +1,35 @@
 # 테이블이 4개 정도이므로 하나의 파일로 테이블 구성
 from __future__ import annotations
 
-from datetime import date, datetime, timedelta, timezone
-from enum import Enum as _Enum
-from typing import Any
+import uuid
+from datetime import datetime, timedelta
+from typing import TYPE_CHECKING, Annotated, Any
 
-from ddp_backend.core.database import Base
 from pydantic import BaseModel
+from pydantic.types import AwareDatetime
 from sqlalchemy import (
     JSON,
     BigInteger,
-    Boolean,
-    Date,
     DateTime,
     Dialect,
-    Enum,
-    Float,
-    ForeignKey,
-    Integer,
-    String,
 )
-from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy.sql import func
 from sqlalchemy.types import TypeDecorator
-from sqlalchemy.dialects.postgresql import UUID
-import uuid
+from sqlmodel import Column, Field, Relationship
 
+from ddp_backend.core.config import settings
+from ddp_backend.core.database import Base
 from ddp_backend.schemas.enums import (
-    LoginMethod,
-    Affiliation,
-    VideoStatus,
     OriginPath,
     STTRiskLevel,
+    VideoStatus,
 )
 from ddp_backend.schemas.enums import Result as ResultEnum
 from ddp_backend.schemas.report import STTScript
 
+if TYPE_CHECKING:
+    from .user import User
+
+MAX_S3_LEN = 512
 
 class PydanticJSONType[T: BaseModel](TypeDecorator[T]):
     impl = JSON
@@ -60,245 +54,138 @@ class PydanticJSONType[T: BaseModel](TypeDecorator[T]):
         return self.pydantic_model.model_validate(value)
 
 
-def enum_to_value(x: list[_Enum]):
-    return [str(e.value) for e in x]
-
-
-
 # 0. source default expires_at : 12시간
-    # DB 내에 생성하면 DB 문법에 의존해야하므로 python 함수로 계산
+# DB 내에 생성하면 DB 문법에 의존해야하므로 python 함수로 계산
 def source_def_expire() -> datetime:
-    return datetime.now(timezone.utc) + timedelta(hours=12)
+    return datetime.now() + timedelta(hours=12)
 
 
-# 1. Users table
-class User(Base):
-    __tablename__ = "users"
-    user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, index=True, default=uuid.uuid4, init=False
-    )  # 효율성을 위해 user만 index=True
-    # 기본값 없는 필드 먼저
-    email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
-    login_method: Mapped[LoginMethod] = mapped_column(
-        Enum(LoginMethod, values_callable=enum_to_value), nullable=False
-    )
-    name: Mapped[str] = mapped_column(String(100), nullable=False)
-    nickname: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
-    # 기본값 없는 필드 나중에
-    hashed_password: Mapped[str | None] = mapped_column(String(255), nullable=True, default=None)  # 자체 로그인 시에만 사용
-    birth: Mapped[date | None] = mapped_column(Date, nullable=True, default=None)
-    profile_image: Mapped[str | None] = mapped_column(
-        String(500), nullable=True, default=None
-    )  # 필요 없을 경우 삭제
-    affiliation: Mapped[Affiliation | None] = mapped_column(
-        Enum(Affiliation, values_callable=enum_to_value), nullable=True, default=None
-    )
-    activation_points: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), init=False
-    )
-    # Relationships
-    tokens: Mapped[Token] = relationship(
-    "Token", back_populates="user", cascade="all, delete-orphan", uselist=False, init=False
-    )
-    videos: Mapped[list[Video]] = relationship(
-        "Video", back_populates="user", cascade="all, delete-orphan", init=False
-    )
-    results: Mapped[list[Result]] = relationship(
-        "Result", back_populates="user", cascade="all, delete-orphan", init=False
-    )
-    fast_reports: Mapped[list[FastReport]] = relationship(
-        "FastReport", back_populates="user", cascade="all, delete-orphan", init=False
-    )
-    deep_reports: Mapped[list[DeepReport]] = relationship(
-        "DeepReport", back_populates="user", cascade="all, delete-orphan", init=False
-    )
-    alerts: Mapped[list[Alert]] = relationship(
-        "Alert", back_populates="user", cascade="all, delete-orphan", init=False
+class CreatedTimestampMixin(Base):
+    created_at: Annotated[datetime, AwareDatetime] = Field(
+        default_factory=datetime.now,
+        sa_column=Column(DateTime(timezone=True), nullable=False),
     )
 
 
 # 2. Tokens table
-class Token(Base):
-    __tablename__ = "tokens"
-    token_id: Mapped[int] = mapped_column(
-        BigInteger, primary_key=True, autoincrement=True, init=False
+class Token(CreatedTimestampMixin, Base, table=True):
+    __tablename__: str = "tokens"  # type: ignore
+    token_id: int | None = Field(default=None, primary_key=True, sa_type=BigInteger)
+    user_id: uuid.UUID = Field(foreign_key="users.user_id", ondelete="CASCADE")
+    refresh_token: str = Field(max_length=255, unique=True)
+    expires_at: Annotated[datetime, AwareDatetime] = Field(
+        default_factory=lambda: datetime.now() +timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS),
+        sa_column=Column(DateTime(timezone=True), nullable=False)
     )
-    user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("users.user_id", ondelete="CASCADE")
-    )  # ondelete = 유저 삭제 시 함께 삭제
-    refresh_token: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
-    # device_uuid:Mapped[str] = mapped_column(String(255)) # 토큰 보안과 연관 (필요 없을 경우 삭제) # 추후 개발
-    expires_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        default=lambda: datetime.utcnow() + timedelta(hours=12),
-        nullable=False,
-        init=False,)  # 토큰 만료
-    created_at: Mapped[datetime] = mapped_column( # refresh 토큰 생성 시간
-        DateTime(timezone=True), server_default=func.now(), init=False
-    )
-    # With default
-    revoked: Mapped[bool] = mapped_column( # 로그아웃 되었거나 보안상 차단된 토큰 -> True시 반드시 재로그인
-        Boolean, default=False
-    )  
-    # Relationships
-    user: Mapped[User] = relationship("User", back_populates="tokens", init=False)
+    revoked: bool = False
 
+    user: User = Relationship(back_populates="token")
 
 
 # 3. Videos table
-class Video(Base):
-    __tablename__ = "videos"
-    video_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, init=False,
-    )
-    user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("users.user_id", ondelete="CASCADE")
-    )
-    origin_path: Mapped[OriginPath] = mapped_column(Enum(OriginPath, values_callable=enum_to_value), nullable=False)
-    source_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
-    status: Mapped[VideoStatus] = mapped_column(
-        Enum(VideoStatus, values_callable=enum_to_value), server_default=VideoStatus.PENDING, init=False
-    )
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), init=False
-    )
-    # Relationships
-    user: Mapped[User] = relationship("User", back_populates="videos", init=False)
-    source: Mapped[Source | None] = relationship(
-        "Source", back_populates="video", cascade="all, delete-orphan", init=False
-    )
-    result: Mapped[Result | None] = relationship(
-        "Result", back_populates="video", cascade="all, delete-orphan", init=False
-    )
+
+
+class Video(CreatedTimestampMixin, Base, table=True):
+    __tablename__: str = "videos"  # type: ignore
+    video_id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    user_id: uuid.UUID = Field(foreign_key="users.user_id", ondelete="CASCADE")
+    origin_path: OriginPath
+    source_url: str | None = Field(default=None, max_length=500)
+    status: VideoStatus = VideoStatus.PENDING
+
+    user: User = Relationship(back_populates="videos")
+    source: Source | None = Relationship(back_populates="video", cascade_delete=True)
+    result: Result | None = Relationship(back_populates="video", cascade_delete=True)
 
 
 # 4. Sources table (12시간이 지난 video 테이블, s3는 삭제)
-class Source(Base):  # S3 관리용 (일정 시간 후 삭제 대상)
-    __tablename__ = "sources"
-    source_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, init=False,
+class Source(CreatedTimestampMixin, Base, table=True):
+    __tablename__: str = "sources"  # type: ignore
+    source_id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    video_id: uuid.UUID = Field(foreign_key="videos.video_id", ondelete="CASCADE")
+    s3_path: str = Field(max_length=MAX_S3_LEN)
+    expires_at: Annotated[datetime, AwareDatetime] = Field(
+        default_factory=source_def_expire,
+        sa_column=Column(DateTime(timezone=True), nullable=False),
     )
-    video_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("videos.video_id", ondelete="CASCADE"), unique=True,
-    )
-    s3_path: Mapped[str] = mapped_column(String(500), nullable=False)
-    expires_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=source_def_expire, nullable=False, init=False,
-    )  # 12시간 후 만료 등 
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), init=False
-    )
-    # Relationships
-    video: Mapped[Video] = relationship("Video", back_populates="source", init=False)
+
+    video: Video = Relationship(back_populates="source")
 
 
 # 5. Results table
-class Result(Base):
-    __tablename__ = "results"
-    result_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, init=False,
+class Result(CreatedTimestampMixin, Base, table=True):
+    __tablename__: str = "results"  # type: ignore
+    result_id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    user_id: uuid.UUID = Field(foreign_key="users.user_id", ondelete="CASCADE")
+    video_id: uuid.UUID = Field(
+        foreign_key="videos.video_id", ondelete="CASCADE", unique=True
     )
-    user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("users.user_id", ondelete="CASCADE")
+    is_fast: bool
+    total_result: ResultEnum
+
+    user: User = Relationship(back_populates="results")
+    video: Video = Relationship(back_populates="result")
+    fast_report: FastReport | None = Relationship(
+        back_populates="result", cascade_delete=True
     )
-    video_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("videos.video_id", ondelete="CASCADE"), unique=True,
+    deep_report: DeepReport | None = Relationship(
+        back_populates="result", cascade_delete=True
     )
-    is_fast: Mapped[bool] = mapped_column(Boolean)
-    total_result: Mapped[ResultEnum] = mapped_column(Enum(ResultEnum, values_callable=enum_to_value))
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), init=False
-    )
-    # Relationships
-    user: Mapped[User] = relationship("User", back_populates="results", init=False)
-    video: Mapped[Video] = relationship("Video", back_populates="result", init=False)
-    fast_report: Mapped[FastReport | None] = relationship(
-        "FastReport",
-        back_populates="result",
-        uselist=False,
-        cascade="all, delete-orphan",
-        init=False,
-    )
-    deep_report: Mapped[DeepReport | None] = relationship(
-        "DeepReport",
-        back_populates="result",
-        uselist=False,
-        cascade="all, delete-orphan",
-        init=False,
-    )
-    alerts: Mapped[list[Alert]] = relationship("Alert", back_populates="result", init=False)
+    alerts: list[Alert] = Relationship(back_populates="result")
 
 
 # 6. FastReports table
-class FastReport(Base):
-    __tablename__ = "fast_reports"
-    fast_id: Mapped[int] = mapped_column(
-        BigInteger, primary_key=True, autoincrement=True, init=False,
-    )
-    user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("users.user_id", ondelete="CASCADE")
-    )
-    result_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("results.result_id", ondelete="CASCADE")
-    )
-    freq_result: Mapped[ResultEnum] = mapped_column(Enum(ResultEnum, values_callable=enum_to_value), nullable=False)
-    freq_conf: Mapped[float] = mapped_column(Float, nullable=False)
-    freq_image: Mapped[str] = mapped_column(String(255), nullable=False)
-    rppg_result: Mapped[ResultEnum] = mapped_column(Enum(ResultEnum, values_callable=enum_to_value), nullable=False)
-    rppg_conf: Mapped[float] = mapped_column(Float, nullable=False)
-    rppg_image: Mapped[str] = mapped_column(String(255), nullable=False)
-    stt_risk_level: Mapped[STTRiskLevel] = mapped_column(
-        Enum(STTRiskLevel, values_callable=enum_to_value), nullable=False
-    )
-    stt_script: Mapped[STTScript] = mapped_column(
-        PydanticJSONType(STTScript), nullable=False
-    )
-    # Relationships
-    user: Mapped[User] = relationship("User", back_populates="fast_reports", init=False)
-    result: Mapped[Result] = relationship(
-        "Result", back_populates="fast_report", init=False
-    )
+class ReportBase(Base):
+    user_id: uuid.UUID = Field(foreign_key="users.user_id", ondelete="CASCADE")
+    result_id: uuid.UUID = Field(foreign_key="results.result_id", ondelete="CASCADE")
 
 
-# 7. DeepReports table
-class DeepReport(Base):
-    __tablename__ = "deep_reports"
-    deep_id: Mapped[int] = mapped_column(
-        BigInteger, primary_key=True, autoincrement=True, init=False,
+class FastReport(ReportBase, table=True):
+    __tablename__: str = "fast_reports"  # type: ignore
+    fast_id: int | None = Field(default=None, primary_key=True, sa_type=BigInteger)
+
+    freq_result: ResultEnum
+    freq_conf: float
+    freq_image: str = Field(max_length=MAX_S3_LEN)
+    rppg_result: ResultEnum
+    rppg_conf: float
+    rppg_image: str = Field(max_length=MAX_S3_LEN)
+    stt_risk_level: STTRiskLevel
+    stt_script: STTScript = Field(
+        sa_column=Column(PydanticJSONType(STTScript), nullable=False)
     )
-    user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("users.user_id", ondelete="CASCADE")
-    )
-    result_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("results.result_id", ondelete="CASCADE")
-    )
-    unite_result: Mapped[ResultEnum] = mapped_column(Enum(ResultEnum, values_callable=enum_to_value), nullable=False)
-    unite_conf: Mapped[float] = mapped_column(Float, nullable=False)
-    # Relationships
-    user: Mapped[User] = relationship("User", back_populates="deep_reports", init=False)
-    result: Mapped[Result] = relationship(
-        "Result", back_populates="deep_report", init=False
-    )
+
+    fast_id: int | None = Field(primary_key=True, sa_type=BigInteger)
+    user: User = Relationship(back_populates="fast_reports")
+    result: Result = Relationship(back_populates="fast_report")
+
+
+class DeepReport(ReportBase, table=True):
+    __tablename__: str = "deep_reports"  # type: ignore
+    deep_id: int | None = Field(default=None, primary_key=True, sa_type=BigInteger)
+
+    unite_result: ResultEnum
+    unite_conf: float
+
+    user: User = Relationship(back_populates="deep_reports")
+    result: Result = Relationship(back_populates="deep_report")
 
 
 # 8. Alerts table
-class Alert(Base):  # 신고하기
-    __tablename__ = "alerts"
-    alert_id: Mapped[int] = mapped_column(
-        BigInteger, primary_key=True, autoincrement=True, init=False,
+class Alert(Base, table=True):
+    __tablename__: str = "alerts"  # type: ignore
+    alert_id: int | None = Field(default=None, primary_key=True, sa_type=BigInteger)
+    user_id: uuid.UUID = Field(foreign_key="users.user_id", ondelete="CASCADE")
+    result_id: uuid.UUID | None = Field(
+        default=None,
+        foreign_key="results.result_id",
+        ondelete="SET NULL",
+        nullable=True,
     )
-    user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("users.user_id", ondelete="CASCADE")
+    alerted_at: Annotated[datetime, AwareDatetime] = Field(
+        default_factory=datetime.now,
+        sa_column=Column(DateTime(timezone=True), nullable=False),
     )
-    result_id: Mapped[uuid.UUID | None] = mapped_column(
-    UUID(as_uuid=True), ForeignKey("results.result_id", ondelete="SET NULL"), nullable=True
-    )
-    alerted_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), init=False
-    )
-    # Relationships
-    user: Mapped[User] = relationship("User", back_populates="alerts", init=False)
-    result: Mapped[Result] = relationship(
-        "Result", back_populates="alerts", passive_deletes=True, init=False
-    )
+
+    user: User = Relationship(back_populates="alerts")
+    result: Result = Relationship(back_populates="alerts", passive_deletes=True)
