@@ -20,6 +20,7 @@ import {
   type Affiliation,
 } from '@/lib/auth-storage';
 import { editUser, getMyProfile } from '@/lib/account-api';
+import { withAuth } from '@/lib/with-auth';
 
 const ACCENT_GREEN = '#00CF90';
 const TEXT = '#111';
@@ -68,8 +69,11 @@ export default function MemberInfoScreen() {
       const email = auth?.email ?? null;
       setAuthEmail(email);
       if (!email || !auth?.accessToken) { setProfile(null); return; }
-      const p = await getMyProfile(auth.accessToken);
+      // access_token 만료 시 refresh_token으로 자동 재발급 후 재시도
+      const p = await withAuth((token) => getMyProfile(token));
       setProfile(p);
+    } catch {
+      setProfile(null);
     } finally {
       setLoading(false);
     }
@@ -111,14 +115,7 @@ export default function MemberInfoScreen() {
     if (!authEmail) return;
     setSaving(true);
     try {
-      const auth = await getAuth();
-      if (!auth?.accessToken) {
-        Alert.alert('오류', '로그인 정보를 찾을 수 없습니다.');
-        return;
-      }
-      await editUser(auth.accessToken, {
-        new_affiliation: editAffiliation,
-      });
+      await withAuth((token) => editUser(token, { new_affiliation: editAffiliation }));
       await load();
       setEditMode(false);
       Alert.alert('저장 완료', '프로필이 업데이트되었습니다.');
@@ -145,12 +142,7 @@ export default function MemberInfoScreen() {
     }
     setPwChanging(true);
     try {
-      const auth = await getAuth();
-      if (!auth?.accessToken) {
-        Alert.alert('오류', '로그인 정보를 찾을 수 없습니다.');
-        return;
-      }
-      await editUser(auth.accessToken, { new_password: newPw });
+      await withAuth((token) => editUser(token, { new_password: newPw }));
       setNewPw('');
       setNewPwConfirm('');
       Alert.alert('변경 완료', '비밀번호가 변경되었습니다.');

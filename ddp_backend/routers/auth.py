@@ -4,6 +4,7 @@ from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 from datetime import datetime, timezone, timedelta
 import httpx
+import urllib.parse
 
 from ddp_backend.core.config import settings
 from ddp_backend.core.database import get_db
@@ -53,11 +54,12 @@ def google_auth():
         "response_type": "code",
         "scope": "openid email profile",
     }
-    query = "&".join(f"{k}={v}" for k, v in params.items())
+    # urllib.parse.urlencode으로 redirect_uri 등 특수문자 포함 값을 올바르게 인코딩
+    query = urllib.parse.urlencode(params)
     return RedirectResponse(f"{GOOGLE_AUTH_URL}?{query}")
 
-# Google OAuth 콜백
-@router.get("/google/callback", response_model=TokenResponse)
+# Google OAuth 콜백 - 토큰 발급 후 앱 deep link로 redirect
+@router.get("/google/callback")
 def google_callback(code: str, db: Session = Depends(get_db)):
     with httpx.Client() as client:
         token_data = client.post(GOOGLE_TOKEN_URL, data={
@@ -80,12 +82,12 @@ def google_callback(code: str, db: Session = Depends(get_db)):
     user_info = UserCreate(
         email=userinfo["email"],
         name=userinfo.get("name", ""),
-        password=None, # google이 None이 들어올 수 있음 (service에서 처리)
+        password=None,
         profile_image=userinfo.get("picture"),
     )
     user = register(db, user_info, LoginMethod.GOOGLE)
 
-    # 토큰 발급
+    # 앱 토큰 발급
     access_token = create_access_token(user.user_id)
     refresh_token = create_refresh_token(user.user_id)
     save_refresh_token(
@@ -94,10 +96,14 @@ def google_callback(code: str, db: Session = Depends(get_db)):
         refresh_token=refresh_token,
         expires_at=datetime.now(timezone.utc) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
     )
-    return TokenResponse(
-        access_token=access_token,
-        refresh_token=refresh_token,
-        user_id=user.user_id,
-        email=user.email,
-        nickname=user.nickname
-    )
+
+    # 앱의 deep link로 redirect하여 토큰 전달
+    # WebBrowser.openAuthSessionAsync가 'ddp://auth?...' URL을 감지하고 앱으로 반환
+    query = urllib.parse.urlencode({
+        "access_token": access_token,
+        "refresh_token": refresh_token,
+        "user_id": str(user.user_id),
+        "email": user.email,
+        "nickname": user.nickname or "",
+    })
+    return RedirectResponse(f"ddp://auth?{query}", status_code=302)

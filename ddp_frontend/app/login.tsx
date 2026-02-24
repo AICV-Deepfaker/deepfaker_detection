@@ -1,8 +1,7 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import * as AuthSession from 'expo-auth-session';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -21,23 +20,23 @@ import { ThemedText } from '@/components/themed-text';
 import { setAuth } from '@/lib/auth-storage';
 import { login } from '@/lib/account-api';
 
-// Expo Go에서 WebBrowser 세션을 완료하기 위해 필요
-WebBrowser.maybeCompleteAuthSession();
-
 const ACCENT_GREEN = '#00CF90';
 const TEXT_COLOR = '#111';
 const SECONDARY_TEXT_COLOR = '#687076';
 
-const GOOGLE_WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || '';
-const EXPO_OWNER = process.env.EXPO_PUBLIC_EXPO_OWNER || '';
+const API_BASE = (process.env.EXPO_PUBLIC_API_URL ?? '').replace(/\/$/, '');
 
-// Google OAuth 전체 discovery 문서
-const GOOGLE_DISCOVERY = {
-  authorizationEndpoint: 'https://accounts.google.com/o/oauth2/v2/auth',
-  tokenEndpoint: 'https://oauth2.googleapis.com/token',
-  revocationEndpoint: 'https://oauth2.googleapis.com/revoke',
-  userInfoEndpoint: 'https://openidconnect.googleapis.com/v1/userinfo',
-};
+/** ddp://auth?key=val&... 형태의 deep link URL에서 파라미터를 파싱 */
+function parseDeepLinkParams(url: string): Record<string, string> {
+  const query = url.split('?')[1] ?? '';
+  const params: Record<string, string> = {};
+  for (const part of query.split('&')) {
+    const eqIdx = part.indexOf('=');
+    if (eqIdx === -1) continue;
+    params[part.slice(0, eqIdx)] = decodeURIComponent(part.slice(eqIdx + 1));
+  }
+  return params;
+}
 
 export default function LoginScreen() {
   const insets = useSafeAreaInsets();
@@ -45,33 +44,6 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
-
-  const redirectUri = `https://auth.expo.io/@${EXPO_OWNER.trim()}/ddp`;
-
-  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-  // @ts-ignore
-  const [, response, promptAsync] = AuthSession.useAuthRequest(
-    {
-      clientId: GOOGLE_WEB_CLIENT_ID,
-      scopes: ['openid', 'profile', 'email'],
-      redirectUri,
-      useProxy: true,
-    },
-    GOOGLE_DISCOVERY
-  );
-
-  useEffect(() => {
-    if (!response) return;
-    if (response.type === 'success') {
-      setGoogleLoading(false);
-      setAuth({ email: 'google', isLoggedIn: true } as any).then(() => router.replace('/(tabs)'));
-    } else if (response.type === 'error') {
-      setGoogleLoading(false);
-      Alert.alert('Google 로그인 실패', response.error?.message || '다시 시도해 주세요.');
-    } else if (response.type === 'dismiss') {
-      setGoogleLoading(false);
-    }
-  }, [response]);
 
   const handleLogin = useCallback(async () => {
     const trimmedEmail = email.trim();
@@ -100,14 +72,47 @@ export default function LoginScreen() {
     }
   }, [email, password]);
 
-  const handleGoogleLogin = useCallback(() => {
-    if (!GOOGLE_WEB_CLIENT_ID) {
-      Alert.alert('설정 필요', 'Google Client ID가 설정되지 않았습니다.');
+  const handleGoogleLogin = useCallback(async () => {
+    if (!API_BASE) {
+      Alert.alert('설정 오류', 'API URL이 설정되지 않았습니다.');
       return;
     }
     setGoogleLoading(true);
-    promptAsync();
-  }, [promptAsync]);
+    try {
+      // 백엔드의 서버 사이드 Google OAuth 시작
+      // 서버가 Google → callback → ddp://auth?access_token=...&refresh_token=... 로 redirect
+      const result = await WebBrowser.openAuthSessionAsync(
+        `${API_BASE}/auth/google`,
+        'ddp://auth'
+      );
+
+      if (result.type === 'success') {
+        const p = parseDeepLinkParams(result.url);
+        const { access_token, refresh_token, user_id, email: userEmail, nickname } = p;
+
+        if (!access_token || !refresh_token || !user_id || !userEmail) {
+          Alert.alert('Google 로그인 실패', '인증 정보를 받지 못했습니다.');
+          return;
+        }
+
+        await setAuth({
+          email: userEmail,
+          nickname: nickname || undefined,
+          accessToken: access_token,
+          refreshToken: refresh_token,
+          userId: parseInt(user_id, 10),
+          isLoggedIn: true,
+        });
+        router.replace('/(tabs)');
+      } else if (result.type === 'cancel') {
+        // 사용자가 직접 취소 - 아무 동작 없음
+      }
+    } catch (e: any) {
+      Alert.alert('Google 로그인 실패', e?.message ?? '다시 시도해 주세요.');
+    } finally {
+      setGoogleLoading(false);
+    }
+  }, []);
 
   return (
     <KeyboardAvoidingView
