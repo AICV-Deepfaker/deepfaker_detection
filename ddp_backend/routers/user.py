@@ -1,8 +1,7 @@
 # 프론트 연결
 
 from typing import Optional
-
-from fastapi import APIRouter, Depends, File, Form, UploadFile
+from fastapi import APIRouter, Depends, File, Form, UploadFile, HTTPException
 from sqlalchemy.orm import Session
 
 from ddp_backend.schemas.enums import LoginMethod
@@ -43,27 +42,10 @@ def check_email_route(body: CheckEmail, db: Session = Depends(get_db)):
 def check_nickname_route(body: CheckNickname, db: Session = Depends(get_db)):
     return DuplicateCheckResponse(is_duplicate=check_nickname_duplicate(db, body.nickname))
 
-# 회원가입 - multipart/form-data (텍스트 필드 + 선택적 이미지 파일)
-@router.post("/register", response_model=UserCreateResponse)
-async def register_route(
-    email: str = Form(...),
-    password: str = Form(...),
-    name: str = Form(...),
-    nickname: str = Form(...),
-    birth: Optional[str] = Form(None),
-    affiliation: Optional[str] = Form(None),
-    profile_image: Optional[UploadFile] = File(None),
-    db: Session = Depends(get_db)
-):
-    user_info = UserCreate(
-        email=email,
-        password=password,
-        name=name,
-        nickname=nickname,
-        birth=birth if birth else None,
-        affiliation=affiliation if affiliation else None,
-    )
-    return register(db, user_info, LoginMethod.LOCAL, profile_image_file=profile_image)
+# 회원가입 - 이메일/닉네임 중복 확인 후 유저 생성 (로컬)
+@router.post("/register", response_model=UserResponse)
+def register_route(user_info: UserCreate, db: Session = Depends(get_db)):
+    return register(db, user_info, LoginMethod.LOCAL)
 
 # 아이디 찾기 - 이름/생년월일로 이메일 조회 (마스킹 처리)
 @router.post("/find-id", response_model=FindIdResponse)

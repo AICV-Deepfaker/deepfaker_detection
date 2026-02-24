@@ -1,7 +1,7 @@
 from pathlib import Path
 from dotenv import load_dotenv
 
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 # .env 파일의 내용을 환경 변수로 부르기 
@@ -10,7 +10,6 @@ load_dotenv(BASE_DIR / ".env")
 
 # JWT 토큰 생성을 위한 환경 설정
 class Settings(BaseSettings):
-    DATABASE_URL: str
     REDIS_URL: str | None = None
     SECRET_KEY: str
     ALGORITHM: str
@@ -24,18 +23,21 @@ class Settings(BaseSettings):
     GOOGLE_CLIENT_ID: str
     GOOGLE_CLIENT_SECRET: str
     GOOGLE_REDIRECT_URI: str
-    
-    # AWS S3
-    AWS_ACCESS_KEY_ID: str = ""
-    AWS_SECRET_ACCESS_KEY: str = ""
-    AWS_REGION: str = "ap-northeast-2"
-    AWS_S3_BUCKET: str = ""
-
-    class Config:
-        env_file = ".env"
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="forbid",   # 그대로 두고 싶으면 forbid 유지
+    )
+    DATABASE_URL: str = "sqlite:///./test.db"
+    S3_BUCKET: str | None = None
+    AWS_REGION: str | None = None
+    AWS_ACCESS_KEY_ID: str | None = None
+    AWS_SECRET_ACCESS_KEY: str | None = None
 
 settings = Settings() # type: ignore
 
 # 환경 변수에서 URL을 가져와 DB 엔진 만들기 
 DATABASE_URL = settings.DATABASE_URL
 REDIS_URL = settings.REDIS_URL
+
+S3_BUCKET = settings.S3_BUCKET

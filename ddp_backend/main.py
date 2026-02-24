@@ -7,6 +7,10 @@ from pathlib import Path
 import torch
 import uvicorn
 
+from ddp_backend.core.database import engine
+from ddp_backend.models.models import Base
+from ddp_backend.core.scheduler import start_schedular, shutdown_schedular
+
 # ==========================================
 # .env 로드
 # ==========================================
@@ -26,7 +30,10 @@ from ddp_backend.core.model import load_all_model
 _BACKEND_DIR = Path(__file__).parent
 load_dotenv(_BACKEND_DIR / ".env")
 
-
+try:
+    from ddp_backend.services.dependencies import load_all_model
+except Exception:
+    load_all_model = None
 # ==========================================
 # DB 생성
 # ==========================================
@@ -56,8 +63,11 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 NGROK_AUTH_TOKEN = os.environ.get("NGROK_AUTH_TOKEN", "")
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
-    load_all_model()
+async def lifespan(app: FastAPI):  # pyright: ignore[reportUnusedParameter]
+    if load_all_model:
+        load_all_model()
+    else:
+        print("[STARTUP] load_all_model() skipped (not available)")
     public_url = None
 
     start_schedular() # 스케쥴러 : 30일 지난 토큰 만료 처리
@@ -95,6 +105,9 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan)
+@app.get("/health")
+def health():
+    return{"ok": True}
 
 # CORS 설정 - 프론트엔드(Expo) 접속 허용
 app.add_middleware(

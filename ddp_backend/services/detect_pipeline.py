@@ -22,6 +22,10 @@ class DetectionPipeline:
 
     def load_all_models(self):
         self.unite_detector.load_model()
+        try:
+            self.wavelet_detector.load_model()
+        except Exception as e:
+            print(f"[WARN] Wavelet model load failed: {e}")
         self.wavelet_detector.load_model()
         self.r_ppg_detector.load_model()
 

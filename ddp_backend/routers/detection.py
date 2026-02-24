@@ -18,6 +18,11 @@ from ddp_backend.task.detection import predict_deepfake_deep, predict_deepfake_f
 router = APIRouter(prefix="/prediction", tags=["prediction"])
 
 
+# ✅ user_id만 뽑아서 int로 반환 (OpenAPI도 깔끔)
+def get_current_user_id(current_user: User = Depends(get_current_user)) -> int:
+    return current_user.user_id
+
+
 @router.post(path="/{mode}", status_code=status.HTTP_202_ACCEPTED)
 async def predict_deepfake(
     file: Annotated[UploadFile, File(...)],

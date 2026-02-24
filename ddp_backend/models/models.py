@@ -129,7 +129,11 @@ class Token(Base):
     )  # ondelete = 유저 삭제 시 함께 삭제
     refresh_token: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
     # device_uuid:Mapped[str] = mapped_column(String(255)) # 토큰 보안과 연관 (필요 없을 경우 삭제) # 추후 개발
-    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)  # 토큰 만료
+    expires_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.utcnow() + timedelta(hours=12),
+        nullable=False,
+        init=False,)  # 토큰 만료
     created_at: Mapped[datetime] = mapped_column( # refresh 토큰 생성 시간
         DateTime(timezone=True), server_default=func.now(), init=False
     )

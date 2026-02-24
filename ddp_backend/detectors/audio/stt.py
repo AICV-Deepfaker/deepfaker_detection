@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import final, override
 
-from stt import SCAM_SEED_KEYWORDS, run_pipeline
+from ddp_backend.detectors.audio.stt import SCAM_SEED_KEYWORDS, run_pipeline
 
 from ddp_backend.schemas.enums import ModelName, Status, STTRiskLevel
 from ddp_backend.schemas.report import STTReport
