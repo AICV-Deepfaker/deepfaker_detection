@@ -38,6 +38,9 @@ pyyaml
 sqlalchemy
 psycopg2-binary
 
+# AWS S3
+boto3
+
 # Scheduler
 APScheduler
 

@@ -96,14 +96,17 @@ export default function SignupScreen() {
 
     setLoading(true);
     try {
-      await register({
-        email: trimmedEmail,
-        password: trimmedPassword,
-        name: trimmedName,
-        nickname: trimmedNickname,
-        birth: trimmedBirthdate,
-        affiliation: affiliation,
-      });
+      await register(
+        {
+          email: trimmedEmail,
+          password: trimmedPassword,
+          name: trimmedName,
+          nickname: trimmedNickname,
+          birth: trimmedBirthdate,
+          affiliation: affiliation,
+        },
+        profilePhotoUri
+      );
       Alert.alert('회원가입 완료', '로그인해 주세요.', [
         { text: '확인', onPress: () => router.replace('/login') },
       ]);

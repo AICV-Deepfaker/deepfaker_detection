@@ -84,7 +84,6 @@ export default function TabLayout() {
       <Tabs.Screen name="settings" options={{ href: null }} />
       <Tabs.Screen name="explore" options={{ href: null }} />
       <Tabs.Screen name="report-history" options={{ href: null }} />
-      <Tabs.Screen name="inquiry" options={{ href: null }} />
     </Tabs>
   );
 }
