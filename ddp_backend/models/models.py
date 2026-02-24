@@ -76,7 +76,9 @@ class User(Base):
     __tablename__ = "users"
     user_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, index=True, default=uuid.uuid4, init=False
-    )  # 효율성을 위해 user만 index=True
+    )  # 효율성을 위해 user만 index=True 
+        # index 참조) 주로 전체 순환하는 곳들은 index를 붙여주는 게 좋음 (조회는 빨라지고 쓰기는 느려짐)
+        # 우리 서비스에서는 user_id, email, nickname
     # 기본값 없는 필드 먼저
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
     login_method: Mapped[LoginMethod] = mapped_column(

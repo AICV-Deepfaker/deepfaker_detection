@@ -56,6 +56,7 @@ class UserLogin(BaseModel):
 class UserEdit(BaseModel):  # 이외에 변경 불가
     new_password: SecretStr | None = Field(None, min_length=8)  # 최소 8자 이상
     new_profile_image: str | None = None
+    delete_profile_image: bool = False  # True면 이미지 삭제
     new_affiliation: Affiliation | None = None
 
 
@@ -119,8 +120,7 @@ class UserEditResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     changed_password: bool = False
-    latest_user_info: UserMeResponse
-
+    latest_user_info : UserMeResponse
 
 # 아이디 찾기
 class FindIdResponse(BaseModel):
@@ -129,8 +129,6 @@ class FindIdResponse(BaseModel):
     email: str  # 마스킹된 문자열로 보낼 예정
 
 # 비밀번호는 200만 반환하면 됨
-
-# 프로필 이미지 삭제는 별도 endpoint 사용 
 
 # 탈퇴는 schema 없음
 

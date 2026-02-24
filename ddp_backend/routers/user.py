@@ -4,6 +4,9 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, File, Form, UploadFile
 from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from pydantic import SecretStr
 
 from ddp_backend.schemas.enums import LoginMethod
 from ddp_backend.core.database import get_db
@@ -17,11 +20,13 @@ from ddp_backend.schemas.user import (
     UserEdit, UserEditResponse,
     UserMeResponse
 )
+from ddp_backend.schemas.ranking import UserRanking
 from ddp_backend.services.user import (
     check_email_duplicate, check_nickname_duplicate,
     register, edit_user, delete_user,
     find_id, find_password, delete_profile_image
 )
+from ddp_backend.services.ranking import get_top10_ranking
 
 router = APIRouter(prefix="/user", tags=["user"])
 
@@ -57,7 +62,7 @@ async def register_route(
 ):
     user_info = UserCreate(
         email=email,
-        password=password,
+        password=SecretStr(password),
         name=name,
         nickname=nickname,
         birth=birth if birth else None,
@@ -85,7 +90,7 @@ async def edit_route(
     current_user: User = Depends(get_current_user)
 ):
     update_info = UserEdit(
-        new_password=new_password if new_password else None,
+        new_password=SecretStr(new_password) if new_password else None,
         new_affiliation=new_affiliation if new_affiliation else None,
     )
     return edit_user(db, current_user.user_id, update_info, profile_image_file=new_profile_image)
@@ -105,3 +110,8 @@ def withdraw_route(
     current_user: User = Depends(get_current_user)
 ):
     return delete_user(db, current_user.user_id)
+
+# 유저 랭킹 top10
+@router.get("/top10", response_model=list[UserRanking])
+async def read_top10_ranking(db: AsyncSession = Depends(get_db)):
+    return await get_top10_ranking(db)

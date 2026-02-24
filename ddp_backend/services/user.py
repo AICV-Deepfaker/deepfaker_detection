@@ -41,9 +41,11 @@ def check_email_duplicate(db: Session, email: str) -> bool:
 def check_nickname_duplicate(db: Session, nickname: str) -> bool:
     return CRUDUser.get_by_nickname(db, nickname) is not None
 
+
 # =========
 # 회원가입
 # =========
+# 회원가입
 def register(
     db: Session,
     user_info: UserCreate,
