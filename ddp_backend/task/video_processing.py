@@ -75,7 +75,7 @@ def _download_youtube_to_path(url: str, local_path: str | Path) -> str:
     return str(p)
 
 
-def process_youtube_video(video_id: uuid.UUID) -> None:
+def upload_youtube_video(video_id: uuid.UUID) -> None:
     print(f"[BG] process_youtube_video start video_id={video_id}")
     """
     유튜브 링크 처리:

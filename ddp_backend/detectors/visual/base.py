@@ -115,7 +115,7 @@ class BaseVideoDetector[C: BaseVideoConfig](VisualDetector):
 
         s3_path: str | None = None
         if analyze_res.image is not None:
-            upload_key = f"{vid_path.stem}_{self.model_name}_analyzed.png"
+            upload_key = f"report/{vid_path.stem}_{self.model_name}_analyzed.png"
 
             s3_path = upload_file_to_s3(
                 BytesIO(analyze_res.image), upload_key, "image/png"

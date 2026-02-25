@@ -14,7 +14,7 @@ from ddp_backend.models.models import Source, User, Video
 from ddp_backend.schemas.enums import OriginPath, VideoStatus
 from ddp_backend.services.crud import CRUDSource, CRUDVideo
 from ddp_backend.task.video_processing import (
-    process_youtube_video,
+    upload_youtube_video,
 )
 
 router = APIRouter(prefix="/videos", tags=["videos"])
@@ -70,5 +70,5 @@ def link_video(
     )
     CRUDVideo.create(db, video)
 
-    background_tasks.add_task(process_youtube_video, video.video_id)
+    background_tasks.add_task(upload_youtube_video, video.video_id)
     return {"video_id": video.video_id, "queued": True}
