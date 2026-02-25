@@ -36,10 +36,13 @@ pyyaml
 
 # DB
 sqlalchemy
+sqlmodel
 psycopg2-binary
 
 # AWS S3
 boto3
+boto3-stubs     
+botocore-stubs  
 
 # Scheduler
 APScheduler

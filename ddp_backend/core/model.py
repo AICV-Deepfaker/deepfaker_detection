@@ -7,6 +7,8 @@ from ddp_backend.detectors.visual import RPPGDetector, UniteDetector, WaveletDet
 from ddp_backend.schemas.config import BaseVideoConfig
 from ddp_backend.services import DetectionPipeline
 
+from .config import settings
+
 DETECTOR_YAML = "Wavelet-CLIP/wavelet_lib/config/detector/detector.yaml"
 CKPT_PATH = "/home/ubuntu/deepfaker_detection/ckpt_best_5.pth"
 IMG_SIZE = 224
@@ -15,15 +17,21 @@ IMG_SIZE = 224
 # UniteDetector (정밀탐지모드 / deep)
 unite_detector = UniteDetector(
     BaseVideoConfig(
-        model_path="./unite_baseline.onnx",
-        img_size=384,
+        model_path=settings.UNITE_MODEL_PATH,
+        img_size=settings.UNITE_IMG_SIZE,
     )
 )
 
 # WaveletDetector (증거수집모드 / fast)
-wavelet_detector = WaveletDetector.from_yaml(DETECTOR_YAML, IMG_SIZE, CKPT_PATH)
+wavelet_detector = WaveletDetector.from_yaml(
+    settings.WAVELET_YAML_PATH, settings.WAVELET_IMG_SIZE, settings.WAVELET_MODEL_PATH
+)
 
-r_ppg_detector = RPPGDetector(BaseVideoConfig(model_path="", img_size=0))
+r_ppg_detector = RPPGDetector(
+    BaseVideoConfig(
+        model_path=settings.RPPG_MODEL_PATH, img_size=settings.RPPG_IMG_SIZE
+    )
+)
 
 stt_detector = STTDetector()
 

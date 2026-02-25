@@ -48,6 +48,7 @@ class Affiliation(StrEnum):
 
 
 class VideoStatus(StrEnum):  # 필요하지 않을 경우 삭제
+    QUEUED = "queued"
     PENDING = "pending"
     PROCESSING = "processing"
     COMPLETED = "completed"

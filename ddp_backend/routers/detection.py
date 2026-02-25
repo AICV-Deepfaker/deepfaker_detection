@@ -1,15 +1,14 @@
 import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import Field
 from sqlmodel.orm.session import Session
 
 from ddp_backend.core.database import get_db
-from ddp_backend.core.s3 import upload_video_to_s3
 from ddp_backend.core.security import get_current_user
-from ddp_backend.models import Source, User, Video
-from ddp_backend.schemas.enums import AnalyzeMode, ModelName, OriginPath, Result, Status
+from ddp_backend.models import User
+from ddp_backend.schemas.enums import AnalyzeMode, ModelName, Result, Status
 from ddp_backend.schemas.report import (
     DeepReportResponse,
     FastReportResponse,
@@ -17,7 +16,6 @@ from ddp_backend.schemas.report import (
     VideoReport,
 )
 from ddp_backend.services.crud import CRUDResult, CRUDVideo
-from ddp_backend.services.crud.source import CRUDSource
 from ddp_backend.task.detection import predict_deepfake_deep, predict_deepfake_fast
 
 router = APIRouter(prefix="/prediction", tags=["prediction"])
@@ -30,29 +28,19 @@ def get_current_user_id(current_user: User = Depends(get_current_user)) -> uuid.
 
 @router.post(path="/{mode}", status_code=status.HTTP_202_ACCEPTED)
 async def predict_deepfake(
-    file: Annotated[UploadFile, File(...)],
+    video_id: uuid.UUID,
     user_id: Annotated[
         uuid.UUID, Depends(get_current_user_id)
     ],
     db: Annotated[Session, Depends(get_db)],
     mode: AnalyzeMode,
 ) -> None:
-    video = CRUDVideo.create(
-        db,
-        Video(
-            user_id=user_id,
-            origin_path=OriginPath.UPLOAD,
-        ),
-    )
-    filename = file.filename if file.filename is not None else "unnamed.mp4"
-    s3_path = upload_video_to_s3(file.file, filename)
-    CRUDSource.create(
-        db,
-        Source(
-            video_id=video.video_id,
-            s3_path=s3_path,
-        ),
-    )
+    video = CRUDVideo.get_by_id(db, video_id)
+    if video is None:
+        raise HTTPException(404, "Video Not Found")
+    if video.user_id != user_id:
+        raise HTTPException(403, "Forbidden")
+
     if mode == AnalyzeMode.FAST:
         await predict_deepfake_fast.kiq(video.video_id)
     elif mode == AnalyzeMode.DEEP:

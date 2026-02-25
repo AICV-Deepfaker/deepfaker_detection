@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import uuid
 from datetime import date
 from typing import TYPE_CHECKING
@@ -40,13 +38,13 @@ class User(UserBase, CreatedTimestampMixin, table=True):
     hashed_password: str | None = Field(default=None, max_length=255)
     activation_points: int = Field(default=0)
 
-    token: Token = Relationship(back_populates="user", cascade_delete=True)
-    videos: list[Video] = Relationship(back_populates="user", cascade_delete=True)
-    results: list[Result] = Relationship(back_populates="user", cascade_delete=True)
-    fast_reports: list[FastReport] = Relationship(
+    token: "Token" = Relationship(back_populates="user", cascade_delete=True)
+    videos: list["Video"] = Relationship(back_populates="user", cascade_delete=True)
+    results: list["Result"] = Relationship(back_populates="user", cascade_delete=True)
+    fast_reports: list["FastReport"] = Relationship(
         back_populates="user", cascade_delete=True
     )
-    deep_reports: list[DeepReport] = Relationship(
+    deep_reports: list["DeepReport"] = Relationship(
         back_populates="user", cascade_delete=True
     )
-    alerts: list[Alert] = Relationship(back_populates="user", cascade_delete=True)
+    alerts: list["Alert"] = Relationship(back_populates="user", cascade_delete=True)

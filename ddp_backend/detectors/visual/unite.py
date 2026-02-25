@@ -49,4 +49,4 @@ class UniteDetector(BaseVideoDetector[BaseVideoConfig]):
             result_prob.append(cur_prob)
         max_prob = max(result_prob)
         # currently no visual output
-        return VideoInferenceResult(prob=max_prob, base64_report="")
+        return VideoInferenceResult(prob=max_prob)

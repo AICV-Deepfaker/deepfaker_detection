@@ -1,24 +1,27 @@
-from __future__ import annotations
-
 import uuid
 from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel
-from sqlalchemy import Dialect
+from sqlalchemy import Dialect, Column
 from sqlalchemy.types import JSON, BigInteger, TypeDecorator
 from sqlmodel import Field, Relationship
 
 from ddp_backend.core.database import Base
-from ddp_backend.schemas.report import STTScript
 
 from .models import MAX_S3_LEN
+from ddp_backend.schemas.enums import Result as ResultEnum
+from ddp_backend.schemas.enums import STTRiskLevel
 
 if TYPE_CHECKING:
-    from ddp_backend.schemas.enums import Result as ResultEnum
-    from ddp_backend.schemas.enums import STTRiskLevel
 
     from .models import Result
     from .user import User
+
+class STTScript(BaseModel):
+    keywords: list[str]
+    risk_reason: str
+    transcript: str
+    search_results: list[dict[str, str]]
 
 
 class PydanticJSONType[T: BaseModel](TypeDecorator[T]):
@@ -51,31 +54,31 @@ class ReportBase(Base):
 class FastReportData(Base):
     freq_result: ResultEnum
     freq_conf: float
-    freq_image: str = Field(max_length=MAX_S3_LEN)
+    freq_image: str | None = Field(max_length=MAX_S3_LEN)
     rppg_result: ResultEnum
     rppg_conf: float
-    rppg_image: str = Field(max_length=MAX_S3_LEN)
+    rppg_image: str | None = Field(max_length=MAX_S3_LEN)
     stt_risk_level: STTRiskLevel
     stt_script: STTScript = Field(
-        sa_type=PydanticJSONType(STTScript), # type: ignore
+        sa_column=Column(PydanticJSONType(STTScript), nullable=False),
     )
 
 class DeepReportData(Base):
     unite_result: ResultEnum
     unite_conf: float
 
-
+# 6. FastReports table
 class FastReport(ReportBase, FastReportData, table=True):
     __tablename__: str = "fast_reports"  # type: ignore
     fast_id: int | None = Field(default=None, primary_key=True, sa_type=BigInteger)
 
-    user: User = Relationship(back_populates="fast_reports")
-    result: Result = Relationship(back_populates="fast_report")
+    user: "User" = Relationship(back_populates="fast_reports")
+    result: "Result" = Relationship(back_populates="fast_report")
 
-
+# 6. DeepReports table
 class DeepReport(ReportBase, DeepReportData, table=True):
     __tablename__: str = "deep_reports"  # type: ignore
     deep_id: int | None = Field(default=None, primary_key=True, sa_type=BigInteger)
 
-    user: User = Relationship(back_populates="deep_reports")
-    result: Result = Relationship(back_populates="deep_report")
+    user: "User" = Relationship(back_populates="deep_reports")
+    result: "Result" = Relationship(back_populates="deep_report")

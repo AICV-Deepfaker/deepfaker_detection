@@ -2,7 +2,7 @@ from typing import Literal
 
 from pydantic import BaseModel, computed_field
 
-from ddp_backend.models.report import DeepReportData, FastReportData
+from ddp_backend.models.report import DeepReportData, FastReportData, STTScript
 
 from .enums import AnalyzeMode, ModelName, Result, Status, STTRiskLevel
 
@@ -25,19 +25,12 @@ class BaseReport(BaseModel):
 class VideoReport(BaseReport):
     result: Result
     probability: float
-    visual_report: str
+    visual_report: str | None
 
     @computed_field
     @property
     def confidence_score(self) -> float:
         return self.probability if self.probability > 0.5 else 1 - self.probability
-
-
-class STTScript(BaseModel):
-    keywords: list[str]
-    risk_reason: str
-    transcript: str
-    search_results: list[dict[str, str]]
 
 
 class STTReport(BaseReport, STTScript):

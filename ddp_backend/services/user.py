@@ -21,7 +21,7 @@ import random, string
 
 # 로그인, 로그아웃 -> auth.py
 
-TEMP_STR_LEN=12
+TEMP_STR_LEN=12 # 임시비밀번호 길이
 
 
 # =========

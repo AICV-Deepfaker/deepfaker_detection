@@ -65,6 +65,7 @@ def reissue_token(db: Session, refresh_token: str):
     
     # payload의 user_id와 token의 user_id와 일치하지 않을경우
     if user_id != token.user_id:
+        CRUDToken.set_revoked(db, hashed) # 즉시 revoked=true
         raise HTTPException(
             status_code=401, detail="사용자 정보가 일치하지 않습니다"
             )
