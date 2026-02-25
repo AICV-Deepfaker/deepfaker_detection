@@ -10,16 +10,18 @@ from sqlmodel.orm.session import Session
 
 from ddp_backend.models import Token
 
+from .base import CRUDBase
+
 __all__ = [
     "CRUDToken",
 ]
 
 
-class CRUDToken:
+class CRUDToken(CRUDBase):
     # 사용 : 로그인
 
-    @staticmethod
-    def upsert_token(db: Session, user_id: UUID, hashed_refresh_token: str, expires_at: datetime):
+    @classmethod
+    def upsert_token(cls, db: Session, user_id: UUID, hashed_refresh_token: str, expires_at: datetime):
         """토큰 업데이트 + 생성"""
         token = db.scalars(select(Token).where(Token.user_id == user_id)).one_or_none()
         if token:
@@ -34,30 +36,30 @@ class CRUDToken:
                 expires_at=expires_at
             )
             db.add(token)
-        db.commit()
+        cls.commit_or_flush(db)
         db.refresh(token)
         return token
 
     # 사용 : refresh 토큰 갱신 (access_token은 DB 접근 X), 로그아웃(revoked 조회)
-    @staticmethod
-    def get_by_refresh(db: Session, hashed_refresh_token: str):
+    @classmethod
+    def get_by_refresh(cls, db: Session, hashed_refresh_token: str):
         """refresh token으로 토큰 조회"""
         query = select(Token).where(Token.refresh_token == hashed_refresh_token)
         return db.scalars(query).one_or_none()
 
     # 사용 : 로그아웃
-    @staticmethod
-    def set_revoked(db: Session, hashed_refresh_token: str):
+    @classmethod
+    def set_revoked(cls, db: Session, hashed_refresh_token: str):
         """토큰 비활성화"""
         token = CRUDToken.get_by_refresh(db, hashed_refresh_token)
         if token is None:
             return False
         token.revoked = True
-        db.commit()
+        cls.commit_or_flush(db)
         return True
 
-    @staticmethod
-    def bulk_revoke_expired(db: Session):
+    @classmethod
+    def bulk_revoke_expired(cls, db: Session):
         expired = datetime.now()
         query = (
             update(Token)
@@ -67,4 +69,4 @@ class CRUDToken:
         )
         db.exec(query, execution_options={'synchronize_session': False})
 
-        db.commit()
+        cls.commit_or_flush(db)

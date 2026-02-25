@@ -18,19 +18,24 @@ def create_alert(db: Session, user_id: uuid.UUID, result_id: uuid.UUID) -> dict:
     if not result:
         raise ValueError("result_id not found")
 
+    if result.user_id != user_id:
+        raise ValueError("Result is not by user")
+
     # 중복 신고 방지(같은 유저가 같은 result를 여러번 신고)
     exists = CRUDAlert.get_by_user_result(db, user_id, result_id)
     if exists:
         raise ValueError("already reported")
 
-    alert = CRUDAlert.create(db, Alert(user_id=user_id, result_id=result_id), do_commit=False)
 
-    # 포인트 적립
-    point: int | None
-    try:
-        point = CRUDUser.update_active_points(db, user_id, ALERT_POINT)
-    except NoResultFound:
-        point = None
+    with CRUDAlert.atomic(db):
+        alert = CRUDAlert.create(db, Alert(user_id=user_id, result_id=result_id))
+
+        # 포인트 적립
+        point: int | None
+        try:
+            point = CRUDUser.update_active_points(db, user_id, ALERT_POINT)
+        except NoResultFound:
+            point = None
 
     # db.commit()
     # db.refresh(alert)
