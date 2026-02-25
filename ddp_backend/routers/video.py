@@ -10,7 +10,7 @@ from sqlmodel.orm.session import Session
 from ddp_backend.core.database import get_db
 from ddp_backend.core.s3 import upload_file_to_s3
 from ddp_backend.core.security import get_current_user
-from ddp_backend.models.models import Source, User, Video
+from ddp_backend.models import Source, User, Video
 from ddp_backend.schemas.enums import OriginPath, VideoStatus
 from ddp_backend.services.crud import CRUDSource, CRUDVideo
 from ddp_backend.task.video_processing import (
