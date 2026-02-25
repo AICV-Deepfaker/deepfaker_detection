@@ -5,7 +5,7 @@ from uuid import UUID
 
 from ddp_backend.core.security import get_password_hash
 from ddp_backend.core.mailer import send_temp_pwd
-from ddp_backend.core.s3 import upload_image_to_s3, delete_image_from_s3, delete_video_from_s3
+from ddp_backend.core.s3 import upload_image_to_s3, delete_image_from_s3, delete_video_from_s3, delete_video_from_s3
 from ddp_backend.schemas.user import UserCreate, UserCreateCRUD, UserCreateResponse, UserMeResponse, FindId, FindIdResponse, FindPassword, UserEdit, UserEditResponse
 from ddp_backend.schemas.enums import Affiliation
 
@@ -277,16 +277,25 @@ def delete_user(db: Session, user_id: UUID) -> bool:
 
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="유저를 찾을 수 없습니다")
+    #삭제할 S3 key 모으기
+    targets: list[str] = []
 
     # 1. 프로필 이미지 S3 삭제
-    if user.profile_image and "amazonaws.com" in user.profile_image:
-        delete_image_from_s3(user.profile_image)
+    if user.profile_image:
+        targets.append(user.profile_image)
 
-    # 2. 비디오 S3 삭제
-    for video in user.videos:
-        if video.source and video.source.s3_path:
-            delete_video_from_s3(video.source.s3_path)
+    for video in getattr(user, "videos", []) or []:
+        src = getattr(video, "source", None)
+        if src and getattr(src, "s3_path", None):
+            targets.append(src.s3_path)
 
-    # 3. 유저 삭제 (cascade로 관련 데이터 모두 삭제)
+    # S3 배치 삭제 (1000개 단위)
+    # 실패해도 탈퇴 진행하고 싶으면 try/except 유지
+    try:
+        delete_keys_from_s3(targets)
+    except Exception:
+        pass
+
+    # ✅ 3) DB 삭제 (cascade)
     CRUDUser.delete(db, user_id)
     return True
