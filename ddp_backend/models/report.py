@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import uuid
 from typing import TYPE_CHECKING, Any
 
@@ -11,10 +9,10 @@ from sqlmodel import Field, Relationship
 from ddp_backend.core.database import Base
 
 from .models import MAX_S3_LEN
+from ddp_backend.schemas.enums import Result as ResultEnum
+from ddp_backend.schemas.enums import STTRiskLevel
 
 if TYPE_CHECKING:
-    from ddp_backend.schemas.enums import Result as ResultEnum
-    from ddp_backend.schemas.enums import STTRiskLevel
 
     from .models import Result
     from .user import User
@@ -74,13 +72,13 @@ class FastReport(ReportBase, FastReportData, table=True):
     __tablename__: str = "fast_reports"  # type: ignore
     fast_id: int | None = Field(default=None, primary_key=True, sa_type=BigInteger)
 
-    user: User = Relationship(back_populates="fast_reports")
-    result: Result = Relationship(back_populates="fast_report")
+    user: "User" = Relationship(back_populates="fast_reports")
+    result: "Result" = Relationship(back_populates="fast_report")
 
 # 6. DeepReports table
 class DeepReport(ReportBase, DeepReportData, table=True):
     __tablename__: str = "deep_reports"  # type: ignore
     deep_id: int | None = Field(default=None, primary_key=True, sa_type=BigInteger)
 
-    user: User = Relationship(back_populates="deep_reports")
-    result: Result = Relationship(back_populates="deep_report")
+    user: "User" = Relationship(back_populates="deep_reports")
+    result: "Result" = Relationship(back_populates="deep_report")

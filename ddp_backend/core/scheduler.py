@@ -1,12 +1,12 @@
 from apscheduler.schedulers.background import BackgroundScheduler # 동작 이상 없음
 
-from ddp_backend.core.database import SessionLocal # DB에서 직접 처리
+from ddp_backend.core.database import get_db # DB에서 직접 처리
 from ddp_backend.services.crud import CRUDToken
 
 
 def revoke_expired_tokens():
     """30일 이상 미사용 토큰 revoked=True 처리"""
-    db = SessionLocal()
+    db = get_db()
     try:
         CRUDToken.bulk_revoke_expired(db)
     finally:
