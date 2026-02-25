@@ -6,7 +6,7 @@
 import os
 import hashlib
 from passlib.context import CryptContext
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta
 from jose import JWTError, jwt, ExpiredSignatureError
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer

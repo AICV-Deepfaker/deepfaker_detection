@@ -7,12 +7,11 @@ from sqlalchemy.exc import NoResultFound
 
 from ddp_backend.models.models import Alert
 from ddp_backend.services.crud import CRUDResult, CRUDAlert, CRUDUser
+from ddp_backend.schemas.alert import AlertResponse
 
 ALERT_POINT = 1000  # 정책: 신고 1회 1000점
 
-# TODO FIXME
-
-def create_alert(db: Session, user_id: uuid.UUID, result_id: uuid.UUID) -> dict:
+def create_alert(db: Session, user_id: uuid.UUID, result_id: uuid.UUID) -> AlertResponse:
     # result 존재 확인
     result = CRUDResult.get_by_id(db, result_id)
     if not result:
@@ -29,6 +28,7 @@ def create_alert(db: Session, user_id: uuid.UUID, result_id: uuid.UUID) -> dict:
 
     with CRUDAlert.atomic(db):
         alert = CRUDAlert.create(db, Alert(user_id=user_id, result_id=result_id))
+        assert alert.alert_id is not None
 
         # 포인트 적립
         point: int | None
@@ -37,13 +37,10 @@ def create_alert(db: Session, user_id: uuid.UUID, result_id: uuid.UUID) -> dict:
         except NoResultFound:
             point = None
 
-    # db.commit()
-    # db.refresh(alert)
-
-    return {
-        "alert_id": alert.alert_id,
-        "result_id": alert.result_id,
-        "user_id": alert.user_id,
-        "points_added": ALERT_POINT,
-        "total_points": point,
-    }
+    return AlertResponse(
+        alert_id=alert.alert_id,
+        result_id=alert.result_id,
+        user_id=alert.user_id,
+        points_added=ALERT_POINT,
+        total_points=point,
+    )

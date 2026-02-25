@@ -1,5 +1,4 @@
 from .models import (
-    Alert,
     DeepReport,
     FastReport,
     Result,
@@ -8,6 +7,7 @@ from .models import (
     Video,
 )
 
+from .alert import Alert
 from .user import User
 
 

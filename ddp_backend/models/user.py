@@ -9,8 +9,8 @@ from ddp_backend.core.database import Base
 from ddp_backend.schemas.enums import Affiliation, LoginMethod
 
 if TYPE_CHECKING:
+    from .alert import Alert
     from .models import (
-        Alert,
         CreatedTimestampMixin,
         DeepReport,
         FastReport,

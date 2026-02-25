@@ -5,7 +5,7 @@ from pathlib import Path
 
 from fastapi import APIRouter, BackgroundTasks, Depends, File, UploadFile
 from pydantic import BaseModel, HttpUrl
-from sqlalchemy.orm import Session
+from sqlmodel.orm.session import Session
 
 from ddp_backend.core.database import get_db
 from ddp_backend.core.s3 import upload_file_to_s3

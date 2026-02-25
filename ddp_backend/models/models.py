@@ -27,6 +27,7 @@ from ddp_backend.schemas.enums import Result as ResultEnum
 from ddp_backend.schemas.report import STTScript
 
 if TYPE_CHECKING:
+    from .alert import Alert
     from .user import User
 
 MAX_S3_LEN = 512
@@ -172,20 +173,3 @@ class DeepReport(ReportBase, table=True):
 
 
 # 8. Alerts table
-class Alert(Base, table=True):
-    __tablename__: str = "alerts"  # type: ignore
-    alert_id: int | None = Field(default=None, primary_key=True, sa_type=BigInteger)
-    user_id: uuid.UUID = Field(foreign_key="users.user_id", ondelete="CASCADE")
-    result_id: uuid.UUID | None = Field(
-        default=None,
-        foreign_key="results.result_id",
-        ondelete="SET NULL",
-        nullable=True,
-    )
-    alerted_at: Annotated[datetime, AwareDatetime] = Field(
-        default_factory=datetime.now,
-        sa_column=Column(DateTime(timezone=True), nullable=False),
-    )
-
-    user: User = Relationship(back_populates="alerts")
-    result: Result = Relationship(back_populates="alerts", passive_deletes=True)
