@@ -10,6 +10,8 @@ from sqlmodel import Field, Relationship
 from ddp_backend.core.database import Base
 from ddp_backend.schemas.enums import Affiliation, LoginMethod
 
+from .models import MAX_S3_LEN
+
 if TYPE_CHECKING:
     from .alert import Alert
     from .models import (
@@ -19,7 +21,6 @@ if TYPE_CHECKING:
         Result,
         Token,
         Video,
-        MAX_S3_LEN
     )
 
 # 1. 공통 Base 모델 (가장 교집합이 되는 필드들)
