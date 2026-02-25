@@ -1,5 +1,5 @@
-from typing import Annotated
 import uuid
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from pydantic import Field
@@ -8,10 +8,14 @@ from sqlmodel.orm.session import Session
 from ddp_backend.core.database import get_db
 from ddp_backend.core.s3 import upload_video_to_s3
 from ddp_backend.core.security import get_current_user
-from ddp_backend.models import Source, Video, User
-from ddp_backend.schemas.api import APIOutputDeep, APIOutputFast
+from ddp_backend.models import Source, User, Video
 from ddp_backend.schemas.enums import AnalyzeMode, ModelName, OriginPath, Result, Status
-from ddp_backend.schemas.report import STTReport, VideoReport
+from ddp_backend.schemas.report import (
+    DeepReportResponse,
+    FastReportResponse,
+    STTReport,
+    VideoReport,
+)
 from ddp_backend.services.crud import CRUDResult, CRUDVideo
 from ddp_backend.services.crud.source import CRUDSource
 from ddp_backend.task.detection import predict_deepfake_deep, predict_deepfake_fast
@@ -57,7 +61,7 @@ async def predict_deepfake(
 
 
 type ResultType = Annotated[
-    APIOutputFast | APIOutputDeep, Field(discriminator="analysis_mode")
+    FastReportResponse | DeepReportResponse, Field(discriminator="analysis_mode")
 ]
 
 
@@ -85,7 +89,7 @@ async def get_result(
 
     if result.is_fast:
         report = result.fast_report
-        return APIOutputFast(
+        return FastReportResponse(
             status=Status.SUCCESS if report is not None else Status.ERROR,
             error_msg=None if report is not None else "Could not find detailed report",
             result=result.total_result,
@@ -116,7 +120,7 @@ async def get_result(
         )
     else:
         report = result.deep_report
-        return APIOutputDeep(
+        return DeepReportResponse(
             status=Status.SUCCESS if report is not None else Status.ERROR,
             error_msg=None if report is not None else "Could not find detailed report",
             result=result.total_result,

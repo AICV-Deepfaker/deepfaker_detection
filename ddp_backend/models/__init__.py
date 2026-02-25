@@ -1,6 +1,4 @@
 from .models import (
-    DeepReport,
-    FastReport,
     Result,
     Source,
     Token,
@@ -9,6 +7,7 @@ from .models import (
 
 from .alert import Alert
 from .user import User
+from .report import DeepReport, FastReport
 
 for next_model in [DeepReport, FastReport, Result, Source, Token, Video, Alert, User]:
     next_model.model_rebuild()

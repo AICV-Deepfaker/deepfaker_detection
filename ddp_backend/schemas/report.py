@@ -1,8 +1,20 @@
+from typing import Literal
+
 from pydantic import BaseModel, computed_field
 
-from .enums import ModelName, Result, Status, STTRiskLevel
+from ddp_backend.models.report import DeepReportData, FastReportData
 
-__all__ = ["VideoReport", "STTScript", "STTReport"]
+from .enums import AnalyzeMode, ModelName, Result, Status, STTRiskLevel
+
+__all__ = [
+    "VideoReport",
+    "STTScript",
+    "STTReport",
+    "FastReportData",
+    "DeepReportData",
+    "FastReportResponse",
+    "DeepReportResponse"
+]
 
 
 class BaseReport(BaseModel):
@@ -30,3 +42,22 @@ class STTScript(BaseModel):
 
 class STTReport(BaseReport, STTScript):
     risk_level: STTRiskLevel
+
+
+class BaseReportResponse(BaseModel):
+    status: Status
+    error_msg: str | None = None
+    # analysis_mode: AnalyzeMode
+    result: Result
+
+
+class FastReportResponse(BaseReportResponse):
+    analysis_mode: Literal[AnalyzeMode.FAST] = AnalyzeMode.FAST
+    r_ppg: VideoReport | None = None
+    wavelet: VideoReport | None = None
+    stt: STTReport | None = None
+
+
+class DeepReportResponse(BaseReportResponse):
+    analysis_mode: Literal[AnalyzeMode.DEEP] = AnalyzeMode.DEEP
+    unite: VideoReport | None = None

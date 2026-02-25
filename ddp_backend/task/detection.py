@@ -12,9 +12,9 @@ from ddp_backend.core.redis_bridge import NOTIFY_CHANNEL, REDIS_URL
 from ddp_backend.core.s3 import download_video_from_s3
 from ddp_backend.core.tk_broker import broker
 from ddp_backend.models import DeepReport, FastReport, Result
-from ddp_backend.schemas.api import WorkerPubSubAPI
-from ddp_backend.schemas.enums import Status, VideoStatus
-from ddp_backend.schemas.report import STTScript
+from ddp_backend.schemas.message import WorkerResultMessage
+from ddp_backend.schemas.enums import Result as ResultEnum
+from ddp_backend.schemas.enums import VideoStatus
 from ddp_backend.services.crud import (
     CRUDDeepReport,
     CRUDFastReport,
@@ -26,7 +26,7 @@ from ddp_backend.services.crud import (
 _redis = Redis.from_url(REDIS_URL if REDIS_URL is not None else "", db=1)
 
 
-def publish_notification(msg: WorkerPubSubAPI):
+def publish_notification(msg: WorkerResultMessage):
     _redis.publish(NOTIFY_CHANNEL, msg.model_dump_json())
 
 
@@ -45,17 +45,24 @@ def predict_deepfake_fast(
 
         output = detection_pipeline.run_fast_mode(temp_path)
 
-        if output.wavelet is None or output.r_ppg is None or output.stt is None:
-            assert output.status == Status.ERROR
+        if output is None:
             CRUDVideo.update_status(db, src.video_id, VideoStatus.FAILED)
             return None
+
+        total_result: ResultEnum
+        if output.freq_conf > output.rppg_conf:
+            total_result = output.freq_result
+        elif output.freq_conf < output.rppg_conf:
+            total_result = output.rppg_result
+        else:
+            total_result = ResultEnum.UNKNOWN
 
         result = CRUDResult.create(
             db,
             Result(
                 user_id=src.video.user_id,
                 video_id=src.video.video_id,
-                total_result=output.result,
+                total_result=total_result,
                 is_fast=True,
             ),
         )
@@ -64,24 +71,12 @@ def predict_deepfake_fast(
             FastReport(
                 user_id=src.video.user_id,
                 result_id=result.result_id,
-                freq_result=output.wavelet.result,
-                freq_conf=output.wavelet.confidence_score,
-                freq_image=output.wavelet.visual_report,
-                rppg_result=output.r_ppg.result,
-                rppg_conf=output.r_ppg.confidence_score,
-                rppg_image=output.r_ppg.visual_report,
-                stt_risk_level=output.stt.risk_level,
-                stt_script=STTScript(
-                    keywords=output.stt.keywords,
-                    risk_reason=output.stt.risk_reason,
-                    transcript=output.stt.transcript,
-                    search_results=output.stt.search_results,
-                ),
+                **output.model_dump()
             ),
         )
         CRUDVideo.update_status(db, src.video_id, VideoStatus.COMPLETED)
         publish_notification(
-            WorkerPubSubAPI(
+            WorkerResultMessage(
                 user_id=src.video.user_id,
                 result_id=result.result_id,
             )
@@ -104,8 +99,7 @@ def predict_deepfake_deep(
 
         output = detection_pipeline.run_deep_mode(temp_path)
 
-        if output.unite is None:
-            assert output.status == Status.ERROR
+        if output is None:
             CRUDVideo.update_status(db, src.video_id, VideoStatus.FAILED)
             return None
 
@@ -114,7 +108,7 @@ def predict_deepfake_deep(
             Result(
                 user_id=src.video.user_id,
                 video_id=src.video.video_id,
-                total_result=output.result,
+                total_result=output.unite_result,
                 is_fast=False,
             ),
         )
@@ -123,13 +117,12 @@ def predict_deepfake_deep(
             DeepReport(
                 user_id=src.video.user_id,
                 result_id=result.result_id,
-                unite_result=output.unite.result,
-                unite_conf=output.unite.confidence_score,
+                **output.model_dump()
             ),
         )
         CRUDVideo.update_status(db, src.video_id, VideoStatus.COMPLETED)
         publish_notification(
-            WorkerPubSubAPI(
+            WorkerResultMessage(
                 user_id=src.video.user_id,
                 result_id=result.result_id,
             )

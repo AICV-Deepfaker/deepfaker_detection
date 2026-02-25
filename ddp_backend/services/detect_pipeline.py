@@ -2,8 +2,7 @@ from pathlib import Path
 
 from ddp_backend.detectors.audio import STTDetector
 from ddp_backend.detectors.visual import RPPGDetector, UniteDetector, WaveletDetector
-from ddp_backend.schemas.api import APIOutputDeep, APIOutputFast
-from ddp_backend.schemas.enums import AnalyzeMode, Status, Result
+from ddp_backend.schemas.report import DeepReportData, FastReportData, STTScript
 
 
 class DetectionPipeline:
@@ -29,49 +28,31 @@ class DetectionPipeline:
         self.wavelet_detector.load_model()
         self.r_ppg_detector.load_model()
 
-    def run_fast_mode(self, file_path: Path) -> APIOutputFast:
+    def run_fast_mode(self, file_path: Path) -> FastReportData | None:
         try:
             wavelet_report = self.wavelet_detector.analyze(file_path)
             r_ppg_report = self.r_ppg_detector.analyze(file_path)
             stt_report = self.stt_detector.analyze(file_path)
 
-            result:Result
-            if wavelet_report.result > r_ppg_report.result:
-                result = wavelet_report.result
-            elif wavelet_report.result < r_ppg_report.result:
-                result = r_ppg_report.result
-            else:
-                result = Result.UNKNOWN
-
-            return APIOutputFast(
-                status=Status.SUCCESS,
-                analysis_mode=AnalyzeMode.FAST,
-                result=result,
-                wavelet=wavelet_report,
-                r_ppg=r_ppg_report,
-                stt=stt_report,
+            return FastReportData(
+                freq_result=wavelet_report.result,
+                freq_conf=wavelet_report.confidence_score,
+                freq_image=wavelet_report.visual_report,
+                rppg_result=r_ppg_report.result,
+                rppg_conf=r_ppg_report.confidence_score,
+                rppg_image=r_ppg_report.visual_report,
+                stt_risk_level=stt_report.risk_level,
+                stt_script=STTScript.model_validate(stt_report),
             )
-        except Exception as e:
-            return APIOutputFast(
-                status=Status.ERROR,
-                error_msg=str(e),
-                result=Result.UNKNOWN,
-                analysis_mode=AnalyzeMode.FAST,
-            )
+        except Exception:
+            return None
 
-    def run_deep_mode(self, file_path: Path) -> APIOutputDeep:
+    def run_deep_mode(self, file_path: Path) -> DeepReportData | None:
         try:
             unite_report = self.unite_detector.analyze(file_path)
-            return APIOutputDeep(
-                status=Status.SUCCESS,
-                analysis_mode=AnalyzeMode.DEEP,
-                result=unite_report.result,
-                unite=unite_report,
+            return DeepReportData(
+                unite_result=unite_report.result,
+                unite_conf=unite_report.confidence_score
             )
-        except Exception as e:
-            return APIOutputDeep(
-                status=Status.ERROR,
-                error_msg=str(e),
-                result=Result.UNKNOWN,
-                analysis_mode=AnalyzeMode.DEEP,
-            )
+        except Exception:
+            return None

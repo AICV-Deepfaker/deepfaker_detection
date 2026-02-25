@@ -14,9 +14,8 @@ from .models import MAX_S3_LEN, CreatedTimestampMixin
 
 if TYPE_CHECKING:
     from .alert import Alert
+    from .report import DeepReport, FastReport
     from .models import (
-        DeepReport,
-        FastReport,
         Result,
         Token,
         Video,

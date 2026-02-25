@@ -4,56 +4,29 @@ from __future__ import annotations
 import uuid
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
-from typing import TYPE_CHECKING, Annotated, Any
+from typing import TYPE_CHECKING, Annotated
 
-from pydantic import BaseModel
 from pydantic.types import AwareDatetime
 from sqlalchemy import (
-    JSON,
     BigInteger,
     DateTime,
-    Dialect,
 )
-from sqlalchemy.types import TypeDecorator
 from sqlmodel import Column, Field, Relationship
 
 from ddp_backend.core.config import settings
 from ddp_backend.core.database import Base
 from ddp_backend.schemas.enums import (
     OriginPath,
-    STTRiskLevel,
     VideoStatus,
 )
 from ddp_backend.schemas.enums import Result as ResultEnum
-from ddp_backend.schemas.report import STTScript
 
 if TYPE_CHECKING:
     from .alert import Alert
     from .user import User
+    from .report import DeepReport, FastReport
 
 MAX_S3_LEN = 512
-
-class PydanticJSONType[T: BaseModel](TypeDecorator[T]):
-    impl = JSON
-    cache_ok = True
-
-    def __init__(self, pydantic_model: type[T]):
-        super().__init__()
-        self.pydantic_model = pydantic_model
-
-    def process_bind_param(self, value: T | None, dialect: Dialect) -> Any:
-        # Python 객체 -> DB 저장 (JSON 변환)
-        if value is None:
-            return None
-        # Pydantic v2: model_dump_json() 또는 model_dump()
-        return value.model_dump(mode="json")
-
-    def process_result_value(self, value: Any, dialect: Dialect) -> T | None:
-        # DB 값 -> Python 객체 (Pydantic 모델 변환)
-        if value is None:
-            return None
-        # Pydantic v2: model_validate()
-        return self.pydantic_model.model_validate(value)
 
 
 # 0. source default expires_at : 12시간
@@ -137,40 +110,6 @@ class Result(CreatedTimestampMixin, Base, table=True):
 
 
 # 6. FastReports table
-class ReportBase(Base):
-    user_id: uuid.UUID = Field(foreign_key="users.user_id", ondelete="CASCADE")
-    result_id: uuid.UUID = Field(foreign_key="results.result_id", ondelete="CASCADE")
-
-
-class FastReport(ReportBase, table=True):
-    __tablename__: str = "fast_reports"  # type: ignore
-    fast_id: int | None = Field(default=None, primary_key=True, sa_type=BigInteger)
-
-    freq_result: ResultEnum
-    freq_conf: float
-    freq_image: str = Field(max_length=MAX_S3_LEN)
-    rppg_result: ResultEnum
-    rppg_conf: float
-    rppg_image: str = Field(max_length=MAX_S3_LEN)
-    stt_risk_level: STTRiskLevel
-    stt_script: STTScript = Field(
-        sa_column=Column(PydanticJSONType(STTScript), nullable=False)
-    )
-
-    fast_id: int | None = Field(primary_key=True, sa_type=BigInteger)
-    user: User = Relationship(back_populates="fast_reports")
-    result: Result = Relationship(back_populates="fast_report")
-
-
-class DeepReport(ReportBase, table=True):
-    __tablename__: str = "deep_reports"  # type: ignore
-    deep_id: int | None = Field(default=None, primary_key=True, sa_type=BigInteger)
-
-    unite_result: ResultEnum
-    unite_conf: float
-
-    user: User = Relationship(back_populates="deep_reports")
-    result: Result = Relationship(back_populates="deep_report")
 
 
 # 8. Alerts table

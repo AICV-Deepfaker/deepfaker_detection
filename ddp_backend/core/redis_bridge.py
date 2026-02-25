@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from pydantic import ValidationError
 from redis.asyncio import Redis
 
-from ddp_backend.schemas.api import WorkerPubSubAPI
+from ddp_backend.schemas.message import WorkerResultMessage
 
 from .config import REDIS_URL
 from .websocket import connection_manager
@@ -32,7 +32,7 @@ async def redis_connector(app: FastAPI):
                 if msg["type"] != "message":
                     continue
                 try:
-                    data = WorkerPubSubAPI.model_validate_json(msg["data"])
+                    data = WorkerResultMessage.model_validate_json(msg["data"])
                 except ValidationError:
                     continue
                 await connection_manager.send_message(data.user_id, data.result_id)
