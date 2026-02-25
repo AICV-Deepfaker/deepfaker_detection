@@ -35,6 +35,8 @@ def _download_youtube_to_path(url: str, local_path: str | Path) -> str:
 
     has_ffmpeg = shutil.which("ffmpeg") is not None
 
+    _COOKIES_PATH = Path(__file__).parent.parent / "cookies.txt"
+
     cmd = [
         "yt-dlp",
         "--no-playlist",
@@ -42,6 +44,9 @@ def _download_youtube_to_path(url: str, local_path: str | Path) -> str:
         "-o",
         template,
     ]
+
+    if _COOKIES_PATH.exists():
+        cmd += ["--cookies", str(_COOKIES_PATH)]
 
     if has_ffmpeg:
         cmd += ["-f", "bv*+ba/best"]
