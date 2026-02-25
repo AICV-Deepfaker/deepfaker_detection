@@ -216,7 +216,7 @@ def upload_image_to_s3(file: UploadFile, user_id: str) -> str:
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"이미지 업로드 실패: {e}"
         )
-    return f"https://{settings.AWS_S3_BUCKET}.s3.{settings.AWS_REGION}.amazonaws.com/{key}"
+    return key
 
 
 # 프로필 이미지 삭제
@@ -270,3 +270,14 @@ def download_from_s3(*args, **kwargs) -> Path:
         return download_file_from_s3(args[0], args[1])
     raise TypeError("download_from_s3 expects (key_or_url, download_path)")
 
+def to_public_url(value: str | None) -> str | None:
+    if not value:
+        return None
+    v = value.strip()
+
+    # 이미 URL이면 그대로(외부 URL도 포함)
+    if "://" in v:
+        return v
+
+    # key면 public url로 변환
+    return _build_public_url(v)

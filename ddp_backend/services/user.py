@@ -2,7 +2,10 @@ from sqlmodel.orm.session import Session
 from fastapi import HTTPException, status, UploadFile
 from pydantic import SecretStr
 from uuid import UUID
+from io import BytesIO
+from urllib.request import Request, urlopen
 
+from ddp_backend.core.s3 import to_public_url, upload_file_to_s3
 from ddp_backend.core.security import get_password_hash
 from ddp_backend.core.mailer import send_temp_pwd
 from ddp_backend.core.s3 import upload_image_to_s3, delete_image_from_s3, delete_video_from_s3, delete_video_from_s3
@@ -112,8 +115,8 @@ def register(
 
     # 5. 프로필 이미지 파일 S3 업로드 (로컬 회원가입)
     if profile_image_file:
-        image_url = upload_image_to_s3(profile_image_file, str(new_user.user_id))
-        CRUDUser.update(db, new_user.user_id, UserUpdate(profile_image=image_url))
+        image_key = upload_image_to_s3(profile_image_file, str(new_user.user_id))
+        CRUDUser.update(db, new_user.user_id, UserUpdate(profile_image=image_key))
         db.refresh(new_user)
 
     return UserCreateResponse.model_validate(new_user)
@@ -243,9 +246,12 @@ def edit_user(
         affiliation=affiliation
     ))
     db.refresh(user)
+    me = UserMeResponse.model_validate(user)
+    me.profile_image = to_public_url(user.profile_image)
+
     return UserEditResponse(
         changed_password=changed_password,
-        latest_user_info=UserMeResponse.model_validate(user)
+        latest_user_info=me
     )
 
 
@@ -261,12 +267,13 @@ def delete_profile_image(db: Session, user_id: UUID) -> UserMeResponse:
         raise HTTPException(status_code=404, detail="프로필 이미지가 없습니다")
 
     # S3에서 삭제
-    if "amazonaws.com" in user.profile_image:
-        delete_image_from_s3(user.profile_image)
+    delete_image_from_s3(user.profile_image)
 
     CRUDUser.delete_profile_image(db, user_id)
     db.refresh(user)
-    return UserMeResponse.model_validate(user)
+    me = UserMeResponse.model_validate(user)
+    me.profile_image = to_public_url(user.profile_image)
+    return me
 
 
 # =========
