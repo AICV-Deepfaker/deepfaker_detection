@@ -12,6 +12,7 @@ from sqlalchemy.exc import NoResultFound
 from ddp_backend.models import User
 from ddp_backend.schemas.user import UserCreateCRUD
 from ddp_backend.schemas.enums import Affiliation
+from ddp_backend.core.s3 import delete_keys_from_s3  # 배치 삭제 함수
 
 from .base import CRUDBase
 
@@ -119,6 +120,46 @@ class CRUDUser(CRUDBase):
         user = CRUDUser.get_by_id(db, user_id)
         if user is None:
             return False
+        db.delete(user)
+        cls.commit_or_flush(db)
+        return True
+        # 사용 : 회원탈퇴 (S3 파일까지 정리)
+    @classmethod
+    def delete_with_s3_cleanup(cls, db: Session, user_id: UUID) -> bool:
+        """
+        유저 탈퇴 시 S3에 저장된 프로필/영상 파일도 함께 삭제.
+        - DB에는 user.profile_image (URL 또는 key)
+        - videos/source에는 source.s3_path (URL 또는 key)
+        """
+        user = CRUDUser.get_by_id(db, user_id)
+        if user is None:
+            return False
+
+        # 1) 삭제 대상 모으기 (URL이든 key든 상관없음)
+        targets: list[str] = []
+
+        if getattr(user, "profile_image", None):
+            targets.append(user.profile_image)
+
+        # user.videos 관계가 있는 경우에만 순회
+        videos = getattr(user, "videos", None)
+        if videos:
+            for video in videos:
+                src = getattr(video, "source", None)
+                if src and getattr(src, "s3_path", None):
+                    targets.append(src.s3_path)
+
+                # 만약 추가 파일 경로가 있다면 여기서 함께 append 가능
+                # if getattr(video, "processed_s3_path", None): targets.append(video.processed_s3_path)
+                # if getattr(video, "thumb_s3_path", None): targets.append(video.thumb_s3_path)
+
+        # 2) S3 배치 삭제 (실패해도 탈퇴는 진행: 현재 코드 스타일 유지)
+        try:
+            delete_keys_from_s3(targets)
+        except Exception:
+            pass
+
+        # 3) DB 삭제 (기존 delete 로직 재사용)
         db.delete(user)
         cls.commit_or_flush(db)
         return True
