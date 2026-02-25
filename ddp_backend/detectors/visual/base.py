@@ -100,10 +100,9 @@ class BaseVideoDetector[C: BaseVideoConfig](VisualDetector):
         vid_path = Path(vid_path)
         resized_path = vid_path.with_stem(f"resize_{vid_path.stem}")
         self.set_fps(vid_path, resized_path)
-        analyze_res = self._analyze(resized_path)
 
         try:
-            res = Result.FAKE if analyze_res.prob > 0.5 else Result.REAL
+            analyze_res = self._analyze(resized_path)
         except RuntimeError:
             return VideoReport(
                 status=Status.ERROR,
@@ -113,6 +112,7 @@ class BaseVideoDetector[C: BaseVideoConfig](VisualDetector):
                 visual_report=None,
             )
 
+        res = Result.FAKE if analyze_res.prob > 0.5 else Result.REAL
         s3_path: str | None = None
         if analyze_res.image is not None:
             upload_key = f"report/{vid_path.stem}_{self.model_name}_analyzed.png"
