@@ -19,7 +19,7 @@ import {
   getAuth,
   type Affiliation,
 } from '@/lib/auth-storage';
-import { editUser, getMyProfile } from '@/lib/account-api';
+import { deleteProfileImage, editUser, getMyProfile } from '@/lib/account-api';
 import { withAuth } from '@/lib/with-auth';
 
 const ACCENT_GREEN = '#00CF90';
@@ -27,6 +27,7 @@ const TEXT = '#111';
 const SUB = '#687076';
 const CARD_BG = '#fff';
 const BORDER = 'rgba(0,0,0,0.06)';
+const ERROR_RED = '#E53935';
 
 const AFFILIATION_OPTIONS: { value: Affiliation; label: string }[] = [
   { value: '개인', label: '개인' },
@@ -56,6 +57,9 @@ export default function MemberInfoScreen() {
   const [editMode, setEditMode] = useState(false);
   const [editAffiliation, setEditAffiliation] = useState<Affiliation | undefined>(undefined);
   const [editPhotoUri, setEditPhotoUri] = useState<string | null>(null);
+
+  // 프로필 이미지 삭제
+  const [deleting, setDeleting] = useState(false);
 
   // 비밀번호 변경
   const [newPw, setNewPw] = useState('');
@@ -92,6 +96,28 @@ export default function MemberInfoScreen() {
 
   const cancelEditMode = () => {
     setEditMode(false);
+  };
+
+  const handleDeletePhoto = () => {
+    Alert.alert('사진 삭제', '프로필 사진을 삭제하시겠습니까?', [
+      { text: '취소', style: 'cancel' },
+      {
+        text: '삭제',
+        style: 'destructive',
+        onPress: async () => {
+          setDeleting(true);
+          try {
+            await withAuth((token) => deleteProfileImage(token));
+            await load();
+            setEditMode(false);
+          } catch (e: any) {
+            Alert.alert('오류', e?.message ?? '삭제에 실패했습니다.');
+          } finally {
+            setDeleting(false);
+          }
+        },
+      },
+    ]);
   };
 
   const pickPhoto = async () => {
@@ -254,6 +280,20 @@ export default function MemberInfoScreen() {
               <View style={{ flex: 1 }}>
                 <ThemedText style={styles.nameText}>{profile.name ?? '-'}</ThemedText>
                 <ThemedText style={styles.emailText}>{profile.email}</ThemedText>
+                {/* 편집 모드 + 기존 S3 사진 있을 때만 삭제 버튼 */}
+                {editMode && !!profile.profile_image && editPhotoUri === profile.profile_image && (
+                  <TouchableOpacity
+                    style={styles.photoDeleteBtn}
+                    onPress={handleDeletePhoto}
+                    disabled={deleting || saving}
+                    hitSlop={8}>
+                    {deleting ? (
+                      <ActivityIndicator size="small" color={ERROR_RED} />
+                    ) : (
+                      <ThemedText style={styles.photoDeleteText}>사진 삭제</ThemedText>
+                    )}
+                  </TouchableOpacity>
+                )}
               </View>
             </View>
 
@@ -450,4 +490,7 @@ const styles = StyleSheet.create({
   },
   pwButtonDisabled: { opacity: 0.6 },
   pwButtonText: { fontSize: 15, fontWeight: '700', color: '#fff' },
+
+  photoDeleteBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 6 },
+  photoDeleteText: { fontSize: 12, fontWeight: '600', color: ERROR_RED },
 });

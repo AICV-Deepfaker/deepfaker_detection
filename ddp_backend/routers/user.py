@@ -1,5 +1,7 @@
 # 프론트 연결
 
+from datetime import date
+
 from fastapi import APIRouter, Depends, File, Form, UploadFile, HTTPException
 from sqlmodel import Session
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -8,6 +10,7 @@ from pydantic import SecretStr
 
 from ddp_backend.core.database import get_db
 from ddp_backend.core.security import get_current_user
+from ddp_backend.core.s3 import to_public_url
 from ddp_backend.models import User
 from ddp_backend.schemas.enums import Affiliation, LoginMethod
 from ddp_backend.schemas.user import (
@@ -44,7 +47,9 @@ def get_me_route(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    return UserMeResponse.model_validate(current_user)
+    me = UserMeResponse.model_validate(current_user)
+    me.profile_image = to_public_url(current_user.profile_image)  # S3 key → 공개 URL
+    return me
 
 # 이메일 중복 확인 (실시간 체크)
 @router.post("/check-email", response_model=DuplicateCheckResponse)
@@ -56,10 +61,27 @@ def check_email_route(body: CheckEmail, db: Session = Depends(get_db)):
 def check_nickname_route(body: CheckNickname, db: Session = Depends(get_db)):
     return DuplicateCheckResponse(is_duplicate=check_nickname_duplicate(db, body.nickname))
 
-# 회원가입 - 이메일/닉네임 중복 확인 후 유저 생성 (로컬)
+# 회원가입 - multipart/form-data (이메일/닉네임 중복 확인 후 유저 생성, 프로필 이미지 S3 업로드)
 @router.post("/register", response_model=UserCreateResponse)
-def register_route(user_info: UserCreate, db: Session = Depends(get_db)):
-    return register(db, user_info, LoginMethod.LOCAL)
+async def register_route(
+    email: str = Form(...),
+    password: SecretStr = Form(...),
+    name: str = Form(...),
+    nickname: str | None = Form(None),
+    birth: date | None = Form(None),
+    affiliation: Affiliation | None = Form(None),
+    profile_image: UploadFile | None = File(None),
+    db: Session = Depends(get_db),
+):
+    user_info = UserCreate(
+        email=email,
+        password=password,
+        name=name,
+        nickname=nickname,
+        birth=birth,
+        affiliation=affiliation,
+    )
+    return register(db, user_info, LoginMethod.LOCAL, profile_image_file=profile_image)
 
 # 아이디 찾기 - 이름/생년월일로 이메일 조회 (마스킹 처리)
 @router.post("/find-id", response_model=FindIdResponse)

@@ -137,21 +137,22 @@ export type UserRegisterResponse = {
 
 export async function register(
   data: UserRegisterRequest,
-  _profileImageUri?: string | null
+  profileImageUri?: string | null
 ): Promise<UserRegisterResponse> {
-  const body: Record<string, unknown> = {
-    email: data.email,
-    password: data.password,
-    name: data.name,
-    nickname: data.nickname,
-  };
-  if (data.birth) body.birth = data.birth;
-  if (data.affiliation) body.affiliation = data.affiliation;
+  const formData = new FormData();
+  formData.append('email', data.email);
+  formData.append('password', data.password);
+  formData.append('name', data.name);
+  if (data.nickname) formData.append('nickname', data.nickname);
+  if (data.birth) formData.append('birth', data.birth);
+  if (data.affiliation) formData.append('affiliation', data.affiliation);
+  if (profileImageUri) {
+    formData.append('profile_image', uriToFormFile(profileImageUri));
+  }
 
   const res = await fetch(`${API_BASE}/user/register`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
+    body: formData,
   });
   if (!res.ok) {
     const msg = await readErrorText(res);
@@ -282,6 +283,33 @@ export async function editUser(
   if (!res.ok) {
     const msg = await readErrorText(res);
     throw new Error(`정보 수정 실패 (${res.status}): ${msg}`);
+  }
+  return res.json();
+}
+
+/**
+ * ✅ 프로필 이미지 삭제
+ * DELETE /user/profile/delete
+ */
+export async function deleteProfileImage(accessToken: string): Promise<{
+  user_id: string;
+  email: string;
+  name: string;
+  nickname: string;
+  birth: string | null;
+  affiliation: string | null;
+  profile_image: string | null;
+  created_at: string;
+}> {
+  const res = await fetch(`${API_BASE}/user/profile/delete`, {
+    method: 'DELETE',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+  if (!res.ok) {
+    const msg = await readErrorText(res);
+    throw new Error(`프로필 이미지 삭제 실패 (${res.status}): ${msg}`);
   }
   return res.json();
 }
