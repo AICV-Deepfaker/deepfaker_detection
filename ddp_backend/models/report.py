@@ -9,13 +9,14 @@ from sqlalchemy.types import JSON, BigInteger, TypeDecorator
 from sqlmodel import Field, Relationship
 
 from ddp_backend.core.database import Base
-from ddp_backend.schemas.enums import Result as ResultEnum
-from ddp_backend.schemas.enums import STTRiskLevel
 from ddp_backend.schemas.report import STTScript
 
 from .models import MAX_S3_LEN
 
 if TYPE_CHECKING:
+    from ddp_backend.schemas.enums import Result as ResultEnum
+    from ddp_backend.schemas.enums import STTRiskLevel
+
     from .models import Result
     from .user import User
 
