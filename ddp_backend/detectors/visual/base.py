@@ -113,11 +113,11 @@ class BaseVideoDetector[C: BaseVideoConfig](VisualDetector):
             )
 
         res = Result.FAKE if analyze_res.prob > 0.5 else Result.REAL
-        s3_path: str | None = None
+        s3_key: str | None = None
         if analyze_res.image is not None:
             upload_key = f"report/{vid_path.stem}_{self.model_name}_analyzed.png"
 
-            s3_path = upload_file_to_s3(
+            s3_key = upload_file_to_s3(
                 BytesIO(analyze_res.image), upload_key, "image/png"
             )
 
@@ -126,5 +126,5 @@ class BaseVideoDetector[C: BaseVideoConfig](VisualDetector):
             model_name=self.model_name,
             result=res,
             probability=analyze_res.prob,
-            visual_report=s3_path,
+            visual_report=s3_key,
         )

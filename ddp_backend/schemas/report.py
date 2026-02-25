@@ -1,7 +1,8 @@
 from typing import Literal
 
-from pydantic import BaseModel, computed_field
+from pydantic import BaseModel, computed_field, field_serializer
 
+from ddp_backend.core.s3 import to_public_url
 from ddp_backend.models.report import DeepReportData, FastReportData, STTScript
 
 from .enums import AnalyzeMode, ModelName, Result, Status, STTRiskLevel
@@ -31,6 +32,12 @@ class VideoReport(BaseReport):
     @property
     def confidence_score(self) -> float:
         return self.probability if self.probability > 0.5 else 1 - self.probability
+
+    @field_serializer('visual_report')
+    def vis_report_s3_key_to_path(self, value: str | None, _info): # type: ignore
+        if value is None:
+            return None
+        return to_public_url(value)
 
 
 class STTReport(BaseReport, STTScript):
