@@ -23,6 +23,9 @@ class Settings(BaseSettings):
     GOOGLE_CLIENT_ID: str
     GOOGLE_CLIENT_SECRET: str
     GOOGLE_REDIRECT_URI: str
+    # Google 임시 비밀번호 메일 발송
+    GMAIL_USER: str
+    GMAIL_APP_PASSWORD: str
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

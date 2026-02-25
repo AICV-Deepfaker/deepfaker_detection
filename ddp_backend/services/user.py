@@ -18,6 +18,8 @@ import random, string
 
 # 로그인, 로그아웃 -> auth.py
 
+TEMP_STR_LEN=12
+
 
 # =========
 # 닉네임 생성 (Google 전용, 필수)
@@ -166,7 +168,7 @@ def find_password(db: Session, user_info: FindPassword) -> bool:
     # 1. 임시 비밀번호 생성
     temp_password = ''.join(
         random.choices(
-            string.ascii_letters + string.digits, k=10
+            string.ascii_letters + string.digits, k=TEMP_STR_LEN
             ))
 
     # 2. 이메일 발송 (실패하면 DB 갱신하지 않음)
