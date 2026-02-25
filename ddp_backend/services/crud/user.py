@@ -6,9 +6,8 @@ from uuid import UUID
 from datetime import date
 
 from pydantic import BaseModel
-from sqlmodel import select
+from sqlmodel import select, Session
 from sqlalchemy.exc import NoResultFound
-from sqlmodel.orm.session import Session
 
 from ddp_backend.models import User
 from ddp_backend.schemas.user import UserCreateCRUD
@@ -43,17 +42,13 @@ class CRUDUser(CRUDBase):
     @classmethod
     def get_by_email(cls, db: Session, email: str):
         """이메일 조회"""
-        query = select(User).where(User.email == email)
-        return db.scalars(query).one_or_none()  # One user per one email
+        return db.exec(select(User).where(User.email == email)).one_or_none()  # One user per one email
 
     # 사용 : 회원가입
     @classmethod
     def get_by_nickname(cls, db: Session, nickname: str):
         """닉네임 중복 체크"""
-        query = select(User).where(User.nickname == nickname)
-        return db.scalars(
-            query
-        ).one_or_none()
+        return db.exec(select(User).where(User.nickname == nickname)).one_or_none()
 
     # 사용 : user_id로 조회
     @classmethod
@@ -65,17 +60,15 @@ class CRUDUser(CRUDBase):
     @classmethod
     def get_by_name_birth(cls, db: Session, name: str, birth: date):
         """이름, 생년월일 조회"""
-        query = select(User).where(User.name == name, User.birth == birth)
-        return db.scalars(query).first()
+        return db.exec(select(User).where(User.name == name, User.birth == birth)).first()
 
     # 사용 : 비밀번호 찾기
     @classmethod
     def get_by_name_birth_email(cls, db: Session, name: str, birth: date, email: str):
         """이름, 생년월일, 이메일 조회"""
-        query = select(User).where(
+        return db.exec(select(User).where(
             User.name == name, User.birth == birth, User.email == email
-        )
-        return db.scalars(query).one_or_none()
+        )).one_or_none()
 
     # 사용 : 회원정보수정
     @classmethod

@@ -1,8 +1,8 @@
 # 프론트 연결
 
-from fastapi import APIRouter, Depends, File, Form, UploadFile
-from pydantic.types import SecretStr
-from sqlmodel.orm.session import Session
+from fastapi import APIRouter, Depends, File, Form, UploadFile, HTTPException
+from sqlmodel import Session
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from ddp_backend.core.database import get_db
 from ddp_backend.core.security import get_current_user
@@ -21,6 +21,7 @@ from ddp_backend.schemas.user import (
     UserEditResponse,
     UserMeResponse,
 )
+from ddp_backend.schemas.ranking import UserRanking
 from ddp_backend.services.user import (
     check_email_duplicate,
     check_nickname_duplicate,
@@ -77,8 +78,8 @@ async def edit_route(
     current_user: User = Depends(get_current_user)
 ):
     update_info = UserEdit(
-        new_password=new_password if new_password else None,
-        new_affiliation=new_affiliation if new_affiliation else None,
+        new_password=new_password,
+        new_affiliation=new_affiliation,
     )
     return edit_user(db, current_user.user_id, update_info, profile_image_file=new_profile_image)
 
