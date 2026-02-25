@@ -9,7 +9,6 @@ from sqlalchemy.types import JSON, BigInteger, TypeDecorator
 from sqlmodel import Field, Relationship
 
 from ddp_backend.core.database import Base
-from ddp_backend.schemas.report import STTScript
 
 from .models import MAX_S3_LEN
 
@@ -19,6 +18,12 @@ if TYPE_CHECKING:
 
     from .models import Result
     from .user import User
+
+class STTScript(BaseModel):
+    keywords: list[str]
+    risk_reason: str
+    transcript: str
+    search_results: list[dict[str, str]]
 
 
 class PydanticJSONType[T: BaseModel](TypeDecorator[T]):
