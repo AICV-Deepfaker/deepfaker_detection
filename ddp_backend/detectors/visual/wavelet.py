@@ -1,9 +1,7 @@
-import base64
+import warnings
 from io import BytesIO
 from pathlib import Path
 from typing import Any, Self, cast, override
-from pathlib import Path
-import warnings
 
 import cv2
 import matplotlib.pyplot as plt
@@ -24,8 +22,8 @@ from wavelet_lib.detectors.base_detector import (  # type: ignore
     PredDict,
 )
 
-from ddp_backend.schemas.enums import ModelName
 from ddp_backend.schemas.config import WaveletConfig as WaveletConfigParam
+from ddp_backend.schemas.enums import ModelName
 
 from .base import (
     BaseVideoDetector,
@@ -76,9 +74,9 @@ class WaveletDetector(BaseVideoDetector[WaveletConfigParam]):
 
         if not ckpt_path.exists():
             warnings.warn(
-            f"[WaveletDetector] checkpoint not found: {ckpt_path}. "
-            "Wavelet detector will be disabled (server will still start)."
-        )
+                f"[WaveletDetector] checkpoint not found: {ckpt_path}. "
+                "Wavelet detector will be disabled (server will still start)."
+            )
             self.model = None
             return
 
@@ -136,7 +134,9 @@ class WaveletDetector(BaseVideoDetector[WaveletConfigParam]):
         # norm_crop (5-keypoint alignment)
         if face.kps is not None:
             try:
-                aligned = norm_crop(img_rgb, landmark=face.kps, image_size=self.config.img_size)
+                aligned = norm_crop(
+                    img_rgb, landmark=face.kps, image_size=self.config.img_size
+                )
                 if aligned is not None:
                     return aligned  # type: ignore
             except Exception:
@@ -165,11 +165,7 @@ class WaveletDetector(BaseVideoDetector[WaveletConfigParam]):
     ) -> float:
         """단일 RGB 이미지 → fake prob ([A] TEMPERATURE 적용)."""
         resized = cv2.resize(img_rgb, (img_size, img_size))
-        img_tensor = (
-            cast(torch.Tensor, transform(resized))
-            .unsqueeze(0)
-            .to(self.device)
-        )
+        img_tensor = cast(torch.Tensor, transform(resized)).unsqueeze(0).to(self.device)
         data_dict = {
             "image": img_tensor,
             "label": torch.zeros(1).long().to(self.device),
@@ -209,8 +205,7 @@ class WaveletDetector(BaseVideoDetector[WaveletConfigParam]):
         buf = BytesIO()
         plt.savefig(buf, format="png", bbox_inches="tight")  # type: ignore
         plt.close(fig)
-        buf.seek(0)
-        return base64.b64encode(buf.read()).decode("utf-8")
+        return buf.getvalue()
 
     # ──────────────────────────────────────────────────────────
     # 메인 추론 (inference_result.py 개선사항 통합)
@@ -241,7 +236,7 @@ class WaveletDetector(BaseVideoDetector[WaveletConfigParam]):
                     raw_frames.append(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
 
         if not raw_frames:
-            return VideoInferenceResult(prob=0.0, base64_report="")
+            raise RuntimeError
 
         # ── Step 2: [G] 프레임 품질 필터링 ──────────────────
         valid_frames: list[MatLike] = []
@@ -294,7 +289,7 @@ class WaveletDetector(BaseVideoDetector[WaveletConfigParam]):
                 best_face_rgb = face_rgb
 
         if not all_probs:
-            return VideoInferenceResult(prob=0.0, base64_report="")
+            raise RuntimeError
 
         # ── Step 4: [E] p75 집계 ─────────────────────────────
         arr = np.array(all_probs)
@@ -308,8 +303,8 @@ class WaveletDetector(BaseVideoDetector[WaveletConfigParam]):
             final_prob = float(np.mean(arr))
 
         # ── 시각화 리포트 ─────────────────────────────────────
-        visual_report = ""
+        visual_report = None
         if best_face_rgb is not None:
             visual_report = self.generate_visual_report(best_face_rgb, max_prob)
 
-        return VideoInferenceResult(prob=final_prob, base64_report=visual_report)
+        return VideoInferenceResult(prob=final_prob, image=visual_report)

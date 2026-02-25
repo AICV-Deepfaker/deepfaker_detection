@@ -1,3 +1,4 @@
+from contextlib import contextmanager
 from sqlmodel import SQLModel, create_engine
 from sqlmodel.orm.session import Session
 from ddp_backend.core.config import settings
@@ -9,7 +10,13 @@ engine = create_engine(settings.DATABASE_URL)
 # Base = declarative_base() # JPA의 Entity
 class Base(SQLModel): ...
 
+@contextmanager
+def get_db_ctx():
+    with Session(engine, autocommit=False, autoflush=False) as session:
+        yield session
+
+
 # 요청 단위로 DB 세션을 생성하고 종료하는 함수
 def get_db():
-    with Session(engine, autocommit=False, autoflush=False) as session:
+    with get_db_ctx() as session:
         yield session

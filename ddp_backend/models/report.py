@@ -54,10 +54,10 @@ class ReportBase(Base):
 class FastReportData(Base):
     freq_result: ResultEnum
     freq_conf: float
-    freq_image: str = Field(max_length=MAX_S3_LEN)
+    freq_image: str | None = Field(max_length=MAX_S3_LEN)
     rppg_result: ResultEnum
     rppg_conf: float
-    rppg_image: str = Field(max_length=MAX_S3_LEN)
+    rppg_image: str | None = Field(max_length=MAX_S3_LEN)
     stt_risk_level: STTRiskLevel
     stt_script: STTScript = Field(
         sa_column=Column(PydanticJSONType(STTScript), nullable=False),

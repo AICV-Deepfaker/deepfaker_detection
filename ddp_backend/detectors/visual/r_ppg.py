@@ -16,4 +16,4 @@ class RPPGDetector(BaseVideoDetector[BaseVideoConfig]):
 
     @override
     def _analyze(self, vid_path: str | Path) -> VideoInferenceResult:
-        return VideoInferenceResult(prob=0, base64_report="dummy")
+        return VideoInferenceResult(prob=0)

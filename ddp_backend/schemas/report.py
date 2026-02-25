@@ -25,7 +25,7 @@ class BaseReport(BaseModel):
 class VideoReport(BaseReport):
     result: Result
     probability: float
-    visual_report: str
+    visual_report: str | None
 
     @computed_field
     @property

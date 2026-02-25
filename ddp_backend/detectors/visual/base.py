@@ -5,12 +5,14 @@ import subprocess
 from abc import abstractmethod
 from collections.abc import Generator
 from contextlib import contextmanager
+from io import BytesIO
 from pathlib import Path
 
 import cv2
 import torch
 from pydantic import BaseModel
 
+from ddp_backend.core.s3 import upload_file_to_s3
 from ddp_backend.schemas.config import BaseVideoConfig
 from ddp_backend.schemas.enums import Result, Status
 from ddp_backend.schemas.report import VideoReport
@@ -19,7 +21,7 @@ from ddp_backend.detectors import VisualDetector
 
 class VideoInferenceResult(BaseModel):
     prob: float
-    base64_report: str
+    image: bytes | None = None
 
 
 class BaseVideoDetector[C: BaseVideoConfig](VisualDetector):
@@ -47,9 +49,7 @@ class BaseVideoDetector[C: BaseVideoConfig](VisualDetector):
             if cap is not None:
                 cap.release()
 
-    def set_fps(
-        self, vid_src: str | Path, vid_dest: str | Path, target_fps: int = 30
-    ):
+    def set_fps(self, vid_src: str | Path, vid_dest: str | Path, target_fps: int = 30):
         # 1. 현재 FPS 확인 (OpenCV 활용)
         with self._load_video(vid_src) as cap:
             current_fps = cap.get(cv2.CAP_PROP_FPS)
@@ -82,7 +82,7 @@ class BaseVideoDetector[C: BaseVideoConfig](VisualDetector):
             cmd,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            text=True  # 이 설정을 통해 stderr를 바이트가 아닌 문자열로 바로 받습니다.
+            text=True,  # 이 설정을 통해 stderr를 바이트가 아닌 문자열로 바로 받습니다.
         )
 
         # 실행 완료 후 리턴코드 확인
@@ -98,15 +98,33 @@ class BaseVideoDetector[C: BaseVideoConfig](VisualDetector):
 
     def analyze(self, vid_path: str | Path) -> VideoReport:
         vid_path = Path(vid_path)
-        self.set_fps(vid_path, vid_path.with_stem(f"resize_{vid_path.stem}"))
-        analyze_res = self._analyze(vid_path)
+        resized_path = vid_path.with_stem(f"resize_{vid_path.stem}")
+        self.set_fps(vid_path, resized_path)
+        analyze_res = self._analyze(resized_path)
 
-        res = Result.FAKE if analyze_res.prob > 0.5 else Result.REAL
+        try:
+            res = Result.FAKE if analyze_res.prob > 0.5 else Result.REAL
+        except RuntimeError:
+            return VideoReport(
+                status=Status.ERROR,
+                model_name=self.model_name,
+                result=Result.UNKNOWN,
+                probability=0,
+                visual_report=None,
+            )
+
+        s3_path: str | None = None
+        if analyze_res.image is not None:
+            upload_key = f"{vid_path.stem}_{self.model_name}_analyzed.png"
+
+            s3_path = upload_file_to_s3(
+                BytesIO(analyze_res.image), upload_key, "image/png"
+            )
 
         return VideoReport(
             status=Status.SUCCESS,
             model_name=self.model_name,
             result=res,
             probability=analyze_res.prob,
-            visual_report=analyze_res.base64_report,
+            visual_report=s3_path,
         )
