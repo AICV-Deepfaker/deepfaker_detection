@@ -197,7 +197,7 @@ def delete_file_from_s3(key_or_url: str) -> None:
 # =========================
 # 프로필 이미지 업로드
 def upload_image_to_s3(file: UploadFile, user_id: str) -> str:
-    if not settings.AWS_S3_BUCKET:
+    if not settings.S3_BUCKET:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="S3 버킷이 설정되지 않았습니다"
@@ -207,7 +207,7 @@ def upload_image_to_s3(file: UploadFile, user_id: str) -> str:
     try:
         s3.upload_fileobj(
             file.file,
-            settings.AWS_S3_BUCKET,
+            settings.S3_BUCKET,
             key,
             ExtraArgs={"ContentType": file.content_type or "image/jpeg"},
         )
