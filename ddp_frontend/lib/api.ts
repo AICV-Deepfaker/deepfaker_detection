@@ -54,6 +54,7 @@ export interface PredictResult {
 /**
  * 백엔드 응답(APIOutputFast / APIOutputDeep)을 프론트 PredictResult 형태로 변환
  */
+// 이거 그냥 바로 받기 (형태 변환 X) -> raw 그대로 반환
 function mapBackendResponse(raw: any, mode: PredictMode): PredictResult {
   if (raw.status === 'error' || raw.error_msg) {
     return {
