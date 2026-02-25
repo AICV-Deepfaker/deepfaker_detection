@@ -4,6 +4,7 @@ Token CRUD
 
 from uuid import UUID
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 from sqlmodel import select, update, col
 from sqlmodel.orm.session import Session
@@ -60,7 +61,7 @@ class CRUDToken(CRUDBase):
 
     @classmethod
     def bulk_revoke_expired(cls, db: Session):
-        expired = datetime.now()
+        expired = datetime.now(ZoneInfo("Asia/Seoul"))
         query = (
             update(Token)
             .where(col(Token.revoked) == False)

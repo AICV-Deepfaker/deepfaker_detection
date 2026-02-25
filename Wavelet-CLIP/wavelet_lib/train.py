@@ -2,6 +2,7 @@ import os
 import argparse
 import random
 import datetime
+from zoneinfo import ZoneInfo
 import yaml
 from datetime import timedelta
 
@@ -198,7 +199,7 @@ def main():
     if config['lmdb']:
         config['dataset_json_folder'] = 'preprocessing/dataset_json_v6'
     # create logger
-    timenow=datetime.datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
+    timenow=datetime.datetime.now(ZoneInfo("Asia/Seoul")).strftime('%Y-%m-%d-%H-%M-%S')
     task_str = f"_{config['task_target']}" if config['task_target'] is not None else ""
     logger_path =  os.path.join(
                 config['log_dir'],

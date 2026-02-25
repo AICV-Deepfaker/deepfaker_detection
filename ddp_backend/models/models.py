@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 from typing import TYPE_CHECKING, Annotated, Any
 
 from pydantic import BaseModel
@@ -58,7 +59,7 @@ class PydanticJSONType[T: BaseModel](TypeDecorator[T]):
 # 0. source default expires_at : 12시간
 # DB 내에 생성하면 DB 문법에 의존해야하므로 python 함수로 계산
 def source_def_expire() -> datetime:
-    return datetime.now() + timedelta(hours=12)
+    return datetime.now(ZoneInfo("Asia/Seoul")) + timedelta(hours=12)
 
 
 class CreatedTimestampMixin(Base):
@@ -75,7 +76,7 @@ class Token(CreatedTimestampMixin, Base, table=True):
     user_id: uuid.UUID = Field(foreign_key="users.user_id", ondelete="CASCADE")
     refresh_token: str = Field(max_length=255, unique=True)
     expires_at: Annotated[datetime, AwareDatetime] = Field(
-        default_factory=lambda: datetime.now() +timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS),
+        default_factory=lambda: datetime.now(ZoneInfo("Asia/Seoul")) +timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS),
         sa_column=Column(DateTime(timezone=True), nullable=False)
     )
     revoked: bool = False

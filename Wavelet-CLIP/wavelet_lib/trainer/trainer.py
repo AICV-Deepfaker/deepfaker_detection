@@ -12,6 +12,7 @@ import numpy as np
 from collections import defaultdict
 from tqdm import tqdm
 import time
+from zoneinfo import ZoneInfo
 import torch
 from torch.utils.tensorboard import SummaryWriter
 from wavelet_lib.metrics.base_metrics_class import Recorder
@@ -34,7 +35,7 @@ class Trainer(object):
         scheduler,
         logger,
         metric_scoring='auc',
-        time_now = datetime.datetime.now().strftime('%Y-%m-%d-%H-%M-%S'),
+        time_now = datetime.datetime.now(ZoneInfo("Asia/Seoul")).strftime('%Y-%m-%d-%H-%M-%S'),
         swa_model=None
         ):
         # check if all the necessary components are implemented

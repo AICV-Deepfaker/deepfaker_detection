@@ -7,6 +7,7 @@ import os
 import hashlib
 from passlib.context import CryptContext
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 from jose import JWTError, jwt, ExpiredSignatureError
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
@@ -27,10 +28,10 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 # jwt access 토큰 생성
 # =========
 def create_access_token(user_id: UUID, expires_delta: timedelta | None = None):
-    expire = datetime.now() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES) # 기본값
+    expire = datetime.now(ZoneInfo("Asia/Seoul")) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES) # 기본값
 
     if expires_delta: # 만료기간을 따로 지정할 경우
-        expire = datetime.now() + expires_delta # 덮어씌움
+        expire = datetime.now(ZoneInfo("Asia/Seoul")) + expires_delta # 덮어씌움
 
     encoded_jwt = jwt.encode(
             {
@@ -49,10 +50,10 @@ def create_access_token(user_id: UUID, expires_delta: timedelta | None = None):
 # jwt refresh 토큰 생성
 # =========
 def create_refresh_token(user_id: UUID, expires_delta: timedelta | None = None):
-    expire = datetime.now() + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS) # 기본값
+    expire = datetime.now(ZoneInfo("Asia/Seoul")) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS) # 기본값
 
     if expires_delta: # 만료기간을 따로 지정할 경우
-        expire = datetime.now() + expires_delta # 덮어씌움
+        expire = datetime.now(ZoneInfo("Asia/Seoul")) + expires_delta # 덮어씌움
 
     encoded_jwt = jwt.encode(
             {

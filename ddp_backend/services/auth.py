@@ -6,6 +6,7 @@ from sqlmodel.orm.session import Session
 from fastapi import HTTPException, status
 from datetime import datetime, timedelta
 from uuid import UUID
+from zoneinfo import ZoneInfo
 
 from ddp_backend.core.config import settings
 from ddp_backend.core.security import hash_refresh_token, create_access_token, create_refresh_token, decode_token, verify_password
@@ -76,14 +77,14 @@ def reissue_token(db: Session, refresh_token: str):
         )
     
     # refresh 유효
-    if datetime.now() < token.expires_at:
+    if datetime.now(ZoneInfo("Asia/Seoul")) < token.expires_at:
         new_access_token = create_access_token(token.user_id) 
         new_refresh_token = create_refresh_token(token.user_id) 
         save_refresh_token(
             db,
             user_id=token.user_id,
             refresh_token=new_refresh_token,
-            expires_at=datetime.now() + 
+            expires_at=datetime.now(ZoneInfo("Asia/Seoul")) + 
                 timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
         )
         return {"access_token": new_access_token, "refresh_token": new_refresh_token}
@@ -118,7 +119,7 @@ def login(db:Session, user_info: UserLogin) -> TokenResponse:
         db,
         user_id=user.user_id,
         refresh_token=refresh_token,
-        expires_at=datetime.now() + 
+        expires_at=datetime.now(ZoneInfo("Asia/Seoul")) + 
             timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
     )
     
@@ -183,7 +184,7 @@ def google_login(db: Session, user_info: UserCreate) -> TokenResponse:
         db,
         user_id=user.user_id,
         refresh_token=refresh_token,
-        expires_at=datetime.now() + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
+        expires_at=datetime.now(ZoneInfo("Asia/Seoul")) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
     )
     return TokenResponse(
         access_token=access_token,
