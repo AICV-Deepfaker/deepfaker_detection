@@ -4,7 +4,7 @@ import uuid
 from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel
-from sqlalchemy import Dialect
+from sqlalchemy import Dialect, Column
 from sqlalchemy.types import JSON, BigInteger, TypeDecorator
 from sqlmodel import Field, Relationship
 
@@ -62,7 +62,7 @@ class FastReportData(Base):
     rppg_image: str = Field(max_length=MAX_S3_LEN)
     stt_risk_level: STTRiskLevel
     stt_script: STTScript = Field(
-        sa_type=PydanticJSONType(STTScript), # type: ignore
+        sa_column=Column(PydanticJSONType(STTScript), nullable=False),
     )
 
 class DeepReportData(Base):
