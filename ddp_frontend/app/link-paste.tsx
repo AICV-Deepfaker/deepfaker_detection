@@ -2,8 +2,9 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   Alert,
   ScrollView,
   StyleSheet,
@@ -14,12 +15,14 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
+import { linkVideo, uploadVideo } from '@/lib/api';
 import {
   peekPendingImageUri,
   peekPendingVideoUri,
   setPendingImageUri,
   setPendingVideoUri,
 } from '@/lib/pending-upload';
+import { withAuth } from '@/lib/with-auth';
 
 const ACCENT_GREEN = '#00CF90';
 const ACCENT_GREEN_DARK = '#00B87A';
@@ -60,20 +63,37 @@ function detectPlatformFromUrl(url: string): PlatformId | null {
 }
 
 type UploadedFile = { type: 'video'; uri: string };
+type LinkUploadStatus = 'idle' | 'uploading' | 'done' | 'error';
 
 export default function LinkPasteScreen() {
   const insets = useSafeAreaInsets();
   const [url, setUrl] = useState('');
   const [selectedPlatform, setSelectedPlatform] = useState<PlatformId | null>(null);
   const [uploadedFile, setUploadedFile] = useState<UploadedFile | null>(null);
+  const [videoUploading, setVideoUploading] = useState(false);
   const [showModeButtons, setShowModeButtons] = useState(false);
+  const [linkUploadStatus, setLinkUploadStatus] = useState<LinkUploadStatus>('idle');
+  const [submittedUrl, setSubmittedUrl] = useState('');
+  const linkDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const canAnalyze = Boolean(url.trim()) || Boolean(uploadedFile);
 
   useEffect(() => {
     const vid = peekPendingVideoUri();
     if (vid) setUploadedFile({ type: 'video', uri: vid });
-    }, []);
+  }, []);
+
+  const handleLinkUpload = useCallback(async (targetUrl: string) => {
+    if (!targetUrl.trim() || targetUrl === submittedUrl) return;
+    setSubmittedUrl(targetUrl);
+    setLinkUploadStatus('uploading');
+    try {
+      await withAuth((token) => linkVideo(token, targetUrl));
+      setLinkUploadStatus('done');
+    } catch {
+      setLinkUploadStatus('error');
+    }
+  }, [submittedUrl]);
 
   const handleUrlChange = useCallback(
     (text: string) => {
@@ -82,8 +102,21 @@ export default function LinkPasteScreen() {
       if (detected) {
         setSelectedPlatform(detected);
       }
+      // YouTube URL이 감지되면 600ms 디바운스 후 링크 업로드
+      if (linkDebounceRef.current) clearTimeout(linkDebounceRef.current);
+      if (detected === 'youtube' && text.trim()) {
+        linkDebounceRef.current = setTimeout(() => {
+          handleLinkUpload(text.trim());
+        }, 600);
+      } else {
+        // YouTube가 아닌 경우 상태 초기화
+        if (detected !== null && detected !== 'youtube') {
+          setLinkUploadStatus('idle');
+          setSubmittedUrl('');
+        }
+      }
     },
-    [],
+    [handleLinkUpload],
   );
 
   const handleAnalyze = () => {
@@ -129,8 +162,18 @@ export default function LinkPasteScreen() {
       allowsMultipleSelection: false,
     });
     if (!result.canceled && result.assets[0]) {
-      setUploadedFile({ type: 'video', uri: result.assets[0].uri });
+      const uri = result.assets[0].uri;
+      setUploadedFile({ type: 'video', uri });
       setShowModeButtons(false);
+      // 백엔드 S3에 업로드
+      setVideoUploading(true);
+      try {
+        await withAuth((token) => uploadVideo(token, uri));
+      } catch (e: any) {
+        Alert.alert('업로드 실패', e?.message ?? '영상 업로드 중 오류가 발생했습니다.');
+      } finally {
+        setVideoUploading(false);
+      }
     }
   };
 
@@ -163,8 +206,14 @@ export default function LinkPasteScreen() {
 
         {uploadedFile && (
           <View style={styles.uploadDoneWrap}>
-            <MaterialIcons name="check-circle" size={16} color={ACCENT_GREEN} />
-            <ThemedText style={styles.uploadDoneText}>업로드 완료</ThemedText>
+            {videoUploading ? (
+              <ActivityIndicator size="small" color={ACCENT_GREEN} />
+            ) : (
+              <MaterialIcons name="check-circle" size={16} color={ACCENT_GREEN} />
+            )}
+            <ThemedText style={styles.uploadDoneText}>
+              {videoUploading ? '업로드 중...' : '업로드 완료'}
+            </ThemedText>
           </View>
         )}
 
@@ -216,6 +265,32 @@ export default function LinkPasteScreen() {
             })}
           </View>
         </View>
+
+        {/* 링크 업로드 상태 (YouTube URL 감지 시) */}
+        {linkUploadStatus !== 'idle' && (
+          <View style={styles.linkStatusWrap}>
+            {linkUploadStatus === 'uploading' && (
+              <>
+                <ActivityIndicator size="small" color={ACCENT_GREEN} />
+                <ThemedText style={styles.linkStatusText}>링크 업로드 중...</ThemedText>
+              </>
+            )}
+            {linkUploadStatus === 'done' && (
+              <>
+                <MaterialIcons name="check-circle" size={16} color={ACCENT_GREEN} />
+                <ThemedText style={styles.linkStatusText}>링크 업로드 완료</ThemedText>
+              </>
+            )}
+            {linkUploadStatus === 'error' && (
+              <>
+                <MaterialIcons name="error-outline" size={16} color="#E53E3E" />
+                <ThemedText style={[styles.linkStatusText, styles.linkStatusError]}>
+                  링크 업로드 실패
+                </ThemedText>
+              </>
+            )}
+          </View>
+        )}
 
         {/* 모드 선택 (업로드 후 분석하기 탭 시 표시) */}
         {showModeButtons && uploadedFile && (
@@ -475,5 +550,19 @@ const styles = StyleSheet.create({
   },
   analyzeButtonDisabled: {
     opacity: 0.6,
+  },
+  linkStatusWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 20,
+  },
+  linkStatusText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: ACCENT_GREEN,
+  },
+  linkStatusError: {
+    color: '#E53E3E',
   },
 });

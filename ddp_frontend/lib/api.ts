@@ -277,6 +277,67 @@ function getImageMimeAndName(uri: string): { type: string; name: string } {
 }
 
 /**
+ * ✅ 영상 파일을 S3에 업로드
+ * POST /videos/upload  (multipart/form-data)
+ */
+export type VideoUploadResponse = {
+  video_id: number;
+  s3_path: string;
+  queued: boolean;
+};
+
+export async function uploadVideo(
+  accessToken: string,
+  videoUri: string
+): Promise<VideoUploadResponse> {
+  const filename = videoUri.split('/').pop() ?? 'video.mp4';
+  const match = /\.(\w+)$/.exec(filename);
+  const type = match ? `video/${match[1].toLowerCase()}` : 'video/mp4';
+
+  const formData = new FormData();
+  formData.append('file', { uri: videoUri, name: filename, type } as unknown as Blob);
+
+  const res = await fetch(`${API_BASE}/videos/upload`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${accessToken}` },
+    body: formData,
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`영상 업로드 실패 (${res.status}): ${text}`);
+  }
+  return res.json();
+}
+
+/**
+ * ✅ YouTube 링크를 S3에 업로드 (백그라운드 처리)
+ * POST /videos/link
+ */
+export type VideoLinkResponse = {
+  video_id: number;
+  queued: boolean;
+};
+
+export async function linkVideo(
+  accessToken: string,
+  url: string
+): Promise<VideoLinkResponse> {
+  const res = await fetch(`${API_BASE}/videos/link`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ url }),
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`링크 업로드 실패 (${res.status}): ${text}`);
+  }
+  return res.json();
+}
+
+/**
  * 이미지 파일로 딥페이크 추론 요청 (영상과 동일한 흐름)
  */
 export async function predictWithImageFile(
