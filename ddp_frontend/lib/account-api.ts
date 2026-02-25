@@ -137,22 +137,21 @@ export type UserRegisterResponse = {
 
 export async function register(
   data: UserRegisterRequest,
-  profileImageUri?: string | null
+  _profileImageUri?: string | null
 ): Promise<UserRegisterResponse> {
-  const formData = new FormData();
-  formData.append('email', data.email);
-  formData.append('password', data.password);
-  formData.append('name', data.name);
-  formData.append('nickname', data.nickname);
-  if (data.birth) formData.append('birth', data.birth);
-  if (data.affiliation) formData.append('affiliation', data.affiliation);
-  if (profileImageUri) {
-    formData.append('profile_image', uriToFormFile(profileImageUri));
-  }
+  const body: Record<string, unknown> = {
+    email: data.email,
+    password: data.password,
+    name: data.name,
+    nickname: data.nickname,
+  };
+  if (data.birth) body.birth = data.birth;
+  if (data.affiliation) body.affiliation = data.affiliation;
 
   const res = await fetch(`${API_BASE}/user/register`, {
     method: 'POST',
-    body: formData,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
   });
   if (!res.ok) {
     const msg = await readErrorText(res);

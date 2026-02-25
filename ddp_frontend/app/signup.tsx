@@ -17,14 +17,16 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
-import { register } from '@/lib/account-api';
+import { checkEmail, checkNickname, register } from '@/lib/account-api';
 
 const ACCENT_GREEN = '#00CF90';
 const TEXT_COLOR = '#111';
 const SECONDARY_TEXT_COLOR = '#687076';
+const ERROR_RED = '#E53935';
 
 // 백엔드 enum 기준: Affiliation = "개인" | "기관" | "회사"
 type Affiliation = '개인' | '기관' | '회사';
+type CheckStatus = 'idle' | 'checking' | 'available' | 'duplicate';
 
 const AFFILIATION_OPTIONS: { value: Affiliation; label: string }[] = [
   { value: '개인', label: '개인' },
@@ -44,6 +46,11 @@ export default function SignupScreen() {
   const [affiliation, setAffiliation] = useState<Affiliation | undefined>(undefined);
   const [loading, setLoading] = useState(false);
 
+  const [emailStatus, setEmailStatus] = useState<CheckStatus>('idle');
+  const [nicknameStatus, setNicknameStatus] = useState<CheckStatus>('idle');
+  const [checkedEmail, setCheckedEmail] = useState('');
+  const [checkedNickname, setCheckedNickname] = useState('');
+
   const pickProfilePhoto = useCallback(async () => {
     const { granted } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!granted) {
@@ -60,6 +67,40 @@ export default function SignupScreen() {
       setProfilePhotoUri(result.assets[0].uri);
     }
   }, []);
+
+  const handleCheckEmail = useCallback(async () => {
+    const trimmed = email.trim();
+    if (!trimmed) {
+      Alert.alert('입력 오류', '이메일을 입력해 주세요.');
+      return;
+    }
+    setEmailStatus('checking');
+    try {
+      const { is_duplicate } = await checkEmail(trimmed);
+      setEmailStatus(is_duplicate ? 'duplicate' : 'available');
+      setCheckedEmail(trimmed);
+    } catch {
+      setEmailStatus('idle');
+      Alert.alert('오류', '이메일 확인 중 오류가 발생했습니다.');
+    }
+  }, [email]);
+
+  const handleCheckNickname = useCallback(async () => {
+    const trimmed = nickname.trim();
+    if (!trimmed) {
+      Alert.alert('입력 오류', '별명을 입력해 주세요.');
+      return;
+    }
+    setNicknameStatus('checking');
+    try {
+      const { is_duplicate } = await checkNickname(trimmed);
+      setNicknameStatus(is_duplicate ? 'duplicate' : 'available');
+      setCheckedNickname(trimmed);
+    } catch {
+      setNicknameStatus('idle');
+      Alert.alert('오류', '닉네임 확인 중 오류가 발생했습니다.');
+    }
+  }, [nickname]);
 
   const handleSignup = useCallback(async () => {
     const trimmedEmail = email.trim();
@@ -93,6 +134,14 @@ export default function SignupScreen() {
       Alert.alert('입력 오류', '비밀번호가 일치하지 않습니다.');
       return;
     }
+    if (trimmedEmail !== checkedEmail || emailStatus !== 'available') {
+      Alert.alert('입력 오류', '이메일 중복 확인을 완료해 주세요.');
+      return;
+    }
+    if (trimmedNickname !== checkedNickname || nicknameStatus !== 'available') {
+      Alert.alert('입력 오류', '별명 중복 확인을 완료해 주세요.');
+      return;
+    }
 
     setLoading(true);
     try {
@@ -115,7 +164,7 @@ export default function SignupScreen() {
     } finally {
       setLoading(false);
     }
-  }, [email, password, passwordConfirm, name, nickname, birthdate, profilePhotoUri, affiliation]);
+  }, [email, password, passwordConfirm, name, nickname, birthdate, profilePhotoUri, affiliation, emailStatus, nicknameStatus, checkedEmail, checkedNickname]);
 
   return (
     <KeyboardAvoidingView
@@ -139,18 +188,40 @@ export default function SignupScreen() {
         </View>
 
         <View style={styles.form}>
+          {/* 이메일 */}
           <ThemedText style={styles.sectionLabel}>이메일 *</ThemedText>
-          <TextInput
-            style={styles.input}
-            placeholder="example@email.com"
-            placeholderTextColor={SECONDARY_TEXT_COLOR}
-            value={email}
-            onChangeText={setEmail}
-            autoCapitalize="none"
-            autoCorrect={false}
-            keyboardType="email-address"
-            editable={!loading}
-          />
+          <View style={styles.inputRow}>
+            <TextInput
+              style={[styles.input, styles.inputFlex]}
+              placeholder="example@email.com"
+              placeholderTextColor={SECONDARY_TEXT_COLOR}
+              value={email}
+              onChangeText={(text) => { setEmail(text); setEmailStatus('idle'); }}
+              autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType="email-address"
+              editable={!loading}
+            />
+            <TouchableOpacity
+              style={[styles.checkButton, emailStatus === 'checking' && styles.checkButtonDisabled]}
+              onPress={handleCheckEmail}
+              disabled={loading || emailStatus === 'checking'}
+              activeOpacity={0.8}>
+              {emailStatus === 'checking' ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <ThemedText style={styles.checkButtonText}>중복 확인</ThemedText>
+              )}
+            </TouchableOpacity>
+          </View>
+          {emailStatus === 'available' && (
+            <ThemedText style={styles.statusAvailable}>사용 가능한 이메일입니다.</ThemedText>
+          )}
+          {emailStatus === 'duplicate' && (
+            <ThemedText style={styles.statusDuplicate}>이미 사용 중인 이메일입니다.</ThemedText>
+          )}
+
+          {/* 비밀번호 */}
           <ThemedText style={[styles.sectionLabel, { marginTop: 16 }]}>비밀번호 * (8자 이상)</ThemedText>
           <TextInput
             style={styles.input}
@@ -172,6 +243,7 @@ export default function SignupScreen() {
             editable={!loading}
           />
 
+          {/* 이름 */}
           <ThemedText style={[styles.sectionLabel, { marginTop: 20 }]}>이름 * (2자 이상)</ThemedText>
           <TextInput
             style={styles.input}
@@ -181,15 +253,38 @@ export default function SignupScreen() {
             onChangeText={setName}
             editable={!loading}
           />
+
+          {/* 별명 */}
           <ThemedText style={[styles.sectionLabel, { marginTop: 16 }]}>별명 *</ThemedText>
-          <TextInput
-            style={styles.input}
-            placeholder="홈에 표시될 별명"
-            placeholderTextColor={SECONDARY_TEXT_COLOR}
-            value={nickname}
-            onChangeText={setNickname}
-            editable={!loading}
-          />
+          <View style={styles.inputRow}>
+            <TextInput
+              style={[styles.input, styles.inputFlex]}
+              placeholder="홈에 표시될 별명"
+              placeholderTextColor={SECONDARY_TEXT_COLOR}
+              value={nickname}
+              onChangeText={(text) => { setNickname(text); setNicknameStatus('idle'); }}
+              editable={!loading}
+            />
+            <TouchableOpacity
+              style={[styles.checkButton, nicknameStatus === 'checking' && styles.checkButtonDisabled]}
+              onPress={handleCheckNickname}
+              disabled={loading || nicknameStatus === 'checking'}
+              activeOpacity={0.8}>
+              {nicknameStatus === 'checking' ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <ThemedText style={styles.checkButtonText}>중복 확인</ThemedText>
+              )}
+            </TouchableOpacity>
+          </View>
+          {nicknameStatus === 'available' && (
+            <ThemedText style={styles.statusAvailable}>사용 가능한 별명입니다.</ThemedText>
+          )}
+          {nicknameStatus === 'duplicate' && (
+            <ThemedText style={styles.statusDuplicate}>이미 사용 중인 별명입니다.</ThemedText>
+          )}
+
+          {/* 생년월일 */}
           <ThemedText style={[styles.sectionLabel, { marginTop: 16 }]}>생년월일 *</ThemedText>
           <TextInput
             style={styles.input}
@@ -201,6 +296,7 @@ export default function SignupScreen() {
             editable={!loading}
           />
 
+          {/* 프로필 사진 */}
           <ThemedText style={[styles.sectionLabel, { marginTop: 20 }]}>프로필 사진 (선택)</ThemedText>
           <TouchableOpacity style={styles.photoButton} onPress={pickProfilePhoto} disabled={loading}>
             {profilePhotoUri ? (
@@ -213,6 +309,7 @@ export default function SignupScreen() {
             )}
           </TouchableOpacity>
 
+          {/* 소속 */}
           <ThemedText style={[styles.sectionLabel, { marginTop: 20 }]}>소속 (선택)</ThemedText>
           <View style={styles.affiliationRow}>
             {AFFILIATION_OPTIONS.map((opt) => (
@@ -260,6 +357,8 @@ const styles = StyleSheet.create({
   logo: { width: 300, height: 140 },
   form: { width: '100%' },
   sectionLabel: { fontSize: 14, fontWeight: '600', color: TEXT_COLOR, marginBottom: 8 },
+  inputRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  inputFlex: { flex: 1 },
   input: {
     backgroundColor: '#F5F5F5',
     borderRadius: 12,
@@ -270,6 +369,20 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(0,0,0,0.06)',
   },
+  checkButton: {
+    backgroundColor: ACCENT_GREEN,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 76,
+    minHeight: 52,
+  },
+  checkButtonDisabled: { opacity: 0.7 },
+  checkButtonText: { fontSize: 13, fontWeight: '600', color: '#fff' },
+  statusAvailable: { fontSize: 12, color: ACCENT_GREEN, marginTop: 4 },
+  statusDuplicate: { fontSize: 12, color: ERROR_RED, marginTop: 4 },
   photoButton: { alignSelf: 'flex-start' },
   photoPlaceholder: {
     width: 88,
