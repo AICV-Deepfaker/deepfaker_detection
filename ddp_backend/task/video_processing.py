@@ -6,7 +6,7 @@ from pathlib import Path
 
 from sqlmodel.orm.session import Session
 
-from ddp_backend.core.database import SessionLocal
+from ddp_backend.core.database import get_db
 from ddp_backend.core.s3 import upload_file_to_s3, download_file_from_s3
 from ddp_backend.models.models import Video, Source, Result
 from ddp_backend.schemas.enums import VideoStatus
@@ -62,7 +62,7 @@ def process_uploaded_video(video_id: uuid.UUID) -> None:
     - 추론
     - results 저장
     """
-    db = SessionLocal()
+    db = get_db()
     try:
         video = CRUDVideo.get_by_id(db, video_id)
         if not video:
@@ -171,7 +171,7 @@ def process_youtube_video(video_id: uuid.UUID) -> None:
     - 추론
     - results 저장
     """
-    db = SessionLocal()
+    db = get_db()
     try:
         video = CRUDVideo.get_by_id(db, video_id)
         if not video:
