@@ -1,4 +1,4 @@
-from uuim import UUID
+from uuid import UUID
 
 from taskiq_redis import RedisAsyncResultBackend, ListQueueBroker
 import taskiq_fastapi
