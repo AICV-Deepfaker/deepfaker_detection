@@ -37,7 +37,7 @@ def source_def_expire() -> datetime:
 
 class CreatedTimestampMixin(Base):
     created_at: Annotated[datetime, AwareDatetime] = Field(
-        default_factory=datetime.now,
+        default_factory=lambda: datetime.now(ZoneInfo("Asia/Seoul")),#lambda : 레코드 형성 때마다 새로 생성
         sa_type=DateTime(timezone=True), # type: ignore
     )
 
@@ -58,8 +58,6 @@ class Token(CreatedTimestampMixin, Base, table=True):
 
 
 # 3. Videos table
-
-
 class Video(CreatedTimestampMixin, Base, table=True):
     __tablename__: str = "videos"  # type: ignore
     video_id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
@@ -109,7 +107,7 @@ class Result(CreatedTimestampMixin, Base, table=True):
     alerts: list[Alert] = Relationship(back_populates="result")
 
 
-# 6. FastReports table
 
 
-# 8. Alerts table
+
+

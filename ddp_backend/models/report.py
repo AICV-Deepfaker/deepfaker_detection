@@ -69,7 +69,7 @@ class DeepReportData(Base):
     unite_result: ResultEnum
     unite_conf: float
 
-
+# 6. FastReports table
 class FastReport(ReportBase, FastReportData, table=True):
     __tablename__: str = "fast_reports"  # type: ignore
     fast_id: int | None = Field(default=None, primary_key=True, sa_type=BigInteger)
@@ -77,7 +77,7 @@ class FastReport(ReportBase, FastReportData, table=True):
     user: User = Relationship(back_populates="fast_reports")
     result: Result = Relationship(back_populates="fast_report")
 
-
+# 6. DeepReports table
 class DeepReport(ReportBase, DeepReportData, table=True):
     __tablename__: str = "deep_reports"  # type: ignore
     deep_id: int | None = Field(default=None, primary_key=True, sa_type=BigInteger)

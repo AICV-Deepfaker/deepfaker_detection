@@ -4,6 +4,8 @@ from fastapi import APIRouter, Depends, File, Form, UploadFile, HTTPException
 from sqlmodel import Session
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from pydantic import SecretStr
+
 from ddp_backend.core.database import get_db
 from ddp_backend.core.security import get_current_user
 from ddp_backend.models import User
@@ -32,6 +34,7 @@ from ddp_backend.services.user import (
     find_password,
     register,
 )
+from ddp_backend.services.ranking import get_top10_ranking
 
 router = APIRouter(prefix="/user", tags=["user"])
 
@@ -77,6 +80,10 @@ async def edit_route(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    # 소셜 계정 진입 차단
+    if new_password and current_user.login_method != LoginMethod.LOCAL:
+        raise HTTPException(status_code=403, detail="소셜 로그인 계정은 비밀번호를 변경할 수 없습니다.")
+
     update_info = UserEdit(
         new_password=new_password,
         new_affiliation=new_affiliation,
@@ -98,3 +105,8 @@ def withdraw_route(
     current_user: User = Depends(get_current_user)
 ):
     return delete_user(db, current_user.user_id)
+
+# 포인트 랭킹 top10
+@router.get("/top10", response_model=list[UserRanking])
+async def points_top10_ranking(db: AsyncSession = Depends(get_db)):
+    return await get_top10_ranking(db)

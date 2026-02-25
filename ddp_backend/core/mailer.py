@@ -26,9 +26,6 @@ def send_temp_pwd(to_email: str, temp_password: str): # to_email: 임시 비밀�
 
 
 
-
-
-
 # 이후 실사용 서비스로 전환 시 사용할 수 있는 AWS SES 가이드
 #- AWS SES 사용 가이드 (IAM 사용자 · Sandbox 기준)
 

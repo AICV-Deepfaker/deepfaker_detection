@@ -142,6 +142,6 @@ class FindIdResponse(BaseModel):
 
 # 비밀번호는 200만 반환하면 됨
 
-# 프로필 이미지 삭제는 별도 endpoint 사용 
+# 프로필 이미지 삭제는 별도 endpoint 사용 (router)
 
 # 탈퇴는 schema 없음

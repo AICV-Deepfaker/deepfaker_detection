@@ -2,9 +2,8 @@ from sqlmodel import SQLModel, create_engine
 from sqlmodel.orm.session import Session
 from ddp_backend.core.config import settings
 
-# DB 엔진 생성 (이제 확실하게 문자열 URL이 들어갑니다)
+# DB 엔진 생성
 engine = create_engine(settings.DATABASE_URL)
-
 
 # 테이블을 만들 때 상속받을 기본 클래스
 # Base = declarative_base() # JPA의 Entity
