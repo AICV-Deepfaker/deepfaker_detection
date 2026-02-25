@@ -1,6 +1,8 @@
 import { getAuth } from './auth-storage';
 
 const API_BASE = (process.env.EXPO_PUBLIC_API_URL ?? '').replace(/\/$/, '');
+// http(s) → ws(s) 변환 (WebSocket base URL)
+const WS_BASE = API_BASE.replace(/^http/, 'ws');
 
 export type PredictMode = 'fast' | 'deep';
 
@@ -123,57 +125,115 @@ async function getAuthHeader(): Promise<Record<string, string>> {
   return {};
 }
 
-/** 2초 대기 */
+/** ms 대기 */
 function delay(ms: number) {
   return new Promise<void>((resolve) => setTimeout(resolve, ms));
 }
 
 /**
- * 분석 상태를 폴링하다가 completed 시 결과를 가져옴.
- * 최대 180초 (2초 간격 × 90회) 대기
+ * WebSocket으로 result_id 수신 대기.
+ * 서버가 분석 완료 시 result_id (UUID string)를 text로 push한다.
  */
-async function pollUntilDone(
-  videoId: number,
-  mode: PredictMode,
-  authHeaders: Record<string, string>
-): Promise<PredictResult> {
-  const MAX_TRIES = 90;
+function waitForResultViaWS(token: string, signal: AbortSignal): Promise<string> {
+  return new Promise((resolve, reject) => {
+    if (signal.aborted) return reject(new Error('취소됨'));
+
+    const ws = new WebSocket(`${WS_BASE}/ws?token=${token}`);
+    let settled = false;
+
+    const finish = (fn: () => void) => {
+      if (!settled) {
+        settled = true;
+        ws.close();
+        fn();
+      }
+    };
+
+    ws.onmessage = (e: MessageEvent) => finish(() => resolve(String(e.data)));
+    ws.onerror = () => finish(() => reject(new Error('WebSocket 연결 오류')));
+    ws.onclose = (e: CloseEvent) => {
+      if (!settled && e.code !== 1000) {
+        finish(() => reject(new Error(`WebSocket 연결 종료 (code: ${e.code})`)));
+      }
+    };
+
+    signal.addEventListener('abort', () =>
+      finish(() => reject(new Error('취소됨')))
+    );
+  });
+}
+
+/**
+ * HTTP 폴링으로 result_id 수신 대기.
+ * GET /prediction/status/{video_id} → { status, result_id? }
+ * 최대 180초 (3초 간격 × 60회) 대기
+ */
+async function pollForResultId(
+  videoId: string,
+  authHeaders: Record<string, string>,
+  signal: AbortSignal
+): Promise<string> {
+  const MAX_TRIES = 60;
   for (let i = 0; i < MAX_TRIES; i++) {
-    await delay(2000);
+    if (signal.aborted) throw new Error('취소됨');
+    await delay(3000);
+    if (signal.aborted) throw new Error('취소됨');
 
     const statusRes = await fetch(`${API_BASE}/prediction/status/${videoId}`, {
       headers: { 'ngrok-skip-browser-warning': 'true', ...authHeaders },
     });
-    if (!statusRes.ok) {
-      throw new Error(`상태 조회 실패 (${statusRes.status})`);
-    }
+    if (!statusRes.ok) continue;
+
     const statusData = await statusRes.json();
-
-    if (statusData.status === 'completed') {
-      const resultRes = await fetch(`${API_BASE}/prediction/result/${videoId}`, {
-        headers: { 'ngrok-skip-browser-warning': 'true', ...authHeaders },
-      });
-      if (!resultRes.ok) {
-        const text = await resultRes.text();
-        throw new Error(`결과 조회 실패 (${resultRes.status}): ${text}`);
-      }
-      const raw = await resultRes.json();
-      return mapBackendResponse(raw, mode);
-    }
-
-    if (statusData.status === 'failed') {
-      throw new Error('분석 처리 중 오류가 발생했습니다.');
-    }
-    // 'pending' | 'processing' → 계속 폴링
+    if (statusData.result_id) return statusData.result_id as string;
+    if (statusData.status === 'failed') throw new Error('분석 처리 중 오류가 발생했습니다.');
   }
   throw new Error('분석 시간이 초과되었습니다. 잠시 후 다시 시도해 주세요.');
 }
 
 /**
+ * WebSocket + 폴링을 동시에 시작하고 먼저 result_id를 받은 쪽으로 처리.
+ */
+async function waitForResultId(
+  videoId: string,
+  token: string,
+  authHeaders: Record<string, string>
+): Promise<string> {
+  const abortCtrl = new AbortController();
+  try {
+    return await Promise.race([
+      waitForResultViaWS(token, abortCtrl.signal),
+      pollForResultId(videoId, authHeaders, abortCtrl.signal),
+    ]);
+  } finally {
+    abortCtrl.abort(); // 승자가 결정된 후 나머지 정리
+  }
+}
+
+/**
+ * result_id로 실제 분석 결과를 가져온 뒤 PredictResult로 변환.
+ */
+async function fetchResult(
+  resultId: string,
+  mode: PredictMode,
+  authHeaders: Record<string, string>
+): Promise<PredictResult> {
+  const resultRes = await fetch(`${API_BASE}/prediction/result/${resultId}`, {
+    headers: { 'ngrok-skip-browser-warning': 'true', ...authHeaders },
+  });
+  if (!resultRes.ok) {
+    const text = await resultRes.text();
+    throw new Error(`결과 조회 실패 (${resultRes.status}): ${text}`);
+  }
+  const raw = await resultRes.json();
+  return mapBackendResponse(raw, mode);
+}
+
+/**
  * 영상 파일로 딥페이크 추론 요청
- * POST /prediction/{mode} → video_id (202)
- * → 폴링 GET /prediction/status/{video_id}
- * → GET /prediction/result/{video_id}
+ * 1) POST /prediction/{mode} → video_id 수신 (202 Accepted)
+ * 2) WebSocket + 폴링 race로 result_id 대기
+ * 3) GET /prediction/result/{result_id} → 최종 결과
  */
 export async function predictWithFile(
   videoUri: string,
@@ -181,6 +241,7 @@ export async function predictWithFile(
 ): Promise<PredictResult> {
   const endpoint = mode === 'fast' ? '/prediction/fast' : '/prediction/deep';
   const authHeaders = await getAuthHeader();
+  const token = authHeaders['Authorization']?.replace('Bearer ', '') ?? '';
 
   const formData = new FormData();
   formData.append('file', {
@@ -192,10 +253,7 @@ export async function predictWithFile(
   const response = await fetch(`${API_BASE}${endpoint}`, {
     method: 'POST',
     body: formData,
-    headers: {
-      'ngrok-skip-browser-warning': 'true',
-      ...authHeaders,
-    },
+    headers: { 'ngrok-skip-browser-warning': 'true', ...authHeaders },
   });
 
   if (!response.ok) {
@@ -203,11 +261,9 @@ export async function predictWithFile(
     throw new Error(`서버 오류 (${response.status}): ${text || response.statusText}`);
   }
 
-  // 202 응답에서 video_id 추출
-  const initData = await response.json();
-  const videoId: number = initData.video_id;
-
-  return pollUntilDone(videoId, mode, authHeaders);
+  const { video_id: videoId }: { video_id: string } = await response.json();
+  const resultId = await waitForResultId(videoId, token, authHeaders);
+  return fetchResult(resultId, mode, authHeaders);
 }
 
 /** URI 확장자로 MIME 타입·파일명 결정 */
@@ -220,7 +276,7 @@ function getImageMimeAndName(uri: string): { type: string; name: string } {
 }
 
 /**
- * 이미지 파일로 딥페이크 추론 요청
+ * 이미지 파일로 딥페이크 추론 요청 (영상과 동일한 흐름)
  */
 export async function predictWithImageFile(
   imageUri: string,
@@ -229,21 +285,15 @@ export async function predictWithImageFile(
   const endpoint = mode === 'fast' ? '/prediction/fast' : '/prediction/deep';
   const { type, name } = getImageMimeAndName(imageUri);
   const authHeaders = await getAuthHeader();
+  const token = authHeaders['Authorization']?.replace('Bearer ', '') ?? '';
 
   const formData = new FormData();
-  formData.append('file', {
-    uri: imageUri,
-    name,
-    type,
-  } as unknown as Blob);
+  formData.append('file', { uri: imageUri, name, type } as unknown as Blob);
 
   const response = await fetch(`${API_BASE}${endpoint}`, {
     method: 'POST',
     body: formData,
-    headers: {
-      'ngrok-skip-browser-warning': 'true',
-      ...authHeaders,
-    },
+    headers: { 'ngrok-skip-browser-warning': 'true', ...authHeaders },
   });
 
   if (!response.ok) {
@@ -251,8 +301,7 @@ export async function predictWithImageFile(
     throw new Error(`서버 오류 (${response.status}): ${text || response.statusText}`);
   }
 
-  const initData = await response.json();
-  const videoId: number = initData.video_id;
-
-  return pollUntilDone(videoId, mode, authHeaders);
+  const { video_id: videoId }: { video_id: string } = await response.json();
+  const resultId = await waitForResultId(videoId, token, authHeaders);
+  return fetchResult(resultId, mode, authHeaders);
 }
