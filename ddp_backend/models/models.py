@@ -8,7 +8,7 @@ from pydantic.types import AwareDatetime
 from sqlalchemy import (
     BigInteger,
     DateTime,
-    Enum as SAEnum,
+    String,
 )
 from sqlmodel import Column, Field, Relationship
 
@@ -61,14 +61,13 @@ class Video(CreatedTimestampMixin, Base, table=True):
     __tablename__: str = "videos"  # type: ignore
     video_id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     user_id: uuid.UUID = Field(foreign_key="users.user_id", ondelete="CASCADE")
-    origin_path: OriginPath
+    origin_path: OriginPath = Field(
+        sa_column=Column(String(20), nullable=False),
+    )
     source_url: str | None = Field(default=None, max_length=500)
     status: VideoStatus = Field(
         default=VideoStatus.PENDING,
-        sa_column=Column(
-            SAEnum(VideoStatus, values_callable=lambda obj: [e.value for e in obj]),
-            nullable=False,
-        ),
+        sa_column=Column(String(20), nullable=False),
     )
 
     user: "User" = Relationship(back_populates="videos")
