@@ -29,9 +29,7 @@ def get_current_user_id(current_user: User = Depends(get_current_user)) -> uuid.
 @router.post(path="/{mode}", status_code=status.HTTP_202_ACCEPTED)
 async def predict_deepfake(
     video_id: uuid.UUID,
-    user_id: Annotated[
-        uuid.UUID, Depends(get_current_user_id)
-    ],
+    user_id: Annotated[uuid.UUID, Depends(get_current_user_id)],
     db: Annotated[Session, Depends(get_db)],
     mode: AnalyzeMode,
 ) -> None:
@@ -89,6 +87,10 @@ async def get_result(
                 visual_report=report.rppg_image,
             )
             if report is not None
+            and (
+                result.total_result == report.rppg_result
+                or result.total_result == Result.UNKNOWN
+            )
             else None,
             wavelet=VideoReport(
                 status=Status.SUCCESS,
@@ -98,6 +100,10 @@ async def get_result(
                 visual_report=report.freq_image,
             )
             if report is not None
+            and (
+                result.total_result == report.freq_result
+                or result.total_result == Result.UNKNOWN
+            )
             else None,
             stt=STTReport(
                 risk_level=report.stt_risk_level,
