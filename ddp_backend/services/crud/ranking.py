@@ -1,7 +1,7 @@
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from models.models import User
+from ddp_backend.models.user import User
 
 
 async def get_top10_crud(db: AsyncSession) -> list[User]:

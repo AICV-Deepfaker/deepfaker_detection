@@ -65,8 +65,8 @@ class Video(CreatedTimestampMixin, Base, table=True):
     status: VideoStatus = VideoStatus.PENDING
 
     user: "User" = Relationship(back_populates="videos")
-    source: "Source | None" = Relationship(back_populates="video", cascade_delete=True)
-    result: "Result | None" = Relationship(back_populates="video", cascade_delete=True)
+    source: "Source" = Relationship(back_populates="video", cascade_delete=True)
+    result: "Result" = Relationship(back_populates="video", cascade_delete=True)
 
 
 # 4. Sources table (12시간이 지난 video 테이블, s3는 삭제)
@@ -96,10 +96,10 @@ class Result(CreatedTimestampMixin, Base, table=True):
 
     user: "User" = Relationship(back_populates="results")
     video: "Video" = Relationship(back_populates="result")
-    fast_report: "FastReport | None" = Relationship(
+    fast_report: "FastReport" = Relationship(
         back_populates="result", cascade_delete=True
     )
-    deep_report: "DeepReport | None" = Relationship(
+    deep_report: "DeepReport" = Relationship(
         back_populates="result", cascade_delete=True
     )
     alerts: list["Alert"] = Relationship(back_populates="result")

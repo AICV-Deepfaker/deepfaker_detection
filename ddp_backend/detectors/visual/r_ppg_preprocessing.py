@@ -10,4 +10,4 @@ _INPUT_FRAMES       = 21    # [H] 프레임 수
 # =========
 class RPPGPreprocessing(str):
 
-    raise
+    pass
