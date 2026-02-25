@@ -3,10 +3,11 @@ from __future__ import annotations
 import os
 import uuid
 from pathlib import Path
-from typing import BinaryIO, Optional
+from typing import BinaryIO, Optional, Iterable
 
 import boto3
 from botocore.exceptions import BotoCoreError, ClientError
+from urllib.parse import urlparse
 
 from fastapi import UploadFile, HTTPException, status
 
@@ -54,7 +55,63 @@ def _build_public_url(key: str) -> str:
     # base가 없으면 표준 s3 url 형태
     return f"https://{S3_BUCKET}.s3.{AWS_REGION}.amazonaws.com/{key}"
 
+def _extract_s3_key(url: str) -> str | None:
+    if not url:
+        return None
+    
+    parsed = urlparse(url)
 
+    #URL이면 path에서 key 추출
+    if parsed.scheme and parsed.netloc:
+        return parsed.path.lstrip("/")
+    
+    #이미 key며 그대로
+    return url.lstrip("/")
+def delete_keys_from_s3(keys_or_urls: Iterable[str]) -> int:
+    """
+    S3 객체(파일) 배치 삭제.
+    - keys_or_urls: "raw/xxx.mp4" 같은 key 또는 https URL 모두 가능
+    - return: 삭제 요청한(유효) key 개수
+    """
+    _require_bucket()
+
+    # 1) key 정규화 + 중복 제거
+    keys = []
+    seen = set()
+    for item in keys_or_urls:
+        key = _extract_s3_key(item)
+        if not key:
+            continue
+        key = _normalize_key(key)
+        if key not in seen:
+            seen.add(key)
+            keys.append(key)
+
+    if not keys:
+        return 0
+
+    # 2) 1000개 단위 배치 삭제
+    s3 = _s3_client()
+    CHUNK = 1000
+    for i in range(0, len(keys), CHUNK):
+        chunk = keys[i : i + CHUNK]
+        try:
+            resp = s3.delete_objects(
+                Bucket=S3_BUCKET,
+                Delete={"Objects": [{"Key": k} for k in chunk], "Quiet": True},
+            )
+        except (BotoCoreError, ClientError) as e:
+            # 너희 기존 스타일이 "실패해도 진행"이면 여기서 raise 대신 return/로그로 바꿔도 됨
+            raise RuntimeError(f"S3 delete_objects failed: {e}") from e
+
+        # 부분 실패 체크 (S3는 일부만 실패할 수도 있음)
+        errors = resp.get("Errors", [])
+        if errors:
+            # 운영에선 logger로 남기고 재시도하는 게 베스트
+            # 여기서는 '깔끔하게 삭제' 요구라서 실패를 명확히 알리도록 예외 처리
+            raise RuntimeError(f"S3 partial delete failure: {errors}")
+
+    return len(keys)
 # =========================
 # Core APIs (권장 표준)
 # =========================
@@ -163,23 +220,16 @@ def upload_image_to_s3(file: UploadFile, user_id: str) -> str:
 
 
 # 프로필 이미지 삭제
-def delete_image_from_s3(url: str):
-    if not settings.AWS_S3_BUCKET:
+def delete_image_from_s3(url_or_key: str):
+    if not url_or_key:
         return
-    # URL에서 key 추출: https://bucket.s3.region.amazonaws.com/profiles/xxx
-    if ".amazonaws.com/" not in url:
-        return
-    key = url.split(".amazonaws.com/", 1)[-1]
-    s3 = _get_s3_client()
     try:
-        s3.delete_object(Bucket=settings.AWS_S3_BUCKET, Key=key)
-    except ClientError:
-        pass  # 삭제 실패해도 진행
-
-
+        delete_keys_from_s3([url_or_key])
+    except Exception:
+        pass #삭제 실패해도 진행
 
 def delete_video_from_s3(url: str):
-    delete_file_from_s3(url)
+    delete_image_from_s3(url)
 
 
 def upload_video_to_s3(file, filename: str | Path) -> str:
@@ -219,3 +269,4 @@ def download_from_s3(*args, **kwargs) -> Path:
     if len(args) >= 2:
         return download_file_from_s3(args[0], args[1])
     raise TypeError("download_from_s3 expects (key_or_url, download_path)")
+
