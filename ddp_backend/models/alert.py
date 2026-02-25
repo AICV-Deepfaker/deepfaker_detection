@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import uuid
 from datetime import datetime
 from typing import Annotated, TYPE_CHECKING
@@ -33,5 +31,5 @@ class Alert(AlertBase, table=True):
         sa_column=Column(DateTime(timezone=True), nullable=False),
     )
 
-    user: User = Relationship(back_populates="alerts")
-    result: Result = Relationship(back_populates="alerts", passive_deletes=True)
+    user: "User" = Relationship(back_populates="alerts")
+    result: "Result" = Relationship(back_populates="alerts", passive_deletes=True)

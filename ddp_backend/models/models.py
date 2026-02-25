@@ -1,6 +1,4 @@
 # 테이블이 4개 정도이므로 하나의 파일로 테이블 구성
-from __future__ import annotations
-
 import uuid
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
@@ -54,7 +52,7 @@ class Token(CreatedTimestampMixin, Base, table=True):
     )
     revoked: bool = False
 
-    user: User = Relationship(back_populates="token")
+    user: "User" = Relationship(back_populates="token")
 
 
 # 3. Videos table
@@ -66,9 +64,9 @@ class Video(CreatedTimestampMixin, Base, table=True):
     source_url: str | None = Field(default=None, max_length=500)
     status: VideoStatus = VideoStatus.PENDING
 
-    user: User = Relationship(back_populates="videos")
-    source: Source | None = Relationship(back_populates="video", cascade_delete=True)
-    result: Result | None = Relationship(back_populates="video", cascade_delete=True)
+    user: "User" = Relationship(back_populates="videos")
+    source: "Source | None" = Relationship(back_populates="video", cascade_delete=True)
+    result: "Result | None" = Relationship(back_populates="video", cascade_delete=True)
 
 
 # 4. Sources table (12시간이 지난 video 테이블, s3는 삭제)
@@ -82,7 +80,7 @@ class Source(CreatedTimestampMixin, Base, table=True):
         sa_column=Column(DateTime(timezone=True), nullable=False),
     )
 
-    video: Video = Relationship(back_populates="source")
+    video: "Video" = Relationship(back_populates="source")
 
 
 # 5. Results table
@@ -96,18 +94,12 @@ class Result(CreatedTimestampMixin, Base, table=True):
     is_fast: bool
     total_result: ResultEnum
 
-    user: User = Relationship(back_populates="results")
-    video: Video = Relationship(back_populates="result")
-    fast_report: FastReport | None = Relationship(
+    user: "User" = Relationship(back_populates="results")
+    video: "Video" = Relationship(back_populates="result")
+    fast_report: "FastReport | None" = Relationship(
         back_populates="result", cascade_delete=True
     )
-    deep_report: DeepReport | None = Relationship(
+    deep_report: "DeepReport | None" = Relationship(
         back_populates="result", cascade_delete=True
     )
-    alerts: list[Alert] = Relationship(back_populates="result")
-
-
-
-
-
-
+    alerts: list["Alert"] = Relationship(back_populates="result")
