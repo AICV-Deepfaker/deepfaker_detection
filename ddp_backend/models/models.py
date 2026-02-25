@@ -64,7 +64,7 @@ def source_def_expire() -> datetime:
 class CreatedTimestampMixin(Base):
     created_at: Annotated[datetime, AwareDatetime] = Field(
         default_factory=datetime.now,
-        sa_column=Column(DateTime(timezone=True), nullable=False),
+        sa_type=DateTime(timezone=True), # type: ignore
     )
 
 
