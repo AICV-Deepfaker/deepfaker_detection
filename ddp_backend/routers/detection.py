@@ -129,6 +129,8 @@ async def get_result(
             )
             else None,
             stt=STTReport(
+                status=Status.SUCCESS,
+                model_name=ModelName.STT,
                 risk_level=report.stt_risk_level,
                 **report.stt_script.model_dump(),
             )
