@@ -4,7 +4,7 @@ Singleton variables used across files
 
 from ddp_backend.detectors.audio import STTDetector
 from ddp_backend.detectors.visual import RPPGDetector, UniteDetector, WaveletDetector
-from ddp_backend.schemas.config import BaseVideoConfig
+from ddp_backend.schemas.config import BaseVideoConfig, RPPGConfig
 from ddp_backend.services import DetectionPipeline
 
 from .config import settings
@@ -28,7 +28,7 @@ wavelet_detector = WaveletDetector.from_yaml(
 )
 
 r_ppg_detector = RPPGDetector(
-    BaseVideoConfig(
+    RPPGConfig(
         model_path=settings.RPPG_MODEL_PATH, img_size=settings.RPPG_IMG_SIZE
     )
 )
