@@ -47,17 +47,13 @@ function SectionCard({
   title,
   result,
   probability,
-  confidenceScore,
-  accuracy,
-  visualBase64,
+  visualUrl,
   children,
 }: {
   title: string;
   result?: 'FAKE' | 'REAL';
   probability?: number;
-  confidenceScore?: string;
-  accuracy?: string;
-  visualBase64?: string;
+  visualUrl?: string;
   children?: React.ReactNode;
 }) {
   return (
@@ -73,26 +69,12 @@ function SectionCard({
             <ThemedText style={styles.metricValue}>{(probability * 100).toFixed(2)}%</ThemedText>
           </View>
         )}
-
-        {confidenceScore != null && (
-          <View style={styles.metric}>
-            <ThemedText style={styles.metricLabel}>Confidence</ThemedText>
-            <ThemedText style={styles.metricValue}>{confidenceScore}</ThemedText>
-          </View>
-        )}
-
-        {accuracy != null && (
-          <View style={styles.metric}>
-            <ThemedText style={styles.metricLabel}>정확도</ThemedText>
-            <ThemedText style={styles.metricValue}>{accuracy}</ThemedText>
-          </View>
-        )}
       </View>
 
-      {visualBase64 ? (
+      {visualUrl ? (
         <View style={styles.visualWrap}>
           <Image
-            source={{ uri: `data:image/png;base64,${visualBase64}` }}
+            source={{ uri: visualUrl }}
             style={styles.visualImage}
             contentFit="contain"
           />
@@ -247,8 +229,6 @@ export default function AnalysisResultScreen() {
         '영상 파일',
         formatResultText(res),
         res.result,
-        res.visual_report,
-        res.result_id
       );
 
       if (!newId) return;
@@ -343,7 +323,6 @@ export default function AnalysisResultScreen() {
   }
 
   const prob = data.average_fake_prob ?? 0;
-  const conf = data.confidence_score ?? '-';
   const result = data.result;
 
   return (
@@ -369,17 +348,11 @@ export default function AnalysisResultScreen() {
                 title="주파수"
                 result={data.frequency?.result ?? result}
                 probability={data.frequency?.probability ?? prob}
-                confidenceScore={data.frequency?.confidence_score ?? conf}
-                accuracy={data.frequency?.accuracy}
-                visualBase64={data.frequency?.visual_base64 ?? data.visual_report}
+                visualUrl={data.frequency?.visual_url}
               />
               <SectionCard
                 title="rPPG"
-                result={data.rppg?.result ?? result}
-                probability={data.rppg?.probability ?? prob}
-                confidenceScore={data.rppg?.confidence_score ?? conf}
-                accuracy={data.rppg?.accuracy}
-                visualBase64={data.rppg?.visual_base64}
+                visualUrl={data.rppg?.visual_url}
               />
               <SttKeywordsCard keywords={data.stt_keywords ?? []} />
               <SttAnalysisCard
@@ -394,8 +367,6 @@ export default function AnalysisResultScreen() {
               title="UNITE"
               result={data.unite?.result ?? result}
               probability={data.unite?.probability ?? prob}
-              confidenceScore={data.unite?.confidence_score ?? conf}
-              accuracy={data.unite?.accuracy}
             />
           )}
         </ViewShot>
@@ -436,28 +407,28 @@ export default function AnalysisResultScreen() {
 function formatResultText(data: PredictResult): string {
   const r = data.result ?? '-';
   const p = data.average_fake_prob != null ? (data.average_fake_prob * 100).toFixed(2) : '-';
-  const c = data.confidence_score ?? '-';
-  return `[DDP 분석 결과]\n판정: ${r}\n딥페이크 확률: ${p}%\n신뢰도: ${c}`;
+  return `[DDP 분석 결과]\n판정: ${r}\n딥페이크 확률: ${p}%`;
 }
 
 function buildResultHtml(data: PredictResult, isEvidence: boolean): string {
   const r = data.result ?? '-';
   const p = data.average_fake_prob != null ? (data.average_fake_prob * 100).toFixed(2) : '-';
-  const c = data.confidence_score ?? '-';
-
-  const img = data.visual_report
-    ? `<img src="data:image/png;base64,${data.visual_report}" style="max-width:100%;height:auto;" />`
-    : '';
-
   const modeLabel = isEvidence ? '증거수집모드' : '정밀탐지모드';
+
+  const freqImg = data.frequency?.visual_url
+    ? `<img src="${data.frequency.visual_url}" style="max-width:100%;height:auto;" />`
+    : '';
+  const rppgImg = data.rppg?.visual_url
+    ? `<img src="${data.rppg.visual_url}" style="max-width:100%;height:auto;" />`
+    : '';
 
   return `<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><title>DDP 분석 결과</title></head>
 <body style="font-family:sans-serif;padding:20px;color:#111;">
   <h2>DDP 딥페이크 분석 결과 (${modeLabel})</h2>
-  <p><strong>판정:</strong> ${r} &nbsp; <strong>확률:</strong> ${p}% &nbsp; <strong>신뢰도:</strong> ${c}</p>
-  ${img}
+  <p><strong>판정:</strong> ${r} &nbsp; <strong>확률:</strong> ${p}%</p>
+  ${freqImg}${rppgImg}
 </body>
 </html>`;
 }

@@ -8,19 +8,15 @@ export type PredictMode = 'fast' | 'deep';
 
 /** 증거수집모드(fast)용 세부 결과 */
 export interface EvidenceSection {
-  result?: 'FAKE' | 'REAL';
+  result?: 'FAKE' | 'REAL' | 'UNKNOWN';
   probability?: number;
-  confidence_score?: string;
-  accuracy?: string;
-  visual_base64?: string;
+  visual_url?: string; // S3 presigned URL
 }
 
 /** 정밀탐지모드(deep)용 UNITE 결과 */
 export interface UniteSection {
-  result?: 'FAKE' | 'REAL';
+  result?: 'FAKE' | 'REAL' | 'UNKNOWN';
   probability?: number;
-  confidence_score?: string;
-  accuracy?: string;
 }
 
 export interface SttSearchResult {
@@ -32,11 +28,8 @@ export interface SttSearchResult {
 
 export interface PredictResult {
   status: 'success' | 'error';
-  result?: 'FAKE' | 'REAL';
-  result_id?: string;
+  result?: 'FAKE' | 'REAL' | 'UNKNOWN';
   average_fake_prob?: number;
-  confidence_score?: string;
-  visual_report?: string; // Base64 이미지 데이터
   analysis_mode?: string;
   message?: string;
   // 증거수집모드 확장 필드
@@ -66,31 +59,26 @@ function mapBackendResponse(raw: any, mode: PredictMode): PredictResult {
   }
 
   if (mode === 'fast') {
+    // wavelet: { probability, result(computed), visual_report(URL) }
+    // r_ppg:   { visual_report(URL) }  ← probability/result 없음
     const wavelet = raw.wavelet ?? {};
     const rppg = raw.r_ppg ?? {};
     const stt = raw.stt ?? {};
 
-    const isFake = wavelet.result === 'FAKE' || rppg.result === 'FAKE';
-
     return {
       status: 'success',
       analysis_mode: 'fast',
-      result: isFake ? 'FAKE' : 'REAL',
-      average_fake_prob: wavelet.probability ?? rppg.probability,
-      confidence_score: String(wavelet.confidence_score ?? rppg.confidence_score ?? ''),
-      visual_report: wavelet.visual_report ?? rppg.visual_report,
+      result: raw.result,                   // 전체 판정은 top-level result 사용
+      average_fake_prob: wavelet.probability,
 
       frequency: {
         result: wavelet.result,
         probability: wavelet.probability,
-        confidence_score: String(wavelet.confidence_score ?? ''),
-        visual_base64: wavelet.visual_report,
+        visual_url: wavelet.visual_report,  // URL (S3 presigned)
       },
       rppg: {
-        result: rppg.result,
-        probability: rppg.probability,
-        confidence_score: String(rppg.confidence_score ?? ''),
-        visual_base64: rppg.visual_report,
+        // r_ppg는 visual만 있고 result/probability 없음
+        visual_url: rppg.visual_report,
       },
 
       stt_risk_level: stt.risk_level,
@@ -101,19 +89,16 @@ function mapBackendResponse(raw: any, mode: PredictMode): PredictResult {
     };
   }
 
-  // deep mode
+  // deep mode: unite: { probability, result(computed) }
   const unite = raw.unite ?? {};
   return {
     status: 'success',
     analysis_mode: 'deep',
-    result: unite.result,
+    result: raw.result,
     average_fake_prob: unite.probability,
-    confidence_score: String(unite.confidence_score ?? ''),
-    visual_report: unite.visual_report,
     unite: {
       result: unite.result,
       probability: unite.probability,
-      confidence_score: String(unite.confidence_score ?? ''),
     },
   };
 }
