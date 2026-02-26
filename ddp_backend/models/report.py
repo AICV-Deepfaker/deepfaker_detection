@@ -36,6 +36,9 @@ class PydanticJSONType[T: BaseModel](TypeDecorator[T]):
         # Python 객체 -> DB 저장 (JSON 변환)
         if value is None:
             return None
+        # model_dump()로 이미 dict가 된 경우 그대로 사용
+        if isinstance(value, dict):
+            return value
         # Pydantic v2: model_dump_json() 또는 model_dump()
         return value.model_dump(mode="json")
 
