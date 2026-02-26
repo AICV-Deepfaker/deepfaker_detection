@@ -2,22 +2,29 @@
 # 토큰 생성, 토큰 갱신, 비밀번호 검증, 로그인, 로그아웃
 
 
-from sqlmodel.orm.session import Session
-from fastapi import HTTPException, status
 from datetime import datetime, timedelta
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
-from ddp_backend.core.config import settings
-from ddp_backend.core.security import hash_refresh_token, create_access_token, create_refresh_token, decode_token, verify_password
+import httpx
+from fastapi import HTTPException, status
+from pydantic import SecretStr
+from sqlmodel.orm.session import Session
 
-from ddp_backend.schemas.user import UserLogin, TokenResponse, UserCreate
+from ddp_backend.core.config import settings
+from ddp_backend.core.security import (
+    create_access_token,
+    create_refresh_token,
+    decode_token,
+    hash_refresh_token,
+    verify_password,
+)
 from ddp_backend.schemas.enums import LoginMethod
-from ddp_backend.services.crud.user import CRUDUser
+from ddp_backend.schemas.user import TokenResponse, UserCreate
 from ddp_backend.services.crud.token import CRUDToken
+from ddp_backend.services.crud.user import CRUDUser
 from ddp_backend.services.user import register
 
-import httpx
 
 # =========
 # 생성된 토큰 저장
@@ -99,12 +106,12 @@ def reissue_token(db: Session, refresh_token: str):
 # =========
 # 로컬 로그인
 # =========
-def login(db:Session, user_info: UserLogin) -> TokenResponse:
+def login(db:Session, username: str, password: SecretStr) -> TokenResponse:
     # 1. 유저 조회 + 비밀번호 확인
-    user = CRUDUser.get_by_email(db, user_info.email)
+    user = CRUDUser.get_by_email(db, username)
     if not user or user.hashed_password is None: # 유저가 없거나 패스워드(구글일 경우)가 없을 떄
         raise HTTPException(status_code=401, detail="이메일 또는 비밀번호가 올바르지 않습니다")
-    if not verify_password(user_info.password, user.hashed_password):
+    if not verify_password(password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, 
             detail="이메일 또는 비밀번호가 올바르지 않습니다"

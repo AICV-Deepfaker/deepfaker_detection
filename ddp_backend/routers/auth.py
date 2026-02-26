@@ -1,16 +1,24 @@
 # routers/auth_router.py
+import urllib.parse
+from datetime import datetime, timedelta, timezone
+from typing import Annotated
+
+import httpx
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import RedirectResponse
+from fastapi.security import OAuth2PasswordRequestForm
+from pydantic import SecretStr
 from sqlmodel.orm.session import Session
-from datetime import datetime, timezone, timedelta
-import httpx
-import urllib.parse
 
 from ddp_backend.core.config import settings
 from ddp_backend.core.database import get_db
-from ddp_backend.core.security import create_access_token, create_refresh_token, oauth2_scheme
-from ddp_backend.schemas.user import UserLogin, TokenResponse, UserCreate
+from ddp_backend.core.security import (
+    create_access_token,
+    create_refresh_token,
+    oauth2_scheme,
+)
 from ddp_backend.schemas.enums import LoginMethod
+from ddp_backend.schemas.user import TokenResponse, UserCreate
 from ddp_backend.services.auth import login, logout, reissue_token, save_refresh_token
 from ddp_backend.services.user import register
 
@@ -26,8 +34,8 @@ GOOGLE_USERINFO_URL = "https://www.googleapis.com/oauth2/v3/userinfo"
 
 # 로컬 로그인 - 이메일/비밀번호 검증 후 access/refresh 토큰 발급
 @router.post("/login", response_model=TokenResponse)
-def login_route(user_info: UserLogin, db: Session = Depends(get_db)):
-    return login(db, user_info)
+def login_route(user_info: Annotated[OAuth2PasswordRequestForm, Depends()], db: Session = Depends(get_db)):
+    return login(db, user_info.username, SecretStr(user_info.password))
 
 # 로컬 로그아웃 - refresh_token을 revoked=True로 변경
 @router.post("/logout")

@@ -31,10 +31,13 @@ function uriToFormFile(uri: string) {
  * POST /auth/login
  */
 export async function login(email: string, password: string): Promise<TokenResponse> {
+  const params = new URLSearchParams();
+  params.append('username', email);
+  params.append('password', password);
   const res = await fetch(`${API_BASE}/auth/login`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password }),
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: params.toString(),
   });
 
   if (!res.ok) {
