@@ -196,8 +196,7 @@ class RPPGPreprocessing:
             tensor = self._to_tensor(window)
             tensors.append(tensor)
 
-        return Preprocess
-        ult(
+        return PreprocessResult(
             tensors=tensors,
             first_bbox=first_bbox_vis,
             last_bbox=last_bbox_vis,
