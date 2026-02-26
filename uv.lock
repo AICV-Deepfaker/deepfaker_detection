@@ -767,6 +767,7 @@ dependencies = [
     { name = "pywavelets" },
     { name = "pyyaml" },
     { name = "redis" },
+    { name = "rjsmin" },
     { name = "sqlalchemy" },
     { name = "sqlmodel" },
     { name = "stt" },
@@ -783,6 +784,7 @@ dependencies = [
     { name = "unite-detection", extra = ["gpu-no-flash-attn"], marker = "(extra == 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu') or (extra != 'extra-15-unite-detection-gpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn') or (extra != 'extra-15-unite-detection-cpu' and extra == 'extra-15-unite-detection-gpu-no-flash-attn')" },
     { name = "uvicorn" },
     { name = "wavelet-clip" },
+    { name = "yt-dlp" },
 ]
 
 [package.metadata]
@@ -808,6 +810,7 @@ requires-dist = [
     { name = "pywavelets", specifier = ">=1.9.0" },
     { name = "pyyaml", specifier = ">=6.0.3" },
     { name = "redis", specifier = ">=7.2.0" },
+    { name = "rjsmin", specifier = ">=1.2.5" },
     { name = "sqlalchemy", specifier = ">=2.0.46" },
     { name = "sqlmodel", specifier = ">=0.0.37" },
     { name = "stt", editable = "STT" },
@@ -823,26 +826,13 @@ requires-dist = [
     { name = "unite-detection", extras = ["gpu-no-flash-attn"], editable = "unite_detection" },
     { name = "uvicorn", specifier = ">=0.40.0" },
     { name = "wavelet-clip", editable = "Wavelet-CLIP" },
+    { name = "yt-dlp", specifier = ">=2026.2.21" },
 ]
 
 [[package]]
 name = "deepfaker-detection"
 version = "0.1.0"
 source = { virtual = "." }
-dependencies = [
-    { name = "apscheduler" },
-    { name = "psycopg2-binary" },
-    { name = "rjsmin" },
-    { name = "yt-dlp" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "apscheduler", specifier = ">=3.11.2" },
-    { name = "psycopg2-binary", specifier = ">=2.9.11" },
-    { name = "rjsmin", specifier = ">=1.2.5" },
-    { name = "yt-dlp", specifier = ">=2026.2.21" },
-]
 
 [[package]]
 name = "diskcache"
