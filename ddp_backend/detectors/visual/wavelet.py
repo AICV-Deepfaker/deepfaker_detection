@@ -210,6 +210,9 @@ class WaveletDetector(BaseVideoDetector[WaveletConfigParam, ProbVisualContent]):
     # ──────────────────────────────────────────────────────────
     @override
     def _analyze(self, vid_path: str | Path) -> ProbVisualContent:
+        if not hasattr(self, "model") or self.model is None:
+            raise RuntimeError("Wavelet model is not loaded (checkpoint not found).")
+
         img_size = self.config.img_size
         transform = v2.Compose(
             [

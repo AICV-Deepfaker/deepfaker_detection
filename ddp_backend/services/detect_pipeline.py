@@ -25,7 +25,6 @@ class DetectionPipeline:
             self.wavelet_detector.load_model()
         except Exception as e:
             print(f"[WARN] Wavelet model load failed: {e}")
-        self.wavelet_detector.load_model()
         self.r_ppg_detector.load_model()
 
     def run_fast_mode(self, file_path: Path) -> FastReportData:
