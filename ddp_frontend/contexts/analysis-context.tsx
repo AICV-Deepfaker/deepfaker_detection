@@ -6,6 +6,7 @@ export interface HistoryItem {
   result: string; // 포맷된 결과 텍스트
   resultType?: 'FAKE' | 'REAL'; // FastAPI에서 받은 최종 판정
   visualReport?: string; // Base64 이미지 데이터
+  resultId?: string; // 신고용 result_id
   date: string;
 }
 
@@ -18,8 +19,8 @@ export const BADGE_TIERS = [
 ] as const;
 
 export function getBadgeForPoints(points: number) {
-  let current = BADGE_TIERS[0];
-  let next = BADGE_TIERS[1] ?? null;
+  let current: typeof BADGE_TIERS[number] = BADGE_TIERS[0];
+  let next: typeof BADGE_TIERS[number] | null = BADGE_TIERS[1] ?? null;
   for (let i = BADGE_TIERS.length - 1; i >= 0; i--) {
     if (points >= BADGE_TIERS[i].minPoints) {
       current = BADGE_TIERS[i];
@@ -42,9 +43,11 @@ interface AnalysisContextType {
       link: string,
       result: string,
       resultType?: 'FAKE' | 'REAL',
-      visualReport?: string
+      visualReport?: string,
+      resultId?: string,
     ) => string;
   addPoints: (amount: number) => void;
+  setPointsFromServer: (data: { activePoints: number; totalPoints: number }) => void;
   incrementReportCount: () => void;
   getHistoryByLink: (link: string) => HistoryItem[];
 }
@@ -65,14 +68,22 @@ export function AnalysisProvider({ children }: { children: React.ReactNode }) {
     setReportCount((prev) => prev + 1);
   }, []);
 
+  const setPointsFromServer = useCallback(
+    (data: { activePoints: number; totalPoints: number }) => {
+      setTotalPoints(data.totalPoints);
+    },
+    [],
+  );
+
   const addToHistory = useCallback(
-    (link: string, result: string, resultType?: 'FAKE' | 'REAL', visualReport?: string) => {
+    (link: string, result: string, resultType?: 'FAKE' | 'REAL', visualReport?: string, resultId?: string) => {
       const newItem: HistoryItem = {
         id: Date.now().toString(),
         link,
         result,
         resultType,
         visualReport,
+        resultId,
         date: new Date().toISOString(),
       };
 
@@ -100,6 +111,7 @@ export function AnalysisProvider({ children }: { children: React.ReactNode }) {
         history,
         addToHistory,
         addPoints,
+        setPointsFromServer,
         incrementReportCount,
         getHistoryByLink,
       }}>

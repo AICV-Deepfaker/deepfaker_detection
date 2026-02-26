@@ -43,6 +43,7 @@ export interface PredictResult {
   stt_search_results?: SttSearchResult[];
   // 정밀탐지모드 확장 필드
   unite?: UniteSection;
+  result_id?: string;
 }
 
 /**

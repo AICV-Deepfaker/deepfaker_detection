@@ -1,4 +1,5 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -18,8 +19,8 @@ import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 
 import { ThemedText } from '@/components/themed-text';
-import { useAnalysis } from '@/contexts/analysis-context';
-import { predictWithFile, predictWithVideoId, type PredictMode, type PredictResult, type SttSearchResult } from '@/lib/api';
+import { useAnalysis, POINTS_PER_REPORT, GIFT_THRESHOLD, getBadgeForPoints } from '@/contexts/analysis-context';
+import { predictWithFile, predictWithVideoId, getMe, postAlert, type PredictMode, type PredictResult, type SttSearchResult } from '@/lib/api';
 import { takePendingVideoUri } from '@/lib/pending-upload';
 
 const ACCENT_GREEN = '#00CF90';
@@ -182,11 +183,15 @@ export default function AnalysisResultScreen() {
   const videoId = params.videoId ?? null;
   const isEvidence = mode === 'fast';
 
-  const { addToHistory } = useAnalysis();
+  const { addToHistory, setPointsFromServer, totalPoints } = useAnalysis();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<PredictResult | null>(null);
+  const [historyId, setHistoryId] = useState<string | null>(null);
+  const [reported, setReported] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [showDone, setShowDone] = useState(false);
 
   const viewShotRef = useRef<ViewShot>(null);
 
@@ -225,20 +230,19 @@ export default function AnalysisResultScreen() {
 
       setData(res);
 
+      // 판정은 wavelet 기준
+      const freqResult = (res.frequency?.result as 'FAKE' | 'REAL' | undefined)
+        ?? (res.result === 'UNKNOWN' ? undefined : res.result as 'FAKE' | 'REAL' | undefined);
+
       const newId = addToHistory(
         '영상 파일',
         formatResultText(res),
-        res.result,
+        freqResult,
+        res.frequency?.visual_url,  // wavelet 이미지 URL
+        res.result_id,
       );
 
-      if (!newId) return;
-
-      setTimeout(() => {
-        router.replace({
-          pathname: '/history/[id]',
-          params: { id: newId },
-        });
-      }, 0);
+      setHistoryId(newId);
     } catch (e) {
       const msg = e instanceof Error ? e.message : '네트워크 오류';
       setError(msg);
@@ -251,6 +255,21 @@ export default function AnalysisResultScreen() {
   useEffect(() => {
     runAnalysis();
   }, [runAnalysis]);
+
+  const handleReport = useCallback(async () => {
+    if (!data?.result_id) return;
+    const key = `reported:${historyId}`;
+    const already = await AsyncStorage.getItem(key);
+    if (already === '1') { setReported(true); return; }
+
+    await postAlert({ result_id: data.result_id });
+    await AsyncStorage.setItem(key, '1');
+    setReported(true);
+
+    const me = await getMe();
+    setPointsFromServer({ activePoints: me.active_points, totalPoints: me.total_points ?? me.active_points });
+    setShowDone(true);
+  }, [data?.result_id, historyId, setPointsFromServer]);
 
   const handleShare = useCallback(async () => {
     if (!data) return;
@@ -322,8 +341,16 @@ export default function AnalysisResultScreen() {
     );
   }
 
-  const prob = data.average_fake_prob ?? 0;
-  const result = data.result;
+  // 판정은 wavelet(주파수) 기준
+  const freqResult = data.frequency?.result ?? (data.result === 'UNKNOWN' ? undefined : data.result);
+  const isFake = freqResult === 'FAKE';
+  const freqProb = data.frequency?.probability;
+  // probability는 REAL 확률 기준: FAKE면 fake% = (1-prob)*100, REAL이면 real% = prob*100
+  const displayPercent = freqProb != null
+    ? Math.round(isFake ? (1 - freqProb) * 100 : freqProb * 100)
+    : null;
+
+  const { current: currentBadge } = getBadgeForPoints((totalPoints ?? 0) + (reported ? 0 : POINTS_PER_REPORT));
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -341,17 +368,44 @@ export default function AnalysisResultScreen() {
         contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 120 }]}
         showsVerticalScrollIndicator={false}
       >
+        {/* 최종 판정 (wavelet 기준) */}
+        {freqResult != null && (
+          <View style={styles.verdictCard}>
+            <ThemedText style={styles.verdictTitle}>최종 판정</ThemedText>
+            <View style={styles.verdictRow}>
+              <View style={[styles.verdictPill, isFake ? styles.pillFake : styles.pillReal]}>
+                <MaterialIcons name={isFake ? 'warning' : 'check-circle'} size={18} color="#fff" />
+                <ThemedText style={styles.verdictPillText}>{isFake ? 'FAKE' : 'REAL'}</ThemedText>
+              </View>
+              {displayPercent != null && (
+                <ThemedText style={styles.verdictPercent}>{displayPercent}%</ThemedText>
+              )}
+            </View>
+            {displayPercent != null && (
+              <View style={styles.progressTrack}>
+                <View style={[styles.progressFill, {
+                  width: `${displayPercent}%`,
+                  backgroundColor: isFake ? '#FF6B6B' : '#7ED957',
+                }]} />
+              </View>
+            )}
+            <ThemedText style={styles.verdictCaption}>
+              {isFake ? '딥페이크/사기 의심 확률 (주파수 분석 기준)' : '정상 콘텐츠로 판단될 확률 (주파수 분석 기준)'}
+            </ThemedText>
+          </View>
+        )}
+
         <ViewShot ref={viewShotRef} options={{ format: 'png', quality: 1 }} style={styles.shotWrap}>
           {isEvidence ? (
             <>
               <SectionCard
-                title="주파수"
-                result={data.frequency?.result ?? result}
-                probability={data.frequency?.probability ?? prob}
+                title="주파수 분석"
+                result={data.frequency?.result}
+                probability={data.frequency?.probability}
                 visualUrl={data.frequency?.visual_url}
               />
               <SectionCard
-                title="rPPG"
+                title="rPPG 분석"
                 visualUrl={data.rppg?.visual_url}
               />
               <SttKeywordsCard keywords={data.stt_keywords ?? []} />
@@ -365,11 +419,30 @@ export default function AnalysisResultScreen() {
           ) : (
             <SectionCard
               title="UNITE"
-              result={data.unite?.result ?? result}
-              probability={data.unite?.probability ?? prob}
+              result={data.unite?.result}
+              probability={data.unite?.probability}
             />
           )}
         </ViewShot>
+
+        {/* 신고하기 버튼 */}
+        <View style={styles.reportWrap}>
+          {reported ? (
+            <View style={[styles.reportButton, styles.reportDone]}>
+              <MaterialIcons name="check-circle" size={20} color="#fff" />
+              <ThemedText style={styles.reportButtonText}>신고 완료</ThemedText>
+            </View>
+          ) : (
+            <TouchableOpacity
+              style={styles.reportButton}
+              activeOpacity={0.85}
+              onPress={() => setShowConfirm(true)}
+            >
+              <MaterialIcons name="report" size={20} color="#fff" />
+              <ThemedText style={styles.reportButtonText}>신고하기</ThemedText>
+            </TouchableOpacity>
+          )}
+        </View>
 
         {/* 공유/저장 */}
         <View style={styles.actionsSection}>
@@ -400,14 +473,64 @@ export default function AnalysisResultScreen() {
           </View>
         </View>
       </ScrollView>
+
+      {/* 신고 확인 모달 */}
+      {showConfirm && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <MaterialIcons name="warning-amber" size={34} color="#E53935" style={{ alignSelf: 'center', marginBottom: 14 }} />
+            <ThemedText style={styles.modalTitle}>신고 확인</ThemedText>
+            <ThemedText style={styles.modalText}>이 콘텐츠를 신고하시겠습니까?</ThemedText>
+            <View style={styles.modalButtons}>
+              <TouchableOpacity style={styles.modalCancel} onPress={() => setShowConfirm(false)}>
+                <ThemedText style={styles.modalCancelText}>아니오</ThemedText>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.modalConfirm} onPress={async () => {
+                setShowConfirm(false);
+                await handleReport();
+              }}>
+                <ThemedText style={styles.modalConfirmText}>신고하기</ThemedText>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
+
+      {/* 신고 완료 모달 */}
+      {showDone && (
+        <View style={styles.successOverlay}>
+          <View style={styles.successCard}>
+            <ThemedText style={{ fontSize: 20, marginBottom: 4 }}>🎉🎉🎉</ThemedText>
+            <MaterialIcons name="check-circle" size={40} color={ACCENT_GREEN} style={{ marginBottom: 12 }} />
+            <ThemedText style={styles.successTitle}>신고 완료</ThemedText>
+            <ThemedText style={styles.successPoints}>+{POINTS_PER_REPORT.toLocaleString()} 포인트가 추가되었습니다!</ThemedText>
+            <ThemedText style={styles.successSubtext}>
+              {GIFT_THRESHOLD.toLocaleString()} 포인트를 모으면 스타벅스 아메리카노 기프티콘을 받을 수 있어요.
+            </ThemedText>
+            <View style={styles.successBadgeRow}>
+              <ThemedText style={{ fontSize: 20 }}>{currentBadge.icon}</ThemedText>
+              <ThemedText style={styles.successBadgeName}>{currentBadge.name}</ThemedText>
+            </View>
+            <TouchableOpacity style={styles.successButton} onPress={() => setShowDone(false)} activeOpacity={0.85}>
+              <ThemedText style={styles.successButtonText}>확인</ThemedText>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
     </View>
   );
 }
 
 function formatResultText(data: PredictResult): string {
-  const r = data.result ?? '-';
-  const p = data.average_fake_prob != null ? (data.average_fake_prob * 100).toFixed(2) : '-';
-  return `[DDP 분석 결과]\n판정: ${r}\n딥페이크 확률: ${p}%`;
+  const freqResult = data.frequency?.result ?? data.result ?? '-';
+  const freqProb = data.frequency?.probability ?? data.average_fake_prob;
+  let displayProb = '-';
+  if (freqProb != null) {
+    // probability는 REAL 확률: FAKE이면 fake% = (1-p)*100, REAL이면 real% = p*100
+    const isFk = freqResult === 'FAKE';
+    displayProb = (isFk ? (1 - freqProb) * 100 : freqProb * 100).toFixed(2);
+  }
+  return `[DDP 분석 결과]\n판정: ${freqResult}\n딥페이크 확률: ${displayProb}%`;
 }
 
 function buildResultHtml(data: PredictResult, isEvidence: boolean): string {
@@ -558,7 +681,7 @@ const styles = StyleSheet.create({
   searchTitle: { fontSize: 13, fontWeight: '600', color: TEXT, marginBottom: 4 },
   searchContent: { fontSize: 12, color: SUB, lineHeight: 18 },
 
-  actionsSection: { marginTop: 24, paddingTop: 20, borderTopWidth: 1, borderTopColor: BORDER },
+  actionsSection: { marginTop: 16, paddingTop: 20, borderTopWidth: 1, borderTopColor: BORDER },
   actionsSectionTitle: { fontSize: 15, fontWeight: '700', color: TEXT, marginBottom: 12 },
   actionsRow: { flexDirection: 'row', gap: 12, marginBottom: 12 },
 
@@ -574,4 +697,82 @@ const styles = StyleSheet.create({
     borderColor: ACCENT_GREEN,
   },
   actionLabel: { fontSize: 14, fontWeight: '700', color: ACCENT_GREEN },
+
+  // 최종 판정 카드
+  verdictCard: {
+    backgroundColor: CARD_BG,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: BORDER,
+  },
+  verdictTitle: { fontSize: 16, fontWeight: '700', color: TEXT, marginBottom: 12 },
+  verdictRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
+  verdictPill: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    paddingHorizontal: 14, paddingVertical: 10, borderRadius: 999,
+  },
+  pillFake: { backgroundColor: '#FF2D2D' },
+  pillReal: { backgroundColor: REAL_GREEN },
+  verdictPillText: { color: '#fff', fontSize: 20, fontWeight: '900', letterSpacing: 0.5 },
+  verdictPercent: { fontSize: 28, fontWeight: '900', color: TEXT },
+  progressTrack: { height: 16, borderRadius: 999, backgroundColor: 'rgba(0,0,0,0.12)', overflow: 'hidden', marginBottom: 10 },
+  progressFill: { height: '100%', borderRadius: 999 },
+  verdictCaption: { color: SUB, fontSize: 13 },
+
+  // 신고 버튼
+  reportWrap: { marginBottom: 16 },
+  reportButton: {
+    backgroundColor: ACCENT_GREEN,
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  reportDone: { backgroundColor: 'rgba(0,0,0,0.35)' },
+  reportButtonText: { color: '#fff', fontSize: 15, fontWeight: '700' },
+
+  // 모달
+  modalOverlay: {
+    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'center', alignItems: 'center', padding: 24,
+  },
+  modalCard: {
+    width: '100%', backgroundColor: '#fff', borderRadius: 20, padding: 24,
+    borderWidth: 1, borderColor: 'rgba(0,0,0,0.06)',
+  },
+  modalTitle: { fontSize: 18, fontWeight: '800', textAlign: 'center', color: '#111', marginBottom: 8 },
+  modalText: { fontSize: 14, textAlign: 'center', color: '#687076', marginBottom: 24 },
+  modalButtons: { flexDirection: 'row', gap: 12 },
+  modalCancel: {
+    flex: 1, paddingVertical: 14, borderRadius: 14, borderWidth: 1,
+    borderColor: '#E0E0E0', alignItems: 'center',
+  },
+  modalCancelText: { fontWeight: '700', color: '#687076' },
+  modalConfirm: { flex: 1, paddingVertical: 14, borderRadius: 14, backgroundColor: ACCENT_GREEN, alignItems: 'center' },
+  modalConfirmText: { fontWeight: '800', color: '#fff' },
+
+  successOverlay: {
+    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'center', alignItems: 'center', padding: 24,
+  },
+  successCard: {
+    width: '100%', maxWidth: 340, backgroundColor: '#fff', borderRadius: 24,
+    padding: 24, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(0,0,0,0.06)',
+  },
+  successTitle: { fontSize: 20, fontWeight: '800', color: TEXT, marginBottom: 10 },
+  successPoints: { fontSize: 16, fontWeight: '800', color: ACCENT_GREEN_DARK, marginBottom: 8 },
+  successSubtext: { fontSize: 13, color: SUB, textAlign: 'center', lineHeight: 18, marginBottom: 14 },
+  successBadgeRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: 'rgba(0,207,144,0.10)', paddingVertical: 10, paddingHorizontal: 14,
+    borderRadius: 12, marginBottom: 18,
+  },
+  successBadgeName: { fontSize: 14, fontWeight: '800', color: ACCENT_GREEN_DARK },
+  successButton: { width: '100%', backgroundColor: ACCENT_GREEN, paddingVertical: 14, borderRadius: 14, alignItems: 'center' },
+  successButtonText: { fontSize: 16, fontWeight: '800', color: '#fff' },
 });

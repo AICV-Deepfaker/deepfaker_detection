@@ -3,11 +3,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Image } from 'expo-image';
 import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import React, { useCallback, useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, TouchableOpacity, View, Pressable } from 'react-native';
+import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
-import { useAnalysis, getBadgeForPoints } from '@/contexts/analysis-context';
+import { useAnalysis, getBadgeForPoints, POINTS_PER_REPORT, GIFT_THRESHOLD } from '@/contexts/analysis-context';
 import { getMe, postAlert } from '@/lib/api';
 
 const ACCENT_GREEN = '#00CF90';
@@ -59,7 +59,7 @@ export default function HistoryDetailScreen() {
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
 
-  const { history, points, setPointsFromServer } = useAnalysis();
+  const { history, totalPoints, setPointsFromServer } = useAnalysis();
   const [showConfirm, setShowConfirm] = useState(false);
   const [showDone, setShowDone] = useState(false);
   const [reported, setReported] = useState(false);
@@ -106,7 +106,7 @@ export default function HistoryDetailScreen() {
     const me = await getMe();
     setPointsFromServer({
       activePoints: me.active_points,
-      totalPoints: me.total_points,
+      totalPoints: me.total_points ?? me.active_points,
     });
 
     setShowDone(true);
@@ -201,26 +201,13 @@ export default function HistoryDetailScreen() {
           <View style={styles.imageCard}>
             <ThemedText style={styles.sectionTitle}>시각화 리포트</ThemedText>
             <Image
-              source={{ uri: `data:image/png;base64,${item.visualReport}` }}
+              source={{ uri: item.visualReport }}
               style={styles.fullReportImage}
               contentFit="contain"
               cachePolicy="memory-disk"
             />
           </View>
-        ) : (
-          <View style={styles.imageCard}>
-            <ThemedText style={styles.sectionTitle}>시각화 리포트</ThemedText>
-            <ThemedText style={{ color: SECONDARY_TEXT_COLOR }}>시각화 리포트가 없습니다.</ThemedText>
-          </View>
-        )}
-
-        {/* 4) 분석 결과 텍스트 */}
-        <View style={styles.textCard}>
-          <ThemedText style={styles.sectionTitle}>분석 결과</ThemedText>
-          <ThemedText style={styles.resultText}>
-            {item.result || '분석 결과 텍스트가 없습니다.'}
-          </ThemedText>
-        </View>
+        ) : null}
 
         {/* ✅ 신고 버튼 */}
         <View style={styles.buttonWrap}>
