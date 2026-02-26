@@ -21,7 +21,7 @@ import * as Sharing from 'expo-sharing';
 
 import { ThemedText } from '@/components/themed-text';
 import { useAnalysis, POINTS_PER_REPORT, GIFT_THRESHOLD, getBadgeForPoints } from '@/contexts/analysis-context';
-import { predictWithFile, predictWithVideoId, getMe, postAlert, type PredictMode, type PredictResult, type SttSearchResult } from '@/lib/api';
+import { predictWithFile, predictWithVideoId, getMe, postAlert, type PredictMode, type PredictResult, type SttSearchResult, type AlertResponse } from '@/lib/api';
 import { takePendingVideoUri } from '@/lib/pending-upload';
 
 const ACCENT_GREEN = '#00CF90';
@@ -54,7 +54,23 @@ function VisualImage({ url }: { url: string }) {
   const containerWidth = SCREEN_WIDTH - 64; // 카드 padding 제외
 
   return (
-    <View style={[styles.visualWrap, { minHeight: status === 'ok' ? imgHeight : 160 }]}>
+    <View style={[styles.visualWrap, { height: status === 'ok' ? imgHeight : 160 }]}>
+      {/* Image는 항상 실제 크기로 렌더링 — opacity로 가시성 제어
+          height:0 이면 expo-image가 onLoad/onError를 발화하지 않으므로 absoluteFillObject 사용 */}
+      <Image
+        source={{ uri: url }}
+        style={[StyleSheet.absoluteFillObject, { opacity: status === 'ok' ? 1 : 0 }]}
+        contentFit="contain"
+        onLoad={(e) => {
+          const { width, height } = e.source;
+          if (width && height) {
+            const ratio = height / width;
+            setImgHeight(Math.min(containerWidth * ratio, 700));
+          }
+          setStatus('ok');
+        }}
+        onError={() => setStatus('error')}
+      />
       {status === 'loading' && (
         <View style={styles.visualPlaceholder}>
           <ActivityIndicator size="large" color={ACCENT_GREEN} />
@@ -68,20 +84,6 @@ function VisualImage({ url }: { url: string }) {
           <ThemedText style={styles.visualErrorUrl} numberOfLines={2}>{url}</ThemedText>
         </View>
       )}
-      <Image
-        source={{ uri: url }}
-        style={{ width: '100%', height: status === 'ok' ? imgHeight : 0 }}
-        contentFit="contain"
-        onLoad={(e) => {
-          const { width, height } = e.source;
-          if (width && height) {
-            const ratio = height / width;
-            setImgHeight(Math.min(containerWidth * ratio, 700));
-          }
-          setStatus('ok');
-        }}
-        onError={() => setStatus('error')}
-      />
     </View>
   );
 }
@@ -364,13 +366,30 @@ export default function AnalysisResultScreen() {
     const already = await AsyncStorage.getItem(key);
     if (already === '1') { setReported(true); return; }
 
-    await postAlert({ result_id: data.result_id });
-    await AsyncStorage.setItem(key, '1');
-    setReported(true);
+    try {
+      const alertRes: AlertResponse = await postAlert({ result_id: data.result_id });
+      await AsyncStorage.setItem(key, '1');
+      setReported(true);
 
-    const me = await getMe();
-    setPointsFromServer({ activePoints: me.active_points, totalPoints: me.total_points ?? me.active_points });
-    setShowDone(true);
+      // alert 응답에 포함된 포인트로 바로 업데이트
+      if (alertRes.total_points != null) {
+        setPointsFromServer({ activePoints: alertRes.total_points, totalPoints: alertRes.total_points });
+      } else {
+        // fallback: /me 재조회
+        const me = await getMe();
+        setPointsFromServer({ activePoints: me.active_points, totalPoints: me.total_points ?? me.active_points });
+      }
+      setShowDone(true);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : '신고 중 오류가 발생했습니다.';
+      if (msg === 'already reported') {
+        // 서버에선 이미 신고됨 → 로컬도 신고 완료로 표시
+        await AsyncStorage.setItem(key, '1');
+        setReported(true);
+      } else {
+        Alert.alert('신고 실패', msg);
+      }
+    }
   }, [data?.result_id, historyId, setPointsFromServer]);
 
   const handleShare = useCallback(async () => {

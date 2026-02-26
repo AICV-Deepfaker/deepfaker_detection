@@ -1,6 +1,6 @@
 import uuid
 
-from models.alert import AlertBase
+from ddp_backend.models.alert import AlertBase
 from pydantic import BaseModel
 
 __all__ = ["AlertRequest", "AlertResponse"]

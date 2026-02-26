@@ -5,7 +5,7 @@ import uuid
 from sqlmodel.orm.session import Session
 from sqlalchemy.exc import NoResultFound
 
-from ddp_backend.models.models import Alert
+from ddp_backend.models.alert import Alert
 from ddp_backend.services.crud import CRUDResult, CRUDAlert, CRUDUser
 from ddp_backend.schemas.alert import AlertResponse
 

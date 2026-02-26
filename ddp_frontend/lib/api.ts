@@ -500,7 +500,15 @@ export async function getMe(): Promise<UserMeResponse> {
   return res.json();
 }
 
-export async function postAlert(body: { result_id: string | number }): Promise<any> {
+export type AlertResponse = {
+  alert_id: number;
+  result_id: string;
+  user_id: string;
+  points_added: number;
+  total_points: number | null;
+};
+
+export async function postAlert(body: { result_id: string }): Promise<AlertResponse> {
   const authHeaders = await getAuthHeader();
   const res = await fetch(`${API_BASE}/alerts`, {
     method: 'POST',
@@ -513,7 +521,13 @@ export async function postAlert(body: { result_id: string | number }): Promise<a
   });
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(`신고 실패 (${res.status}): ${text}`);
+    // 서버 에러 메시지 파싱 (FastAPI detail 필드)
+    let detail = text;
+    try {
+      const parsed = JSON.parse(text);
+      detail = parsed.detail ?? text;
+    } catch {}
+    throw new Error(detail);
   }
-  return res.json().catch(() => ({}));
+  return res.json();
 }
