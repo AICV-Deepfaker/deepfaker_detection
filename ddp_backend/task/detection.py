@@ -23,7 +23,7 @@ from ddp_backend.services.crud import (
     CRUDVideo,
 )
 
-_redis = Redis.from_url(REDIS_URL if REDIS_URL is not None else "")
+_redis = Redis.from_url(REDIS_URL if REDIS_URL is not None else "", db=1)
 
 
 def publish_notification(msg: WorkerResultMessage):
