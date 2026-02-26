@@ -71,10 +71,7 @@ class WaveletDetector(BaseVideoDetector[WaveletConfigParam, ProbVisualContent]):
         ckpt_path = Path(self.config.model_path)
 
         if not ckpt_path.exists():
-            warnings.warn(
-                f"[WaveletDetector] checkpoint not found: {ckpt_path}. "
-                "Wavelet detector will be disabled (server will still start)."
-            )
+            print(f"[WaveletDetector] checkpoint not found at: {ckpt_path.resolve()}")
             self.model = None
             return
 

@@ -38,14 +38,16 @@ def predict_deepfake_fast(
     video_id: uuid.UUID,
     db: Session = TaskiqDepends(get_db),
 ) -> uuid.UUID | None:
+    print(f"[TASK] predict_deepfake_fast started for video_id={video_id}", flush=True)
     src = CRUDSource.get_by_video(db, video_id)
     if src is None:
+        print(f"[TASK] Source not found for video_id={video_id}", flush=True)
         return None
 
     with TemporaryDirectory() as temp_dir:
-        print(f"[TASK] Downloading from S3: {src.s3_path}")
+        print(f"[TASK] Downloading from S3: {src.s3_path}", flush=True)
         temp_path = download_video_from_s3(src.s3_path, Path(temp_dir))
-        print(f"[TASK] Download complete: {temp_path}")
+        print(f"[TASK] Download complete: {temp_path}", flush=True)
         CRUDVideo.update_status(db, src.video_id, VideoStatus.PROCESSING)
 
         try:
@@ -106,8 +108,10 @@ def predict_deepfake_deep(
     video_id: uuid.UUID,
     db: Session = TaskiqDepends(get_db),
 ) -> uuid.UUID | None:
+    print(f"[TASK] predict_deepfake_deep started for video_id={video_id}", flush=True)
     src = CRUDSource.get_by_video(db, video_id)
     if src is None:
+        print(f"[TASK] Source not found for video_id={video_id}", flush=True)
         return None
 
     with TemporaryDirectory() as temp_dir:
