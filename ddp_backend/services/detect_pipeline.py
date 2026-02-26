@@ -45,7 +45,12 @@ class DetectionPipeline:
             freq_image=wavelet_report.content.visual_report,
             rppg_image=r_ppg_report.content.visual_report,
             stt_risk_level=stt_report.risk_level,
-            stt_script=STTScript.model_validate(stt_report),
+            stt_script=STTScript(
+                keywords=stt_report.keywords,
+                risk_reason=stt_report.risk_reason,
+                transcript=stt_report.transcript,
+                search_results=stt_report.search_results,
+            ),
         )
 
     def run_deep_mode(self, file_path: Path) -> DeepReportData:
