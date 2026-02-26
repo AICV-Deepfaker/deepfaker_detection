@@ -1,6 +1,7 @@
 import uuid
 from pathlib import Path
 from tempfile import TemporaryDirectory
+import traceback
 
 from redis import Redis
 from sqlmodel.orm.session import Session
@@ -42,10 +43,17 @@ def predict_deepfake_fast(
         temp_path = download_video_from_s3(src.s3_path, Path(temp_dir))
         CRUDVideo.update_status(db, src.video_id, VideoStatus.PROCESSING)
 
-        output = detection_pipeline.run_fast_mode(temp_path)
-
-        if output is None:
+        try:
+            output = detection_pipeline.run_fast_mode(temp_path)
+        except RuntimeError:
             CRUDVideo.update_status(db, src.video_id, VideoStatus.FAILED)
+            publish_notification(
+                WorkerResultMessage(
+                    user_id=src.video.user_id,
+                    result_id=None,
+                    error_msg=traceback.format_exc()
+                )
+            )
             return None
 
         """
@@ -73,7 +81,7 @@ def predict_deepfake_fast(
             FastReport(
                 user_id=src.video.user_id,
                 result_id=result.result_id,
-                **output.model_dump()
+                **output.model_dump(),
             ),
         )
         CRUDVideo.update_status(db, src.video_id, VideoStatus.COMPLETED)
@@ -99,10 +107,18 @@ def predict_deepfake_deep(
         temp_path = download_video_from_s3(src.s3_path, Path(temp_dir))
         CRUDVideo.update_status(db, src.video_id, VideoStatus.PROCESSING)
 
-        output = detection_pipeline.run_deep_mode(temp_path)
+        try:
+            output = detection_pipeline.run_deep_mode(temp_path)
 
-        if output is None:
+        except RuntimeError:
             CRUDVideo.update_status(db, src.video_id, VideoStatus.FAILED)
+            publish_notification(
+                WorkerResultMessage(
+                    user_id=src.video.user_id,
+                    result_id=None,
+                    error_msg=traceback.format_exc()
+                )
+            )
             return None
 
         result = CRUDResult.create(
@@ -119,7 +135,7 @@ def predict_deepfake_deep(
             DeepReport(
                 user_id=src.video.user_id,
                 result_id=result.result_id,
-                **output.model_dump()
+                **output.model_dump(),
             ),
         )
         CRUDVideo.update_status(db, src.video_id, VideoStatus.COMPLETED)

@@ -6,4 +6,5 @@ __all__ = ['WorkerResultMessage']
 
 class WorkerResultMessage(BaseModel):
     user_id: UUID
-    result_id: UUID
+    result_id: UUID | None
+    error_msg: str | None = None

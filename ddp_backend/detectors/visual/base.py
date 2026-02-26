@@ -101,13 +101,7 @@ class BaseVideoDetector[C: BaseVideoConfig, ContentType: BaseModel](VisualDetect
         resized_path = vid_path.with_stem(f"resize_{vid_path.stem}")
         self.set_fps(vid_path, resized_path)
 
-        try:
-            analyze_res = self._analyze(resized_path)
-        except RuntimeError:
-            return VideoReport(
-                status=Status.ERROR,
-                model_name=self.model_name,
-            )
+        analyze_res = self._analyze(resized_path)
 
         s3_key: str | None = None
         if isinstance(analyze_res, VisualContent):

@@ -35,7 +35,7 @@ async def redis_connector(app: FastAPI):
                     data = WorkerResultMessage.model_validate_json(msg["data"])
                 except ValidationError:
                     continue
-                await connection_manager.send_message(data.user_id, data.result_id)
+                await connection_manager.send_message(data.user_id, data.result_id, data.error_msg)
     except asyncio.CancelledError:
         await pubsub.unsubscribe()
         await redis.close()

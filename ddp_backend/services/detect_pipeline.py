@@ -28,34 +28,28 @@ class DetectionPipeline:
         self.wavelet_detector.load_model()
         self.r_ppg_detector.load_model()
 
-    def run_fast_mode(self, file_path: Path) -> FastReportData | None:
-        try:
-            wavelet_report = self.wavelet_detector.analyze(file_path)
-            r_ppg_report = self.r_ppg_detector.analyze(file_path)
-            stt_report = self.stt_detector.analyze(file_path)
+    def run_fast_mode(self, file_path: Path) -> FastReportData:
+        wavelet_report = self.wavelet_detector.analyze(file_path)
+        r_ppg_report = self.r_ppg_detector.analyze(file_path)
+        stt_report = self.stt_detector.analyze(file_path)
 
-            if wavelet_report.content is None or r_ppg_report.content is None:
-                return None
+        if wavelet_report.content is None or r_ppg_report.content is None:
+            raise RuntimeError("Content is empty.")
 
-            return FastReportData(
-                freq_result=wavelet_report.content.result,
-                freq_conf=wavelet_report.content.confidence_score,
-                freq_image=wavelet_report.content.visual_report,
-                rppg_image=r_ppg_report.content.visual_report,
-                stt_risk_level=stt_report.risk_level,
-                stt_script=STTScript.model_validate(stt_report),
-            )
-        except Exception:
-            return None
+        return FastReportData(
+            freq_result=wavelet_report.content.result,
+            freq_conf=wavelet_report.content.confidence_score,
+            freq_image=wavelet_report.content.visual_report,
+            rppg_image=r_ppg_report.content.visual_report,
+            stt_risk_level=stt_report.risk_level,
+            stt_script=STTScript.model_validate(stt_report),
+        )
 
-    def run_deep_mode(self, file_path: Path) -> DeepReportData | None:
-        try:
-            unite_report = self.unite_detector.analyze(file_path)
-            if unite_report.content is None:
-                return None
-            return DeepReportData(
-                unite_result=unite_report.content.result,
-                unite_conf=unite_report.content.confidence_score
-            )
-        except Exception:
-            return None
+    def run_deep_mode(self, file_path: Path) -> DeepReportData:
+        unite_report = self.unite_detector.analyze(file_path)
+        if unite_report.content is None:
+            raise RuntimeError("Content is empty")
+        return DeepReportData(
+            unite_result=unite_report.content.result,
+            unite_conf=unite_report.content.confidence_score
+        )
