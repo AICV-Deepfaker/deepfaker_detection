@@ -6,6 +6,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Dimensions,
   ScrollView,
   Share,
   StyleSheet,
@@ -44,6 +45,47 @@ function ResultBadge({ result }: { result: 'FAKE' | 'REAL' }) {
   );
 }
 
+const SCREEN_WIDTH = Dimensions.get('window').width;
+
+function VisualImage({ url }: { url: string }) {
+  const [status, setStatus] = useState<'loading' | 'ok' | 'error'>('loading');
+  const [imgHeight, setImgHeight] = useState(320);
+
+  const containerWidth = SCREEN_WIDTH - 64; // 카드 padding 제외
+
+  return (
+    <View style={[styles.visualWrap, { minHeight: status === 'ok' ? imgHeight : 160 }]}>
+      {status === 'loading' && (
+        <View style={styles.visualPlaceholder}>
+          <ActivityIndicator size="large" color={ACCENT_GREEN} />
+          <ThemedText style={styles.visualPlaceholderText}>시각화 이미지 로딩 중...</ThemedText>
+        </View>
+      )}
+      {status === 'error' && (
+        <View style={styles.visualPlaceholder}>
+          <MaterialIcons name="broken-image" size={40} color={SUB} />
+          <ThemedText style={styles.visualPlaceholderText}>이미지를 불러올 수 없습니다</ThemedText>
+          <ThemedText style={styles.visualErrorUrl} numberOfLines={2}>{url}</ThemedText>
+        </View>
+      )}
+      <Image
+        source={{ uri: url }}
+        style={{ width: '100%', height: status === 'ok' ? imgHeight : 0 }}
+        contentFit="contain"
+        onLoad={(e) => {
+          const { width, height } = e.source;
+          if (width && height) {
+            const ratio = height / width;
+            setImgHeight(Math.min(containerWidth * ratio, 700));
+          }
+          setStatus('ok');
+        }}
+        onError={() => setStatus('error')}
+      />
+    </View>
+  );
+}
+
 function SectionCard({
   title,
   result,
@@ -52,7 +94,7 @@ function SectionCard({
   children,
 }: {
   title: string;
-  result?: 'FAKE' | 'REAL';
+  result?: 'FAKE' | 'REAL' | 'UNKNOWN';
   probability?: number;
   visualUrl?: string;
   children?: React.ReactNode;
@@ -61,7 +103,7 @@ function SectionCard({
     <View style={styles.sectionCard}>
       <ThemedText style={styles.sectionTitle}>{title}</ThemedText>
 
-      {result != null && <ResultBadge result={result} />}
+      {result != null && result !== 'UNKNOWN' && <ResultBadge result={result} />}
 
       <View style={styles.metricsRow}>
         {probability != null && (
@@ -72,15 +114,7 @@ function SectionCard({
         )}
       </View>
 
-      {visualUrl ? (
-        <View style={styles.visualWrap}>
-          <Image
-            source={{ uri: visualUrl }}
-            style={styles.visualImage}
-            contentFit="contain"
-          />
-        </View>
-      ) : null}
+      {visualUrl ? <VisualImage url={visualUrl} /> : null}
 
       {children}
     </View>
@@ -628,10 +662,27 @@ const styles = StyleSheet.create({
     marginTop: 8,
     borderRadius: 12,
     overflow: 'hidden',
-    backgroundColor: '#fff',
-    minHeight: 120,
+    backgroundColor: '#F4F6F8',
+    borderWidth: 1,
+    borderColor: BORDER,
   },
-  visualImage: { width: '100%', height: 200 },
+  visualPlaceholder: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 32,
+    gap: 10,
+  },
+  visualPlaceholderText: {
+    fontSize: 13,
+    color: SUB,
+  },
+  visualErrorUrl: {
+    fontSize: 10,
+    color: SUB,
+    textAlign: 'center',
+    paddingHorizontal: 12,
+    opacity: 0.6,
+  },
 
   keywordGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   keywordChip: {

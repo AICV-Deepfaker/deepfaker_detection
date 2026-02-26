@@ -322,7 +322,7 @@ class WaveletDetector(BaseVideoDetector[WaveletConfigParam, ProbVisualContent]):
         transform = v2.Compose(
             [
                 v2.ToImage(),
-                v2.ToDtype(torch.float32),
+                v2.ToDtype(torch.float32, scale=True),  # 0~255 → 0.0~1.0
                 v2.Normalize(mean=self.config.mean, std=self.config.std),
             ]
         )
@@ -429,4 +429,5 @@ class WaveletDetector(BaseVideoDetector[WaveletConfigParam, ProbVisualContent]):
                 img_size,
             )
 
-        return ProbVisualContent(probability=final_prob, image=visual_report)
+        # final_prob는 FAKE 확률 → ProbabilityContent는 REAL 확률을 기대하므로 변환
+        return ProbVisualContent(probability=1.0 - final_prob, image=visual_report)
