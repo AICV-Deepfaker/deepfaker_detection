@@ -271,6 +271,8 @@ def download_from_s3(*args, **kwargs) -> Path:
         return download_file_from_s3(args[0], args[1])
     raise TypeError("download_from_s3 expects (key_or_url, download_path)")
 
+
+
 def to_public_url(value: str | None) -> str | None:
     if not value:
         return None
