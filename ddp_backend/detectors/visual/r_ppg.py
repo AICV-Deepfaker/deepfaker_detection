@@ -98,8 +98,8 @@ class RPPGDetector(BaseVideoDetector[RPPGConfig, VisualContent]):
                     tensor = torch.cat([tensor, pad_frame], dim=1)  # (C, T+pad, H, W)
                     T = tensor.shape[1]
 
-                    # EfficientPhys는 보통 (B, C, T, H, W) 입력을 기대
-                x = tensor.unsqueeze(0)  # (1, C, T, H, W)
+                # EfficientPhys는 (T, C, H, W) 입력을 기대 — 프레임이 배치 dim
+                x = tensor.permute(1, 0, 2, 3)  # (C, T, H, W) → (T, C, H, W)
 
                 if self.model is None:
                     raise RuntimeError
