@@ -8,6 +8,7 @@ import numpy as np
 import torch
 
 from ddp_backend.schemas.enums import ModelName
+from ddp_backend.schemas.report import VisualContent
 from ddp_backend.detectors.visual.r_ppg import RPPGPreprocessing
 
 from .base import BaseVideoConfig, BaseVideoDetector, VideoInferenceResult
@@ -15,7 +16,7 @@ from .base import BaseVideoConfig, BaseVideoDetector, VideoInferenceResult
 
 
 @final
-class RPPGDetector(BaseVideoDetector[BaseVideoConfig]):
+class RPPGDetector(BaseVideoDetector[BaseVideoConfig, VisualContent]):
     model_name = ModelName.R_PPG
 
     preprocessing = RPPGPreprocessing # RPPG 최소 프레임이 안될 경우 분기처리 필요
@@ -25,11 +26,11 @@ class RPPGDetector(BaseVideoDetector[BaseVideoConfig]):
         pass
 
     @override
-    def _analyze(self, vid_path: str | Path) -> VideoInferenceResult:
+    def _analyze(self, vid_path: str | Path) -> VisualContent:
 
 
 
         
-        return VideoInferenceResult(prob=0)
+        return VisualContent()
 
 

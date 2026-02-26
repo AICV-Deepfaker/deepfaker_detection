@@ -13,18 +13,18 @@ import torch
 from pydantic import BaseModel
 
 from ddp_backend.core.s3 import upload_file_to_s3
-from ddp_backend.schemas.config import BaseVideoConfig
-from ddp_backend.schemas.enums import Result, Status
-from ddp_backend.schemas.report import VideoReport
 from ddp_backend.detectors import VisualDetector
+from ddp_backend.schemas.config import BaseVideoConfig
+from ddp_backend.schemas.enums import Status
+from ddp_backend.schemas.report import VideoReport, VisualContent
 
 
 class VideoInferenceResult(BaseModel):
-    prob: float
+    prob: float | None = None
     image: bytes | None = None
 
 
-class BaseVideoDetector[C: BaseVideoConfig](VisualDetector):
+class BaseVideoDetector[C: BaseVideoConfig, ContentType: BaseModel](VisualDetector[ContentType]):
     """
     BaseVideoDetector[C: BaseVideoConfig] for Config.
     """
@@ -93,10 +93,10 @@ class BaseVideoDetector[C: BaseVideoConfig](VisualDetector):
             )
 
     @abstractmethod
-    def _analyze(self, vid_path: str | Path) -> VideoInferenceResult:
+    def _analyze(self, vid_path: str | Path) -> ContentType:
         pass
 
-    def analyze(self, vid_path: str | Path) -> VideoReport:
+    def analyze(self, vid_path: str | Path) -> VideoReport[ContentType]:
         vid_path = Path(vid_path)
         resized_path = vid_path.with_stem(f"resize_{vid_path.stem}")
         self.set_fps(vid_path, resized_path)
@@ -107,24 +107,20 @@ class BaseVideoDetector[C: BaseVideoConfig](VisualDetector):
             return VideoReport(
                 status=Status.ERROR,
                 model_name=self.model_name,
-                result=Result.UNKNOWN,
-                probability=0,
-                visual_report=None,
             )
 
-        res = Result.FAKE if analyze_res.prob > 0.5 else Result.REAL
         s3_key: str | None = None
-        if analyze_res.image is not None:
-            upload_key = f"report/{vid_path.stem}_{self.model_name}_analyzed.png"
+        if isinstance(analyze_res, VisualContent):
+            if analyze_res.image is not None:
+                upload_key = f"report/{vid_path.stem}_{self.model_name}_analyzed.png"
 
-            s3_key = upload_file_to_s3(
-                BytesIO(analyze_res.image), upload_key, "image/png"
-            )
+                s3_key = upload_file_to_s3(
+                    BytesIO(analyze_res.image), upload_key, "image/png"
+                )
+                analyze_res.visual_report = s3_key
 
         return VideoReport(
             status=Status.SUCCESS,
             model_name=self.model_name,
-            result=res,
-            probability=analyze_res.prob,
-            visual_report=s3_key,
+            content=analyze_res,
         )
