@@ -27,7 +27,10 @@ _redis = Redis.from_url(REDIS_URL if REDIS_URL is not None else "", db=1)
 
 
 def publish_notification(msg: WorkerResultMessage):
-    _redis.publish(NOTIFY_CHANNEL, msg.model_dump_json())
+    try:
+        _redis.publish(NOTIFY_CHANNEL, msg.model_dump_json())
+    except Exception as e:
+        print(f"[WARN] Redis publish failed: {e}")
 
 
 @broker.task

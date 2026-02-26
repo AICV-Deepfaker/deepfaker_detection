@@ -6,8 +6,8 @@ from .config import REDIS_URL
 
 from taskiq_redis import RedisStreamBroker
 
-REDIS_URL = "redis://127.0.0.1:6379/0"
-result_backend = RedisAsyncResultBackend[UUID | None](REDIS_URL)
-broker = RedisStreamBroker(REDIS_URL).with_result_backend(result_backend)
+_broker_url = REDIS_URL or "redis://127.0.0.1:6379/0"
+result_backend = RedisAsyncResultBackend[UUID | None](_broker_url)
+broker = RedisStreamBroker(_broker_url).with_result_backend(result_backend)
 
 taskiq_fastapi.init(broker, "ddp_backend.main:app")
