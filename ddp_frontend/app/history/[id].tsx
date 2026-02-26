@@ -7,12 +7,8 @@ import { ScrollView, StyleSheet, TouchableOpacity, View, Pressable } from 'react
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
-import {
-  useAnalysis,
-  POINTS_PER_REPORT,
-  GIFT_THRESHOLD,
-  getBadgeForPoints,
-} from '@/contexts/analysis-context';
+import { useAnalysis, getBadgeForPoints } from '@/contexts/analysis-context';
+import { getMe, postAlert } from '@/lib/api';
 
 const ACCENT_GREEN = '#00CF90';
 const ACCENT_GREEN_DARK = '#00B87A';
@@ -63,8 +59,7 @@ export default function HistoryDetailScreen() {
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
 
-  const { history, addPoints, incrementReportCount, totalPoints } = useAnalysis();
-
+  const { history, points, setPointsFromServer } = useAnalysis();
   const [showConfirm, setShowConfirm] = useState(false);
   const [showDone, setShowDone] = useState(false);
   const [reported, setReported] = useState(false);
@@ -82,22 +77,40 @@ export default function HistoryDetailScreen() {
   const onConfirmReport = useCallback(async () => {
     if (!id) return;
 
+    const resultId = item?.resultId;
+    if (resultId == null) {
+      // result_id 없으면 신고 불가
+      setShowDone(false);
+      // 여기 Alert 쓰고 싶으면 import { Alert } from 'react-native';
+      // Alert.alert('신고 불가', 'result_id가 없어 신고할 수 없습니다. 다시 분석 후 시도해주세요.');
+      return;
+    }
+
+    // (선택) 로컬 중복 클릭 방지용 - 원칙 위반 아님
     const key = `reported:${id}`;
     const already = await AsyncStorage.getItem(key);
-
     if (already === '1') {
       setReported(true);
       return;
     }
 
+    // ✅ 원칙 2: 신고는 /alerts POST로만
+    await postAlert({ result_id: resultId });
+
+    // 로컬 표시만 (서버 중복방지는 백엔드에서 409 등으로 처리하는 게 베스트)
     await AsyncStorage.setItem(key, '1');
     setReported(true);
 
-    addPoints(POINTS_PER_REPORT);
-    incrementReportCount();
+    // ✅ 원칙 1: 포인트는 로컬에서 더하지 않음
+    // 신고 후 서버 /me를 다시 받아서 최신 포인트로 갱신
+    const me = await getMe();
+    setPointsFromServer({
+      activePoints: me.active_points,
+      totalPoints: me.total_points,
+    });
 
     setShowDone(true);
-  }, [id, addPoints, incrementReportCount]);
+  }, [id, item?.resultId, setPointsFromServer]);
 
   useFocusEffect(
     useCallback(() => {
