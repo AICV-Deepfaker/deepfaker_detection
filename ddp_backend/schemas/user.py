@@ -18,7 +18,6 @@ from .enums import Affiliation, LoginMethod
 __all__ = [
     "CheckEmail",
     "CheckNickname",
-    "UserLogin",
     "UserEdit",
     "FindId",
     "FindPassword",
@@ -63,10 +62,6 @@ class CheckNickname(BaseModel):
     nickname: str = Field(..., min_length=2)
 
 
-# 로그인
-class UserLogin(BaseModel):
-    email: EmailStr
-    password: SecretStr = Field(..., min_length=8)  # 최소 8자 이상
 
 
 # 회원정보 수정
