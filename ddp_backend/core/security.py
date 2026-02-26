@@ -9,7 +9,7 @@ from passlib.context import CryptContext
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 from jose import JWTError, jwt, ExpiredSignatureError
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Query, WebSocket, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlmodel.orm.session import Session
 from pydantic import SecretStr
@@ -141,5 +141,56 @@ def get_password_hash(password: SecretStr) -> str:
 def verify_password(plain_password: SecretStr, hashed_password: str) -> bool:
     verify_pwd = pwd_context.verify(plain_password.get_secret_value(), hashed_password)
     return verify_pwd
+
+
+# =========
+# WebSocket 전용 토큰 추출
+# OAuth2PasswordBearer는 HTTP Request만 지원하므로 WebSocket에서는 별도 처리
+# =========
+async def _get_ws_token(
+    websocket: WebSocket,
+    token: str | None = Query(default=None),
+) -> str:
+    """WebSocket 연결에서 토큰 추출 (쿼리 파라미터 또는 Authorization 헤더)"""
+    if token:
+        return token
+    auth_header = websocket.headers.get("Authorization", "")
+    if auth_header.startswith("Bearer "):
+        return auth_header[7:]
+    raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="인증 토큰이 없습니다")
+
+
+def get_current_user_ws(
+    token: str = Depends(_get_ws_token),
+    db: Session = Depends(get_db),
+):
+    """WebSocket 전용 사용자 인증 (OAuth2PasswordBearer 미사용)"""
+    from ddp_backend.services.crud.user import CRUDUser  # 순환 import 방지
+
+    try:
+        payload = decode_token(token)
+    except HTTPException:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="유효하지 않은 토큰입니다")
+
+    if payload.get("type") != "access":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="access 토큰이 아닙니다")
+
+    user_id_str: str | None = payload.get("user_id")
+    if user_id_str is None:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="유효하지 않은 토큰입니다")
+
+    try:
+        user_id = UUID(user_id_str)
+    except ValueError:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="유효하지 않은 토큰입니다")
+
+    user = CRUDUser.get_by_id(db, user_id)
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="존재하지 않는 유저입니다")
+
+    if user.token and user.token.revoked:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="비정상적인 접근입니다. 다시 로그인해주세요")
+
+    return user
 
 
