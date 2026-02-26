@@ -163,15 +163,16 @@ def download_file_from_s3(key_or_url: str, download_path: str | Path) -> Path:
     key = _normalize_key(key)
     download_path = Path(download_path)
 
-    download_path.parent.mkdir(parents=True, exist_ok=True)
+    local_path = download_path / Path(key).name
+    local_path.parent.mkdir(parents=True, exist_ok=True)
 
     if S3_DRY_RUN:
         # dry-run이면 파일을 만들지 않고 경로만 반환
-        return download_path
+        return local_path
 
     try:
-        _s3_client().download_file(S3_BUCKET, key, str(download_path / key))
-        return download_path
+        _s3_client().download_file(S3_BUCKET, key, str(local_path))
+        return local_path
     except (BotoCoreError, ClientError) as e:
         raise RuntimeError(f"S3 download failed: {e}") from e
 
