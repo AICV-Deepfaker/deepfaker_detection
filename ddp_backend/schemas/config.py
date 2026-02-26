@@ -19,3 +19,6 @@ class WaveletConfig(BaseVideoConfig):
     std: tuple[float, float, float]
     model_name: str
     loss_func: str
+
+class RPPGConfig(BaseVideoConfig):
+    ...

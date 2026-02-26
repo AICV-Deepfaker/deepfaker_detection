@@ -1,11 +1,12 @@
 import warnings
+from collections import OrderedDict
 from io import BytesIO
 from pathlib import Path
 from typing import Any, Dict, List, Self, override
-from collections import OrderedDict
 
 import cv2
 import matplotlib
+
 matplotlib.use("Agg")  # 백엔드 환경 GUI 스레드 충돌 방지
 import matplotlib.pyplot as plt
 import numpy as np
@@ -13,14 +14,17 @@ import torch
 import torch.nn as nn
 from scipy.signal import welch
 
+# 스키마
+from ddp_backend.schemas.config import RPPGConfig
+
 #  모듈 임포트
 from ddp_backend.schemas.enums import ModelName
-from ddp_backend.detectors.visual.models.rppg_preprocessing import RPPGPreprocessing, PreprocessResult
-from ddp_backend.detectors.visual.config import ModelType
-from .base import BaseVideoDetector, VideoInferenceResult
-from ddp_backend.detectors.visual.models.efficientphys_toolbox import EfficientPhys
-# 스키마
-from ddp_backend.schemas.config import RPPGConfigParam
+from ddp_backend.schemas.report import VisualContent
+
+from .base import BaseVideoDetector
+from .config import ModelType
+from .models.efficientphys_toolbox import EfficientPhys
+from .rppg_preprocessing import PreprocessResult, RPPGPreprocessing
 
 # ─────────────────────────────────────────────────────────────
 # rPPG 추론 상수
@@ -29,22 +33,8 @@ _FS           = 30.0    # 샘플링 주파수
 _HR_LOW       = 0.7     # 심박수 유효 대역 (Hz)
 _HR_HIGH      = 2.5     # 심박수 유효 대역 (Hz)
 
-class RPPGDetector(BaseVideoDetector[RPPGConfigParam]):
+class RPPGDetector(BaseVideoDetector[RPPGConfig, VisualContent]):
     model_name = ModelName.R_PPG
-
-    @classmethod
-    def from_yaml(
-        cls,
-        yaml_path: str | Path,
-        img_size: int,
-        ckpt_path: str | Path,
-        threshold: float = 0.5,
-    ) -> Self:
-        new_config = RPPGConfigParam(
-            model_path=ckpt_path,
-            img_size=img_size,
-        )
-        return cls(new_config)
 
     @override
     def load_model(self):
@@ -185,7 +175,7 @@ class RPPGDetector(BaseVideoDetector[RPPGConfigParam]):
         return buf.getvalue()
 
     @override
-    def _analyze(self, vid_path: str | Path) -> VideoInferenceResult:
+    def _analyze(self, vid_path: str | Path) -> VisualContent:
         if self.model is None:
             raise RuntimeError("EfficientPhys model is not loaded.")
 
@@ -206,4 +196,4 @@ class RPPGDetector(BaseVideoDetector[RPPGConfigParam]):
         # 3포인트 시각화 (최고/최저 SNR 얼굴 + 전체 Frequency 그래프)
         visual_report = self.generate_visual_report(prep_result.tensors, signals, feat_dicts)
 
-        return VideoInferenceResult(prob=0.0, image=visual_report)
+        return VisualContent(image=visual_report)
