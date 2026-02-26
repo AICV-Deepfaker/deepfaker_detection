@@ -2,20 +2,20 @@ import uuid
 from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel
-from sqlalchemy import Dialect, Column
-from sqlalchemy.types import JSON, BigInteger, TypeDecorator
+from sqlalchemy import Column, Dialect
+from sqlalchemy.types import JSON, BigInteger, Enum, TypeDecorator
 from sqlmodel import Field, Relationship
 
 from ddp_backend.core.database import Base
-
-from .models import MAX_S3_LEN
 from ddp_backend.schemas.enums import Result as ResultEnum
 from ddp_backend.schemas.enums import STTRiskLevel
 
-if TYPE_CHECKING:
+from .models import MAX_S3_LEN, enum_to_value
 
+if TYPE_CHECKING:
     from .models import Result
     from .user import User
+
 
 class STTScript(BaseModel):
     keywords: list[str]
@@ -51,21 +51,43 @@ class ReportBase(Base):
     user_id: uuid.UUID = Field(foreign_key="users.user_id", ondelete="CASCADE")
     result_id: uuid.UUID = Field(foreign_key="results.result_id", ondelete="CASCADE")
 
+
 class FastReportData(Base):
-    freq_result: ResultEnum
+    freq_result: ResultEnum = Field(
+        sa_column=Column(
+            Enum(ResultEnum, values_callable=enum_to_value), nullable=False
+        )
+    )
     freq_conf: float
     freq_image: str | None = Field(max_length=MAX_S3_LEN)
-    rppg_result: ResultEnum
+    rppg_result: ResultEnum = Field(
+        sa_column=Column(
+            Enum(ResultEnum, values_callable=enum_to_value), nullable=False
+        )
+    )
+
     rppg_conf: float
     rppg_image: str | None = Field(max_length=MAX_S3_LEN)
-    stt_risk_level: STTRiskLevel
+    stt_risk_level: STTRiskLevel = Field(
+        sa_column=Column(
+            Enum(STTRiskLevel, values_callable=enum_to_value), nullable=False
+        )
+    )
+
     stt_script: STTScript = Field(
         sa_column=Column(PydanticJSONType(STTScript), nullable=False),
     )
 
+
 class DeepReportData(Base):
-    unite_result: ResultEnum
+    unite_result: ResultEnum = Field(
+        sa_column=Column(
+            Enum(ResultEnum, values_callable=enum_to_value), nullable=False
+        )
+    )
+
     unite_conf: float
+
 
 # 6. FastReports table
 class FastReport(ReportBase, FastReportData, table=True):
@@ -74,6 +96,7 @@ class FastReport(ReportBase, FastReportData, table=True):
 
     user: "User" = Relationship(back_populates="fast_reports")
     result: "Result" = Relationship(back_populates="fast_report")
+
 
 # 6. DeepReports table
 class DeepReport(ReportBase, DeepReportData, table=True):

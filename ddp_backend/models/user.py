@@ -3,21 +3,24 @@ from datetime import date
 from typing import TYPE_CHECKING
 
 from pydantic import EmailStr
+from sqlalchemy import Column
+from sqlalchemy.types import Enum
 from sqlmodel import Field, Relationship
 
 from ddp_backend.core.database import Base
 from ddp_backend.schemas.enums import Affiliation, LoginMethod
 
-from .models import MAX_S3_LEN, CreatedTimestampMixin
+from .models import MAX_S3_LEN, CreatedTimestampMixin, enum_to_value
 
 if TYPE_CHECKING:
     from .alert import Alert
-    from .report import DeepReport, FastReport
     from .models import (
         Result,
         Token,
         Video,
     )
+    from .report import DeepReport, FastReport
+
 
 # 1. 공통 Base 모델 (가장 교집합이 되는 필드들)
 class UserBase(Base):
@@ -26,15 +29,27 @@ class UserBase(Base):
     nickname: str = Field(min_length=2, max_length=100, unique=True)
     birth: date | None = None
     profile_image: str | None = Field(default=None, max_length=MAX_S3_LEN)
-    affiliation: Affiliation | None = None
+    affiliation: Affiliation | None = Field(
+        sa_column=Column(
+            Enum(Affiliation, values_callable=enum_to_value),
+            nullable=True,
+            default=None,
+        )
+    )
 
 
 # 2. 실제 데이터베이스 테이블 (Table=True)
 class User(UserBase, CreatedTimestampMixin, table=True):
-    __tablename__: str = "users" # type: ignore
-    
+    __tablename__: str = "users"  # type: ignore
+
     user_id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True, index=True)
-    login_method: LoginMethod = Field(default=LoginMethod.LOCAL)
+    login_method: LoginMethod = Field(
+        sa_column=Column(
+            Enum(LoginMethod, values_callable=enum_to_value),
+            nullable=False,
+            default=LoginMethod.LOCAL,
+        )
+    )
     hashed_password: str | None = Field(default=None, max_length=255)
     activation_points: int = Field(default=0)
 

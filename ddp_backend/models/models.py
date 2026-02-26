@@ -1,16 +1,18 @@
 # 테이블이 4개 정도이므로 하나의 파일로 테이블 구성
+from enum import Enum as _Enum
 import uuid
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
-from typing import TYPE_CHECKING, Annotated
+from typing import TYPE_CHECKING, Annotated, Optional # type: ignore
 
 from pydantic.types import AwareDatetime
 from sqlalchemy import (
     BigInteger,
+    Column,
     DateTime,
-    String,
+    Enum,
 )
-from sqlmodel import Column, Field, Relationship
+from sqlmodel import Field, Relationship
 
 from ddp_backend.core.config import settings
 from ddp_backend.core.database import Base
@@ -33,6 +35,8 @@ MAX_S3_LEN = 512
 def source_def_expire() -> datetime:
     return datetime.now(ZoneInfo("Asia/Seoul")) + timedelta(hours=12)
 
+def enum_to_value(x: list[_Enum]):
+    return [str(e.value) for e in x]
 
 class CreatedTimestampMixin(Base):
     created_at: Annotated[datetime, AwareDatetime] = Field(
@@ -62,12 +66,12 @@ class Video(CreatedTimestampMixin, Base, table=True):
     video_id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     user_id: uuid.UUID = Field(foreign_key="users.user_id", ondelete="CASCADE")
     origin_path: OriginPath = Field(
-        sa_column=Column(String(20), nullable=False),
+        sa_column=Column(Enum(OriginPath, values_callable=enum_to_value), nullable=False),
     )
     source_url: str | None = Field(default=None, max_length=500)
     status: VideoStatus = Field(
         default=VideoStatus.PENDING,
-        sa_column=Column(String(20), nullable=False),
+        sa_column=Column(Enum(VideoStatus, values_callable=enum_to_value), nullable=False),
     )
 
     user: "User" = Relationship(back_populates="videos")
@@ -102,10 +106,10 @@ class Result(CreatedTimestampMixin, Base, table=True):
 
     user: "User" = Relationship(back_populates="results")
     video: "Video" = Relationship(back_populates="result")
-    fast_report: "FastReport" = Relationship(
+    fast_report: Optional["FastReport"] = Relationship( # type: ignore
         back_populates="result", cascade_delete=True
     )
-    deep_report: "DeepReport" = Relationship(
+    deep_report: Optional["DeepReport"] = Relationship( # type: ignore
         back_populates="result", cascade_delete=True
     )
     alerts: list["Alert"] = Relationship(back_populates="result")
