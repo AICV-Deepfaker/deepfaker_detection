@@ -53,6 +53,8 @@ function VisualImage({ url }: { url: string }) {
 
   const containerWidth = SCREEN_WIDTH - 64; // 카드 padding 제외
 
+console.log('현재 포인트:', points?.activePoints);
+
   return (
     <View style={[styles.visualWrap, { height: status === 'ok' ? imgHeight : 160 }]}>
       {/* Image는 항상 실제 크기로 렌더링 — opacity로 가시성 제어
@@ -116,6 +118,14 @@ function SectionCard({
 }) {
   const hasContent = visualUrl != null || React.Children.count(children) > 0;
   const [expanded, setExpanded] = useState(false);
+  const percent =
+              probability != null
+                ? (result === 'FAKE'
+                    ? probability * 100
+                    : result === 'REAL'
+                      ? (1 - probability) * 100
+                      : probability * 100)
+                : null;
 
   return (
     <View style={styles.sectionCard}>
@@ -130,9 +140,9 @@ function SectionCard({
           {result != null && result !== 'UNKNOWN' && <ResultBadge result={result} />}
         </View>
         <View style={styles.sectionHeaderRight}>
-          {probability != null && (
+          {percent != null && (
             <ThemedText style={styles.metricValueInline}>
-              {(probability * 100).toFixed(1)}%
+              {percent.toFixed(1)}%
             </ThemedText>
           )}
           {hasContent && (
@@ -152,7 +162,9 @@ function SectionCard({
             <View style={styles.metricsRow}>
               <View style={styles.metric}>
                 <ThemedText style={styles.metricLabel}>확률</ThemedText>
-                <ThemedText style={styles.metricValue}>{(probability * 100).toFixed(2)}%</ThemedText>
+                {percent != null && (
+                  <ThemedText style={styles.metricValue}>{percent.toFixed(2)}%</ThemedText>
+                )}
               </View>
             </View>
           )}
@@ -469,7 +481,7 @@ export default function AnalysisResultScreen() {
   // deep mode에서는 data.frequency가 없으므로 data.unite?.probability로 fallback
   const displayProb = data.frequency?.probability ?? data.unite?.probability;
   const displayPercent = displayProb != null
-    ? Math.round(isFake ? (1 - displayProb) * 100 : displayProb * 100)
+    ? Math.round(isFake ? displayProb * 100 : (1 - displayProb) * 100)
     : null;
   const analysisLabel = isEvidence ? '주파수 분석 기준' : 'UNITE 분석 기준';
 
