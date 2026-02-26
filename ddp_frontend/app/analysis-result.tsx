@@ -19,7 +19,7 @@ import * as Sharing from 'expo-sharing';
 
 import { ThemedText } from '@/components/themed-text';
 import { useAnalysis } from '@/contexts/analysis-context';
-import { predictWithFile, type PredictMode, type PredictResult, type SttSearchResult } from '@/lib/api';
+import { predictWithFile, predictWithVideoId, type PredictMode, type PredictResult, type SttSearchResult } from '@/lib/api';
 import { takePendingVideoUri } from '@/lib/pending-upload';
 
 const ACCENT_GREEN = '#00CF90';
@@ -195,8 +195,9 @@ function SttAnalysisCard({
 export default function AnalysisResultScreen() {
   const insets = useSafeAreaInsets();
 
-  const params = useLocalSearchParams<{ mode?: string }>();
+  const params = useLocalSearchParams<{ mode?: string; pendingVideo?: string; videoId?: string }>();
   const mode = (params.mode === 'fast' ? 'fast' : 'deep') as PredictMode;
+  const videoId = params.videoId ?? null;
   const isEvidence = mode === 'fast';
 
   const { addToHistory } = useAnalysis();
@@ -216,17 +217,23 @@ export default function AnalysisResultScreen() {
   const mediaUri = initialVideoRef.current ?? null;
 
   const runAnalysis = useCallback(async () => {
-    if (!mediaUri) {
-      setError('탐지 후 분석 기록이 있어야 신고할 수 있어요.');
-      setLoading(false);
-      return;
-    }
-
     setLoading(true);
     setError(null);
 
     try {
-      const res = await predictWithFile(mediaUri, mode);
+      let res: PredictResult;
+
+      if (videoId) {
+        // video_id 기반 분석 (링크 또는 S3 업로드된 영상)
+        res = await predictWithVideoId(videoId, mode);
+      } else if (mediaUri) {
+        // 로컬 파일 기반 분석 (기존 플로우 - pendingVideo)
+        res = await predictWithFile(mediaUri, mode);
+      } else {
+        setError('분석할 영상 정보가 없습니다.');
+        setLoading(false);
+        return;
+      }
 
       if (res.status === 'error') {
         setError(res.message ?? '분석 실패');
@@ -236,7 +243,6 @@ export default function AnalysisResultScreen() {
 
       setData(res);
 
-      // ✅ 히스토리에 저장하고, 바로 상세로 이동
       const newId = addToHistory(
         '영상 파일',
         formatResultText(res),
@@ -244,11 +250,8 @@ export default function AnalysisResultScreen() {
         res.visual_report
       );
 
-      // 방어: 혹시라도 newId가 falsy면 이동하지 않음
       if (!newId) return;
 
-      // ✅ expo-router 동적 라우팅 정석 방식
-      // (setTimeout 없어도 대체로 되지만, 상태 flush 타이밍 꼬임 방지로 유지)
       setTimeout(() => {
         router.replace({
           pathname: '/history/[id]',
@@ -262,7 +265,7 @@ export default function AnalysisResultScreen() {
     } finally {
       setLoading(false);
     }
-  }, [mediaUri, mode, addToHistory]);
+  }, [videoId, mediaUri, mode, addToHistory]);
 
   useEffect(() => {
     runAnalysis();

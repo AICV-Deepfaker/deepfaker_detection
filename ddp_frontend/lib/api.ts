@@ -281,7 +281,7 @@ function getImageMimeAndName(uri: string): { type: string; name: string } {
  * POST /videos/upload  (multipart/form-data)
  */
 export type VideoUploadResponse = {
-  video_id: number;
+  video_id: string;
   s3_path: string;
   queued: boolean;
 };
@@ -314,7 +314,7 @@ export async function uploadVideo(
  * POST /videos/link
  */
 export type VideoLinkResponse = {
-  video_id: number;
+  video_id: string;
   queued: boolean;
 };
 
@@ -335,6 +335,105 @@ export async function linkVideo(
     throw new Error(`링크 업로드 실패 (${res.status}): ${text}`);
   }
   return res.json();
+}
+
+/** JWT payload에서 user_id(UUID) 추출 */
+function getUserIdFromToken(token: string): string | null {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+    let base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    while (base64.length % 4) base64 += '=';
+    const payload = JSON.parse(atob(base64));
+    return payload.user_id ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * WebSocket으로 result_id 수신 대기 (새 버전: /ws/{user_id} 경로 사용)
+ */
+function waitForResultViaWSV2(userId: string, token: string, signal: AbortSignal): Promise<string> {
+  return new Promise((resolve, reject) => {
+    if (signal.aborted) return reject(new Error('취소됨'));
+
+    // React Native WebSocket은 세 번째 인자로 headers를 지원한다
+    const ws = new (WebSocket as any)(
+      `${WS_BASE}/ws/${userId}`,
+      undefined,
+      { headers: { Authorization: `Bearer ${token}` } },
+    );
+    let settled = false;
+
+    const finish = (fn: () => void) => {
+      if (!settled) {
+        settled = true;
+        ws.close();
+        fn();
+      }
+    };
+
+    ws.onmessage = (e: MessageEvent) => finish(() => resolve(String(e.data)));
+    ws.onerror = () => finish(() => reject(new Error('WebSocket 연결 오류')));
+    ws.onclose = (e: CloseEvent) => {
+      if (!settled && e.code !== 1000) {
+        finish(() => reject(new Error(`WebSocket 연결 종료 (code: ${e.code})`)));
+      }
+    };
+
+    signal.addEventListener('abort', () =>
+      finish(() => reject(new Error('취소됨')))
+    );
+  });
+}
+
+/**
+ * 분석 요청 트리거
+ * POST /prediction/{mode}?video_id={videoId}
+ */
+export async function triggerAnalysis(
+  accessToken: string,
+  videoId: string,
+  mode: PredictMode,
+): Promise<void> {
+  const res = await fetch(`${API_BASE}/prediction/${mode}?video_id=${videoId}`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'ngrok-skip-browser-warning': 'true',
+    },
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`분석 요청 실패 (${res.status}): ${text}`);
+  }
+}
+
+/**
+ * video_id 기반 딥페이크 추론 전체 흐름
+ * 1) POST /prediction/{mode}?video_id={videoId}
+ * 2) WebSocket /ws/{user_id} 로 result_id 대기
+ * 3) GET /prediction/result/{result_id} → 최종 결과
+ */
+export async function predictWithVideoId(
+  videoId: string,
+  mode: PredictMode = 'deep',
+): Promise<PredictResult> {
+  const authHeaders = await getAuthHeader();
+  const token = authHeaders['Authorization']?.replace('Bearer ', '') ?? '';
+  const userId = getUserIdFromToken(token);
+  if (!userId) throw new Error('인증 정보를 찾을 수 없습니다. 다시 로그인해주세요.');
+
+  // 1. 분석 트리거
+  await triggerAnalysis(token, videoId, mode);
+
+  // 2. WebSocket으로 result_id 대기
+  const abortCtrl = new AbortController();
+  const resultId = await waitForResultViaWSV2(userId, token, abortCtrl.signal);
+
+  // 3. 결과 조회
+  return fetchResult(resultId, mode, authHeaders);
 }
 
 /**
