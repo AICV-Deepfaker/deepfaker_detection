@@ -43,18 +43,22 @@ def predict_deepfake_fast(
         return None
 
     with TemporaryDirectory() as temp_dir:
+        print(f"[TASK] Downloading from S3: {src.s3_path}")
         temp_path = download_video_from_s3(src.s3_path, Path(temp_dir))
+        print(f"[TASK] Download complete: {temp_path}")
         CRUDVideo.update_status(db, src.video_id, VideoStatus.PROCESSING)
 
         try:
             output = detection_pipeline.run_fast_mode(temp_path)
-        except RuntimeError:
+        except Exception:
             CRUDVideo.update_status(db, src.video_id, VideoStatus.FAILED)
+            tb = traceback.format_exc()
+            print(f"[ERROR] predict_deepfake_fast failed:\n{tb}")
             publish_notification(
                 WorkerResultMessage(
                     user_id=src.video.user_id,
                     result_id=None,
-                    error_msg=traceback.format_exc()
+                    error_msg=tb,
                 )
             )
             return None
@@ -107,19 +111,22 @@ def predict_deepfake_deep(
         return None
 
     with TemporaryDirectory() as temp_dir:
+        print(f"[TASK] Downloading from S3: {src.s3_path}")
         temp_path = download_video_from_s3(src.s3_path, Path(temp_dir))
+        print(f"[TASK] Download complete: {temp_path}")
         CRUDVideo.update_status(db, src.video_id, VideoStatus.PROCESSING)
 
         try:
             output = detection_pipeline.run_deep_mode(temp_path)
-
-        except RuntimeError:
+        except Exception:
             CRUDVideo.update_status(db, src.video_id, VideoStatus.FAILED)
+            tb = traceback.format_exc()
+            print(f"[ERROR] predict_deepfake_deep failed:\n{tb}")
             publish_notification(
                 WorkerResultMessage(
                     user_id=src.video.user_id,
                     result_id=None,
-                    error_msg=traceback.format_exc()
+                    error_msg=tb,
                 )
             )
             return None

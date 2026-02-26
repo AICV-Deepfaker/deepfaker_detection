@@ -49,6 +49,25 @@ async def predict_deepfake(
     return None
 
 
+@router.get("/status/{video_id}")
+async def get_video_status(
+    video_id: uuid.UUID,
+    user_id: Annotated[uuid.UUID, Depends(get_current_user_id)],
+    db: Annotated[Session, Depends(get_db)],
+):
+    video = CRUDVideo.get_by_id(db, video_id)
+    if video is None:
+        raise HTTPException(404, "Video Not Found")
+    if video.user_id != user_id:
+        raise HTTPException(403, "Forbidden")
+
+    result = CRUDResult.get_by_video_id(db, video_id)
+    return {
+        "status": video.status,
+        "result_id": str(result.result_id) if result is not None else None,
+    }
+
+
 type ResultType = Annotated[
     FastReportResponse | DeepReportResponse, Field(discriminator="analysis_mode")
 ]

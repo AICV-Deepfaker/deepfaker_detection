@@ -28,9 +28,13 @@ class DetectionPipeline:
         self.r_ppg_detector.load_model()
 
     def run_fast_mode(self, file_path: Path) -> FastReportData:
+        print(f"[PIPELINE] Starting wavelet analysis: {file_path}")
         wavelet_report = self.wavelet_detector.analyze(file_path)
+        print(f"[PIPELINE] Wavelet done. Starting rPPG analysis.")
         r_ppg_report = self.r_ppg_detector.analyze(file_path)
+        print(f"[PIPELINE] rPPG done. Starting STT analysis.")
         stt_report = self.stt_detector.analyze(file_path)
+        print(f"[PIPELINE] STT done.")
 
         if wavelet_report.content is None or r_ppg_report.content is None:
             raise RuntimeError("Content is empty.")
