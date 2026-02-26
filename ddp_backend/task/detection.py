@@ -41,7 +41,8 @@ def predict_deepfake_fast(
     print(f"[TASK] predict_deepfake_fast started for video_id={video_id}", flush=True)
     src = CRUDSource.get_by_video(db, video_id)
     if src is None:
-        print(f"[TASK] Source not found for video_id={video_id}", flush=True)
+        video_check = CRUDVideo.get_by_id(db, video_id)
+        print(f"[TASK] Source not found. Video exists in DB: {video_check is not None}", flush=True)
         return None
 
     with TemporaryDirectory() as temp_dir:

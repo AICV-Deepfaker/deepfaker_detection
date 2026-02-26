@@ -399,9 +399,10 @@ export async function triggerAnalysis(
 
 /**
  * video_id 기반 딥페이크 추론 전체 흐름
- * 1) POST /prediction/{mode}?video_id={videoId}
- * 2) WebSocket /ws/{user_id} 로 result_id 대기
- * 3) GET /prediction/result/{result_id} → 최종 결과
+ * 1) Source 준비 대기 (링크 영상의 경우 YouTube 다운로드 완료까지)
+ * 2) POST /prediction/{mode}?video_id={videoId}
+ * 3) WebSocket /ws/{user_id} 로 result_id 대기
+ * 4) GET /prediction/result/{result_id} → 최종 결과
  */
 export async function predictWithVideoId(
   videoId: string,
@@ -412,8 +413,21 @@ export async function predictWithVideoId(
   const userId = getUserIdFromToken(token);
   if (!userId) throw new Error('인증 정보를 찾을 수 없습니다. 다시 로그인해주세요.');
 
-  // 1. 분석 트리거
-  await triggerAnalysis(token, videoId, mode);
+  // 1. Source 준비 대기: 409면 아직 업로드 중이므로 재시도
+  const MAX_WAIT = 60; // 최대 60초 대기
+  for (let i = 0; i < MAX_WAIT; i++) {
+    const res = await fetch(`${API_BASE}/prediction/${mode}?video_id=${videoId}`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'ngrok-skip-browser-warning': 'true' },
+    });
+    if (res.ok) break;
+    if (res.status === 409) {
+      await delay(1000);
+      continue;
+    }
+    const text = await res.text();
+    throw new Error(`분석 요청 실패 (${res.status}): ${text}`);
+  }
 
   // 2. WebSocket + 폴링 race로 result_id 대기
   const abortCtrl = new AbortController();

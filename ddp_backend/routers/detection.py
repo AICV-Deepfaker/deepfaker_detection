@@ -18,7 +18,7 @@ from ddp_backend.schemas.report import (
     VisualContent,
     ProbVisualContent
 )
-from ddp_backend.services.crud import CRUDResult, CRUDVideo
+from ddp_backend.services.crud import CRUDResult, CRUDSource, CRUDVideo
 from ddp_backend.task.detection import predict_deepfake_deep, predict_deepfake_fast
 
 router = APIRouter(prefix="/prediction", tags=["prediction"])
@@ -41,6 +41,10 @@ async def predict_deepfake(
         raise HTTPException(404, "Video Not Found")
     if video.user_id != user_id:
         raise HTTPException(403, "Forbidden")
+
+    src = CRUDSource.get_by_video(db, video_id)
+    if src is None:
+        raise HTTPException(409, "Video is not ready yet. Please wait for upload to complete.")
 
     if mode == AnalyzeMode.FAST:
         await predict_deepfake_fast.kiq(video.video_id)
