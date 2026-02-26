@@ -42,7 +42,7 @@ class Settings(BaseSettings):
     WAVELET_IMG_SIZE: int = 224
     UNITE_MODEL_PATH: str = "./unite_baseline.onnx"
     UNITE_IMG_SIZE: int = 384
-    RPPG_MODEL_PATH: str = ""
+    RPPG_MODEL_PATH: str = "/home/ubuntu/deepfaker_detection/UBFC-rPPG_EfficientPhys.pth"
     RPPG_IMG_SIZE: int = 72
 
 

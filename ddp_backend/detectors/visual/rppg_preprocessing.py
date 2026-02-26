@@ -22,7 +22,7 @@ class RPPGPreprocessing:
     # =========
     # 1. 기본설정
     # =========
-    def __init__(self, model_type: ModelType):
+    def __init__(self, model_type: ModelType, img_size: int):
         self.model_type = model_type
         self.model_config = RPPGConfig.CONFIG_MAP[model_type]
         self.min_frames = RPPGConfig.MIN_FRAMES
