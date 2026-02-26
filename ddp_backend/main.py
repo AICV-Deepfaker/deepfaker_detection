@@ -63,13 +63,14 @@ async def lifespan(app: FastAPI):  # pyright: ignore[reportUnusedParameter]
     public_url = None
     task = None
 
+    # Load ML models in both server and worker processes
+    if load_all_model:
+        load_all_model()
+    else:
+        print("[STARTUP] load_all_model() skipped (not available)")
+
     if not is_worker:
         # ── FastAPI 서버 전용 초기화 (Taskiq 워커에서는 실행 안 함) ──
-        if load_all_model:
-            load_all_model()
-        else:
-            print("[STARTUP] load_all_model() skipped (not available)")
-
         start_schedular()
 
         await broker.startup()
