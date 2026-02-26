@@ -247,7 +247,8 @@ export default function AnalysisResultScreen() {
         '영상 파일',
         formatResultText(res),
         res.result,
-        res.visual_report
+        res.visual_report,
+        res.result_id
       );
 
       if (!newId) return;

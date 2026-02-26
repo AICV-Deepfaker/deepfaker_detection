@@ -10,6 +10,8 @@ import { ThemedText } from '@/components/themed-text';
 import { useAnalysis } from '@/contexts/analysis-context';
 import { getAuth } from '@/lib/auth-storage';
 import { setPendingVideoUri } from '@/lib/pending-upload';
+import { useIsFocused } from '@react-navigation/native';
+import { getMe } from '@/lib/api';
 
 const MINT_CARD = '#D6F6E4';
 const BLUE_CARD = '#D7ECFF';
@@ -30,12 +32,27 @@ type QuickAction = {
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
-  const { totalPoints } = useAnalysis();
+  const { points, setPointsFromServer, history } = useAnalysis();
   const [nickname, setNickname] = React.useState<string | null>(null);
-  const { history } = useAnalysis();
+  const isFocused = useIsFocused();
 
+  React.useEffect(() => {
+    if (!isFocused) return;
 
-  useEffect(() => {
+    (async () => {
+      try {
+        const me = await getMe();
+        setPointsFromServer({
+          activePoints: me.active_points,
+          totalPoints: me.total_points,
+        });
+      } catch (e) {
+        console.log('포인트 조회 실패', e);
+      }
+    })();
+  }, [isFocused, setPointsFromServer]);
+
+  React.useEffect(() => {
     getAuth().then((auth) => {
       if (!auth) router.replace('/login');
       else setNickname(auth.nickname ?? null);
@@ -147,7 +164,7 @@ export default function HomeScreen() {
               {nickname ?? '회원'}님,{'\n'}딥페이크 금융사기{'\n'}신고하고 보상받으세요!
             </ThemedText>
             <ThemedText style={styles.pointsTitle}>
-              내 포인트 {totalPoints.toLocaleString()}P
+              내 포인트 {(points?.activePoints ?? 0).toLocaleString()}P
             </ThemedText>
           </View>
           <Image

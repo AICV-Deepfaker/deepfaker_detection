@@ -21,6 +21,10 @@ const TEXT_COLOR = '#111';
 const SECONDARY_TEXT_COLOR = '#687076';
 const DANGER = '#E53935';
 
+import { useFocusEffect } from 'expo-router';
+import { getMe } from '@/lib/api';
+
+
 function RowItem({
   icon,
   label,
@@ -116,7 +120,21 @@ function ConfirmModal({
 
 export default function MypageScreen() {
   const insets = useSafeAreaInsets();
-  const { totalPoints } = useAnalysis();
+  const { points } = useAnalysis();
+  const { setPointsFromServer } = useAnalysis();
+
+  useFocusEffect(
+    useCallback(() => {
+      (async () => {
+        try {
+          const me = await getMe();
+          setPointsFromServer({ activePoints: me.active_points, totalPoints: me.total_points });
+        } catch {
+          // 로그인 전 등 예외 상황이면 조용히 무시하거나 안내
+        }
+      })();
+    }, [setPointsFromServer])
+  );
 
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirmVariant, setConfirmVariant] = useState<ConfirmVariant>('logout');
@@ -194,7 +212,9 @@ export default function MypageScreen() {
           <TouchableOpacity style={styles.row} activeOpacity={0.7} onPress={() => router.push('/fraud-report')}>
             <MaterialIcons name="account-balance-wallet" size={22} color={TEXT_COLOR} />
             <ThemedText style={styles.rowLabel}>포인트 내역</ThemedText>
-            <ThemedText style={styles.pointBadge}>{totalPoints.toLocaleString()}P</ThemedText>
+            <ThemedText style={styles.pointBadge}>
+              {(points?.activePoints ?? 0).toLocaleString()}P
+            </ThemedText>
             <MaterialIcons name="chevron-right" size={22} color={SECONDARY_TEXT_COLOR} />
           </TouchableOpacity>
         </View>

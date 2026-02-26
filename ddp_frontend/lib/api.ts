@@ -33,6 +33,7 @@ export interface SttSearchResult {
 export interface PredictResult {
   status: 'success' | 'error';
   result?: 'FAKE' | 'REAL';
+  result_id?: string;
   average_fake_prob?: number;
   confidence_score?: string;
   visual_report?: string; // Base64 이미지 데이터
@@ -227,7 +228,8 @@ async function fetchResult(
     throw new Error(`결과 조회 실패 (${resultRes.status}): ${text}`);
   }
   const raw = await resultRes.json();
-  return mapBackendResponse(raw, mode);
+  const mapped = mapBackendResponse(raw, mode);
+  return { ...mapped, result_id: resultId };
 }
 
 /**
@@ -465,4 +467,44 @@ export async function predictWithImageFile(
   const { video_id: videoId }: { video_id: string } = await response.json();
   const resultId = await waitForResultId(videoId, token, authHeaders);
   return fetchResult(resultId, mode, authHeaders);
+}
+
+/**
+ * 포인트 조회
+ */
+export type UserMeResponse = {
+  active_points: number;
+  total_points?: number;
+  profile_image?: string;
+};
+
+export async function getMe(): Promise<UserMeResponse> {
+  const authHeaders = await getAuthHeader();
+  const res = await fetch(`${API_BASE}/me`, {
+    method: 'GET',
+    headers: { 'ngrok-skip-browser-warning': 'true', ...authHeaders },
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`내 정보 조회 실패 (${res.status}): ${text}`);
+  }
+  return res.json();
+}
+
+export async function postAlert(body: { result_id: string | number }): Promise<any> {
+  const authHeaders = await getAuthHeader();
+  const res = await fetch(`${API_BASE}/alerts`, {
+    method: 'POST',
+    headers: {
+      'ngrok-skip-browser-warning': 'true',
+      'Content-Type': 'application/json',
+      ...authHeaders,
+    },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`신고 실패 (${res.status}): ${text}`);
+  }
+  return res.json().catch(() => ({}));
 }
