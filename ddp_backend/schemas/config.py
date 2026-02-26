@@ -4,7 +4,7 @@ from pydantic import BaseModel
 __all__ = [
     "BaseVideoConfig",
     "WaveletConfig",
-    "RPPGConfigParam",
+    "RPPGConfig",
 ]
 
 
@@ -21,5 +21,5 @@ class WaveletConfig(BaseVideoConfig):
     loss_func: str
 
 
-class RPPGConfigParam(BaseVideoConfig):
+class RPPGConfig(BaseVideoConfig):
     img_size: int = 72
