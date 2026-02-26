@@ -4,7 +4,6 @@ from datetime import date
 
 from fastapi import APIRouter, Depends, File, Form, UploadFile, HTTPException
 from sqlmodel import Session
-from sqlmodel.ext.asyncio.session import AsyncSession
 
 from pydantic import SecretStr
 
@@ -130,5 +129,5 @@ def withdraw_route(
 
 # 포인트 랭킹 top10
 @router.get("/top10", response_model=list[UserRanking])
-async def points_top10_ranking(db: AsyncSession = Depends(get_db)):
-    return await get_top10_ranking(db)
+def points_top10_ranking(db: Session = Depends(get_db)):
+    return get_top10_ranking(db)

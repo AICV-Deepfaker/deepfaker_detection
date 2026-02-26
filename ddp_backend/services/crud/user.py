@@ -6,7 +6,7 @@ from uuid import UUID
 from datetime import date
 
 from pydantic import BaseModel
-from sqlmodel import select, Session
+from sqlmodel import select, Session, col
 from sqlalchemy.exc import NoResultFound
 
 from ddp_backend.models import User
@@ -19,7 +19,6 @@ from .base import CRUDBase
 __all__ = [
     "CRUDUser",
 ]
-
 
 
 class UserUpdate(BaseModel):
@@ -43,7 +42,9 @@ class CRUDUser(CRUDBase):
     @classmethod
     def get_by_email(cls, db: Session, email: str):
         """이메일 조회"""
-        return db.exec(select(User).where(User.email == email)).one_or_none()  # One user per one email
+        return db.exec(
+            select(User).where(User.email == email)
+        ).one_or_none()  # One user per one email
 
     # 사용 : 회원가입
     @classmethod
@@ -61,15 +62,24 @@ class CRUDUser(CRUDBase):
     @classmethod
     def get_by_name_birth(cls, db: Session, name: str, birth: date):
         """이름, 생년월일 조회"""
-        return db.exec(select(User).where(User.name == name, User.birth == birth)).first()
+        return db.exec(
+            select(User).where(User.name == name, User.birth == birth)
+        ).first()
 
     # 사용 : 비밀번호 찾기
     @classmethod
     def get_by_name_birth_email(cls, db: Session, name: str, birth: date, email: str):
         """이름, 생년월일, 이메일 조회"""
-        return db.exec(select(User).where(
-            User.name == name, User.birth == birth, User.email == email
-        )).one_or_none()
+        return db.exec(
+            select(User).where(
+                User.name == name, User.birth == birth, User.email == email
+            )
+        ).one_or_none()
+
+    @classmethod
+    def get_top_10(cls, db: Session):
+        query = select(User).order_by(col(User.activation_points).desc()).limit(10)
+        return db.exec(query).all()
 
     # 사용 : 회원정보수정
     @classmethod
@@ -89,7 +99,7 @@ class CRUDUser(CRUDBase):
         cls.commit_or_flush(db)
         db.refresh(user)
         return user
-    
+
     # 사용 : 이미지 삭제
     @classmethod
     def delete_profile_image(cls, db: Session, user_id: UUID):
@@ -124,6 +134,7 @@ class CRUDUser(CRUDBase):
         cls.commit_or_flush(db)
         return True
         # 사용 : 회원탈퇴 (S3 파일까지 정리)
+
     @classmethod
     def delete_with_s3_cleanup(cls, db: Session, user_id: UUID) -> bool:
         """
@@ -138,7 +149,7 @@ class CRUDUser(CRUDBase):
         # 1) 삭제 대상 모으기 (URL이든 key든 상관없음)
         targets: list[str] = []
 
-        if getattr(user, "profile_image", None):
+        if user.profile_image is not None:
             targets.append(user.profile_image)
 
         # user.videos 관계가 있는 경우에만 순회

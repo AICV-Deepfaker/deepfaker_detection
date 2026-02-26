@@ -1,9 +1,9 @@
-from sqlmodel.ext.asyncio.session import AsyncSession
+from sqlmodel.orm.session import Session
 from ddp_backend.schemas.ranking import UserRanking
-from ddp_backend.services.crud.ranking import get_top10_crud
+from ddp_backend.services.crud import CRUDUser
 
-async def get_top10_ranking(db: AsyncSession) -> list[UserRanking]:
-    rows = await get_top10_crud(db)
+def get_top10_ranking(db: Session) -> list[UserRanking]:
+    rows = CRUDUser.get_top_10(db)
 
     return [
         UserRanking(
