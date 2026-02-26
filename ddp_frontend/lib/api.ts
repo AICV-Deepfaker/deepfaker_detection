@@ -415,12 +415,18 @@ export async function predictWithVideoId(
   // 1. 분석 트리거
   await triggerAnalysis(token, videoId, mode);
 
-  // 2. WebSocket으로 result_id 대기
+  // 2. WebSocket + 폴링 race로 result_id 대기
   const abortCtrl = new AbortController();
-  const resultId = await waitForResultViaWSV2(userId, token, abortCtrl.signal);
-
-  // 3. 결과 조회
-  return fetchResult(resultId, mode, authHeaders);
+  try {
+    const resultId = await Promise.race([
+      waitForResultViaWSV2(userId, token, abortCtrl.signal),
+      pollForResultId(videoId, authHeaders, abortCtrl.signal),
+    ]);
+    // 3. 결과 조회
+    return fetchResult(resultId, mode, authHeaders);
+  } finally {
+    abortCtrl.abort();
+  }
 }
 
 /**
