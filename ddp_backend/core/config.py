@@ -43,7 +43,7 @@ class Settings(BaseSettings):
     UNITE_MODEL_PATH: str = "./unite_baseline.onnx"
     UNITE_IMG_SIZE: int = 384
     RPPG_MODEL_PATH: str = ""
-    RPPG_IMG_SIZE: int = 0
+    RPPG_IMG_SIZE: int = 72
 
 
 

@@ -26,7 +26,8 @@ class RPPGPreprocessing:
         self.model_type = model_type
         self.model_config = RPPGConfig.CONFIG_MAP[model_type]
         self.min_frames = RPPGConfig.MIN_FRAMES
-
+        self.img_size = img_size
+        
         self.face_app = FaceAnalysis(
         name="buffalo_l",
         providers=["CUDAExecutionProvider", "CPUExecutionProvider"],
@@ -125,6 +126,16 @@ class RPPGPreprocessing:
         by2 = min(h, y2 + ph)
         crop = img_rgb[by1:by2, bx1:bx2]
         return crop if crop.size > 0 else img_rgb, bbox_crop
+    def _resize_frames(self, frames: List[np.ndarray]) -> List[np.ndarray]:
+        resized: List[np.ndarray] = []
+        for f in frames:
+            if f is None or f.size == 0:
+                continue
+            # RGB 상태 유지, (W,H) = (size,size)
+            resized.append(cv2.resize(f, (self.img_size, self.img_size), interpolation=cv2.INTER_AREA))
+        if not resized:
+            raise ValueError("All frames are empty after resizing.")
+        return resized
     
     # =========
     # 4-2. 정규화 [0, 1]
@@ -171,16 +182,22 @@ class RPPGPreprocessing:
                 if last_bbox_vis is None and last_bbox is not None:
                     last_bbox_vis = last_bbox
 
+            window = self._resize_frames(window)
 
             window = self._normalize(window)
+            requires_diff = self.model_config.requires_diff
 
-            if self.model_config.requires_diff:
+            if self.model_type == ModelType.EFFICIENTPHYS:
+                requires_diff = False
+
+            if requires_diff:
                 window = self._apply_diff(window)
 
             tensor = self._to_tensor(window)
             tensors.append(tensor)
 
-        return PreprocessResult(
+        return Preprocess
+        ult(
             tensors=tensors,
             first_bbox=first_bbox_vis,
             last_bbox=last_bbox_vis,
