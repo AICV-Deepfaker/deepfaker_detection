@@ -170,7 +170,7 @@ def download_file_from_s3(key_or_url: str, download_path: str | Path) -> Path:
         return download_path
 
     try:
-        _s3_client().download_file(S3_BUCKET, key, str(download_path))
+        _s3_client().download_file(S3_BUCKET, key, str(download_path / key))
         return download_path
     except (BotoCoreError, ClientError) as e:
         raise RuntimeError(f"S3 download failed: {e}") from e
