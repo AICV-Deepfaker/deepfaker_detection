@@ -57,7 +57,10 @@ class RPPGDetector(BaseVideoDetector[RPPGConfig, VisualContent]):
         self.model.to(self.device)
         self.model.eval()
 
-        self.preprocessor = RPPGPreprocessing(model_type=ModelType.EFFICIENTPHYS)
+        self.preprocessor = RPPGPreprocessing(
+            model_type=ModelType.EFFICIENTPHYS,
+            img_size=self.config.img_size,
+        )
 
         print(f"[{self.__class__.__name__}] Load Complete.")
 
