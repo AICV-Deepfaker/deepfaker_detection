@@ -60,13 +60,6 @@ class FastReportData(Base):
     )
     freq_conf: float
     freq_image: str | None = Field(max_length=MAX_S3_LEN)
-    rppg_result: ResultEnum = Field(
-        sa_column=Column(
-            Enum(ResultEnum, values_callable=enum_to_value), nullable=False
-        )
-    )
-
-    rppg_conf: float
     rppg_image: str | None = Field(max_length=MAX_S3_LEN)
     stt_risk_level: STTRiskLevel = Field(
         sa_column=Column(

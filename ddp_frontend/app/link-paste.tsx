@@ -17,9 +17,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ThemedText } from '@/components/themed-text';
 import { linkVideo, uploadVideo } from '@/lib/api';
 import {
-  peekPendingImageUri,
   peekPendingVideoUri,
-  setPendingImageUri,
   setPendingVideoUri,
 } from '@/lib/pending-upload';
 import { withAuth } from '@/lib/with-auth';
@@ -71,8 +69,11 @@ export default function LinkPasteScreen() {
   const [selectedPlatform, setSelectedPlatform] = useState<PlatformId | null>(null);
   const [uploadedFile, setUploadedFile] = useState<UploadedFile | null>(null);
   const [videoUploading, setVideoUploading] = useState(false);
+  const [uploadedVideoId, setUploadedVideoId] = useState<string | null>(null);
   const [showModeButtons, setShowModeButtons] = useState(false);
   const [linkUploadStatus, setLinkUploadStatus] = useState<LinkUploadStatus>('idle');
+  const [linkVideoId, setLinkVideoId] = useState<string | null>(null);
+  const [showLinkModeButtons, setShowLinkModeButtons] = useState(false);
   const [submittedUrl, setSubmittedUrl] = useState('');
   const linkDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -87,8 +88,11 @@ export default function LinkPasteScreen() {
     if (!targetUrl.trim() || targetUrl === submittedUrl) return;
     setSubmittedUrl(targetUrl);
     setLinkUploadStatus('uploading');
+    setLinkVideoId(null);
+    setShowLinkModeButtons(false);
     try {
-      await withAuth((token) => linkVideo(token, targetUrl));
+      const res = await withAuth((token) => linkVideo(token, targetUrl));
+      setLinkVideoId(res.video_id);
       setLinkUploadStatus('done');
     } catch {
       setLinkUploadStatus('error');
@@ -104,6 +108,7 @@ export default function LinkPasteScreen() {
       }
       // YouTube URL이 감지되면 600ms 디바운스 후 링크 업로드
       if (linkDebounceRef.current) clearTimeout(linkDebounceRef.current);
+      setShowLinkModeButtons(false);
       if (detected === 'youtube' && text.trim()) {
         linkDebounceRef.current = setTimeout(() => {
           handleLinkUpload(text.trim());
@@ -113,6 +118,7 @@ export default function LinkPasteScreen() {
         if (detected !== null && detected !== 'youtube') {
           setLinkUploadStatus('idle');
           setSubmittedUrl('');
+          setLinkVideoId(null);
         }
       }
     },
@@ -126,14 +132,34 @@ export default function LinkPasteScreen() {
     }
     const trimmed = url.trim();
     if (!trimmed) return;
-    const encoded = encodeURIComponent(trimmed);
-    router.replace(`/(tabs)/chatbot?link=${encoded}`);
+    if (linkUploadStatus === 'done' && linkVideoId) {
+      setShowLinkModeButtons(true);
+      return;
+    }
+    if (linkUploadStatus === 'uploading') {
+      Alert.alert('업로드 중', '링크 업로드가 완료될 때까지 잠시 기다려주세요.');
+      return;
+    }
+    if (linkUploadStatus === 'error') {
+      Alert.alert('업로드 실패', '링크 업로드에 실패했습니다. 다시 시도해주세요.');
+      return;
+    }
+    Alert.alert('알림', 'YouTube URL을 입력하면 자동으로 업로드됩니다.');
   };
 
   const handleModeSelect = (mode: 'fast' | 'deep') => {
     if (!uploadedFile) return;
-    setPendingVideoUri(uploadedFile.uri);
-    router.replace(`/analysis-result?pendingVideo=1&mode=${mode}`);
+    if (uploadedVideoId) {
+      router.replace(`/analysis-result?videoId=${uploadedVideoId}&mode=${mode}`);
+    } else {
+      setPendingVideoUri(uploadedFile.uri);
+      router.replace(`/analysis-result?pendingVideo=1&mode=${mode}`);
+    }
+  };
+
+  const handleLinkModeSelect = (mode: 'fast' | 'deep') => {
+    if (!linkVideoId) return;
+    router.replace(`/analysis-result?videoId=${linkVideoId}&mode=${mode}`);
   };
 
   const handleCancel = () => {
@@ -167,8 +193,10 @@ export default function LinkPasteScreen() {
       setShowModeButtons(false);
       // 백엔드 S3에 업로드
       setVideoUploading(true);
+      setUploadedVideoId(null);
       try {
-        await withAuth((token) => uploadVideo(token, uri));
+        const res = await withAuth((token) => uploadVideo(token, uri));
+        setUploadedVideoId(res.video_id);
       } catch (e: any) {
         Alert.alert('업로드 실패', e?.message ?? '영상 업로드 중 오류가 발생했습니다.');
       } finally {
@@ -292,7 +320,7 @@ export default function LinkPasteScreen() {
           </View>
         )}
 
-        {/* 모드 선택 (업로드 후 분석하기 탭 시 표시) */}
+        {/* 모드 선택 (영상 파일 업로드 후 분석하기 탭 시 표시) */}
         {showModeButtons && uploadedFile && (
           <View style={styles.modeSection}>
             <ThemedText style={styles.modeSectionLabel}>분석 모드 선택</ThemedText>
@@ -307,6 +335,27 @@ export default function LinkPasteScreen() {
                 style={styles.modeButton}
                 activeOpacity={0.8}
                 onPress={() => handleModeSelect('deep')}>
+                <ThemedText style={styles.modeButtonText}>정밀탐지모드</ThemedText>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
+        {/* 모드 선택 (링크 업로드 완료 후 분석하기 탭 시 표시) */}
+        {showLinkModeButtons && linkVideoId && (
+          <View style={styles.modeSection}>
+            <ThemedText style={styles.modeSectionLabel}>분석 모드 선택</ThemedText>
+            <View style={styles.modeButtonsRow}>
+              <TouchableOpacity
+                style={styles.modeButton}
+                activeOpacity={0.8}
+                onPress={() => handleLinkModeSelect('fast')}>
+                <ThemedText style={styles.modeButtonText}>증거수집모드</ThemedText>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.modeButton}
+                activeOpacity={0.8}
+                onPress={() => handleLinkModeSelect('deep')}>
                 <ThemedText style={styles.modeButtonText}>정밀탐지모드</ThemedText>
               </TouchableOpacity>
             </View>

@@ -41,6 +41,8 @@ def _download_youtube_to_path(url: str, local_path: str | Path) -> str:
         "yt-dlp",
         "--no-playlist",
         "--no-part",
+        "--js-runtimes", "node",  # JS 런타임(node)을 쓰겠다고 명시
+        "--remote-components", "ejs:github", # 해독 스크립트 다운로드 허용
         "-o",
         template,
     ]
@@ -49,7 +51,8 @@ def _download_youtube_to_path(url: str, local_path: str | Path) -> str:
         cmd += ["--cookies", str(_COOKIES_PATH)]
 
     if has_ffmpeg:
-        cmd += ["-f", "bv*+ba/best"]
+        # 특정 포맷을 강제하기보다, mp4 확장자 중 가장 좋은 걸 찾도록 수정
+        cmd += ["-f", "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best"]
         cmd += ["--merge-output-format", "mp4"]
     else:
         cmd += ["-f", "best"]

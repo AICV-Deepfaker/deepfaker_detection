@@ -14,6 +14,9 @@ from ddp_backend.schemas.report import (
     FastReportResponse,
     STTReport,
     VideoReport,
+    ProbabilityContent,
+    VisualContent,
+    ProbVisualContent
 )
 from ddp_backend.services.crud import CRUDResult, CRUDVideo
 from ddp_backend.task.detection import predict_deepfake_deep, predict_deepfake_fast
@@ -79,25 +82,22 @@ async def get_result(
             status=Status.SUCCESS if report is not None else Status.ERROR,
             error_msg=None if report is not None else "Could not find detailed report",
             result=result.total_result,
-            r_ppg=VideoReport(
+            r_ppg=VideoReport[VisualContent](
                 status=Status.SUCCESS,
                 model_name=ModelName.R_PPG,
-                result=report.rppg_result,
-                probability=conf_to_prob(report.rppg_conf, report.rppg_result),
-                visual_report=report.rppg_image,
+                content=VisualContent(
+                    visual_report=report.rppg_image,
+                )
             )
             if report is not None
-            and (
-                result.total_result == report.rppg_result
-                or result.total_result == Result.UNKNOWN
-            )
             else None,
-            wavelet=VideoReport(
+            wavelet=VideoReport[ProbVisualContent](
                 status=Status.SUCCESS,
                 model_name=ModelName.WAVELET,
-                result=report.freq_result,
-                probability=conf_to_prob(report.freq_conf, report.freq_result),
-                visual_report=report.freq_image,
+                content=ProbVisualContent(
+                    visual_report=report.freq_image,
+                    probability=conf_to_prob(report.freq_conf, report.freq_result),
+                )
             )
             if report is not None
             and (
@@ -118,12 +118,12 @@ async def get_result(
             status=Status.SUCCESS if report is not None else Status.ERROR,
             error_msg=None if report is not None else "Could not find detailed report",
             result=result.total_result,
-            unite=VideoReport(
+            unite=VideoReport[ProbabilityContent](
                 status=Status.SUCCESS,
                 model_name=ModelName.UNITE,
-                result=report.unite_result,
-                probability=conf_to_prob(report.unite_conf, report.unite_result),
-                visual_report="",
+                content=ProbabilityContent(
+                    probability=conf_to_prob(report.unite_conf, report.unite_result),
+                )
             )
             if report is not None
             else None,
