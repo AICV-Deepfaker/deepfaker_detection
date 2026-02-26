@@ -21,12 +21,29 @@ class UniteDetector(BaseVideoDetector[BaseVideoConfig, ProbabilityContent]):
 
     @override
     def load_model(self):
+        sess_options = ort.SessionOptions()
+        # 메모리 풀 비활성화 → 4GB 단일 버퍼 연속 할당 실패 방지
+        sess_options.enable_mem_pattern = False
+        sess_options.enable_cpu_mem_arena = False
+
+        # CUDA는 VRAM 부족(~4GB attention 행렬) 시 OOM → CPU만 사용
+        providers: list[str] = []
+        try:
+            if ort.get_device() == "GPU":
+                providers = ["CUDAExecutionProvider", "CPUExecutionProvider"]
+            else:
+                providers = ["CPUExecutionProvider"]
+        except Exception:
+            providers = ["CPUExecutionProvider"]
+
         self.session = ort.InferenceSession(
             self.config.model_path,
-            providers=["CUDAExecutionProvider", "CPUExecutionProvider"],
+            sess_options=sess_options,
+            providers=providers,
         )
         self.input_name: str = self.session.get_inputs()[0].name  # type: ignore
         self.output_name: str = self.session.get_outputs()[0].name  # type: ignore
+        print(f"[UNITE] input shape: {self.session.get_inputs()[0].shape}, providers: {self.session.get_providers()}")
 
     @staticmethod
     def softmax(x: np.ndarray) -> np.ndarray:

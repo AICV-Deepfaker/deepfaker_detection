@@ -37,6 +37,8 @@ export const GIFT_THRESHOLD = 10000; // 스타벅스 아메리카노 기프티�
 interface AnalysisContextType {
   reward: number;
   totalPoints: number;
+  /** 홈·마이페이지에서 points?.activePoints 로 사용 */
+  points: { activePoints: number; totalPoints: number };
   reportCount: number;
   history: HistoryItem[];
   addToHistory: (
@@ -47,7 +49,7 @@ interface AnalysisContextType {
       resultId?: string,
     ) => string;
   addPoints: (amount: number) => void;
-  setPointsFromServer: (data: { activePoints: number; totalPoints: number }) => void;
+  setPointsFromServer: (data: { activePoints: number; totalPoints?: number }) => void;
   incrementReportCount: () => void;
   getHistoryByLink: (link: string) => HistoryItem[];
 }
@@ -55,12 +57,14 @@ interface AnalysisContextType {
 const AnalysisContext = createContext<AnalysisContextType | null>(null);
 
 export function AnalysisProvider({ children }: { children: React.ReactNode }) {
+  const [activePoints, setActivePoints] = useState(0);
   const [totalPoints, setTotalPoints] = useState(0);
   const [reportCount, setReportCount] = useState(0);
   const [history, setHistory] = useState<HistoryItem[]>([]);
 
   const reward = totalPoints; // 호환용
   const addPoints = useCallback((amount: number) => {
+    setActivePoints((prev) => prev + amount);
     setTotalPoints((prev) => prev + amount);
   }, []);
 
@@ -69,8 +73,9 @@ export function AnalysisProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const setPointsFromServer = useCallback(
-    (data: { activePoints: number; totalPoints: number }) => {
-      setTotalPoints(data.totalPoints);
+    (data: { activePoints: number; totalPoints?: number }) => {
+      setActivePoints(data.activePoints);
+      setTotalPoints(data.totalPoints ?? data.activePoints);
     },
     [],
   );
@@ -102,11 +107,14 @@ export function AnalysisProvider({ children }: { children: React.ReactNode }) {
     [history],
   );
 
+  const points = { activePoints, totalPoints };
+
   return (
     <AnalysisContext.Provider
       value={{
         reward,
         totalPoints,
+        points,
         reportCount,
         history,
         addToHistory,

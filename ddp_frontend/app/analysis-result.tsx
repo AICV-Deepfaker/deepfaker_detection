@@ -462,14 +462,16 @@ export default function AnalysisResultScreen() {
     );
   }
 
-  // 판정은 wavelet(주파수) 기준
+  // fast: wavelet 기준 / deep: unite 기준
   const freqResult = data.frequency?.result ?? (data.result === 'UNKNOWN' ? undefined : data.result);
   const isFake = freqResult === 'FAKE';
-  const freqProb = data.frequency?.probability;
   // probability는 REAL 확률 기준: FAKE면 fake% = (1-prob)*100, REAL이면 real% = prob*100
-  const displayPercent = freqProb != null
-    ? Math.round(isFake ? (1 - freqProb) * 100 : freqProb * 100)
+  // deep mode에서는 data.frequency가 없으므로 data.unite?.probability로 fallback
+  const displayProb = data.frequency?.probability ?? data.unite?.probability;
+  const displayPercent = displayProb != null
+    ? Math.round(isFake ? (1 - displayProb) * 100 : displayProb * 100)
     : null;
+  const analysisLabel = isEvidence ? '주파수 분석 기준' : 'UNITE 분석 기준';
 
   const { current: currentBadge } = getBadgeForPoints((totalPoints ?? 0) + (reported ? 0 : POINTS_PER_REPORT));
 
@@ -511,7 +513,7 @@ export default function AnalysisResultScreen() {
               </View>
             )}
             <ThemedText style={styles.verdictCaption}>
-              {isFake ? '딥페이크/사기 의심 확률 (주파수 분석 기준)' : '정상 콘텐츠로 판단될 확률 (주파수 분석 기준)'}
+              {isFake ? `딥페이크/사기 의심 확률 (${analysisLabel})` : `정상 콘텐츠로 판단될 확률 (${analysisLabel})`}
             </ThemedText>
           </View>
         )}
