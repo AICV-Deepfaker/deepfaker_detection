@@ -13,7 +13,6 @@ from ddp_backend.core.s3 import download_video_from_s3
 from ddp_backend.core.tk_broker import broker
 from ddp_backend.models import DeepReport, FastReport, Result
 from ddp_backend.schemas.message import WorkerResultMessage
-from ddp_backend.schemas.enums import Result as ResultEnum
 from ddp_backend.schemas.enums import VideoStatus
 from ddp_backend.services.crud import (
     CRUDDeepReport,
@@ -49,6 +48,7 @@ def predict_deepfake_fast(
             CRUDVideo.update_status(db, src.video_id, VideoStatus.FAILED)
             return None
 
+        """
         total_result: ResultEnum
         if output.freq_conf > output.rppg_conf:
             total_result = output.freq_result
@@ -56,6 +56,8 @@ def predict_deepfake_fast(
             total_result = output.rppg_result
         else:
             total_result = ResultEnum.UNKNOWN
+        """
+        total_result = output.freq_result
 
         result = CRUDResult.create(
             db,

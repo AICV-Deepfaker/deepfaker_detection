@@ -24,11 +24,9 @@ from wavelet_lib.detectors.base_detector import (  # type: ignore
 
 from ddp_backend.schemas.config import WaveletConfig as WaveletConfigParam
 from ddp_backend.schemas.enums import ModelName
+from ddp_backend.schemas.report import ProbVisualContent
 
-from .base import (
-    BaseVideoDetector,
-    VideoInferenceResult,
-)
+from .base import BaseVideoDetector
 
 # ─────────────────────────────────────────────────────────────
 # 추론 개선 상수 (inference_result.py 와 동기화)
@@ -42,7 +40,7 @@ _FACE_SCORE_THR   = 0.7   # [G] InsightFace det_score < 이 값 → 저신뢰 �
 _AGGREGATION      = "p75" # [E] 집계 전략: mean / max / p75 / any_frame
 
 
-class WaveletDetector(BaseVideoDetector[WaveletConfigParam]):
+class WaveletDetector(BaseVideoDetector[WaveletConfigParam, ProbVisualContent]):
     model_name = ModelName.WAVELET
 
     @classmethod
@@ -211,7 +209,7 @@ class WaveletDetector(BaseVideoDetector[WaveletConfigParam]):
     # 메인 추론 (inference_result.py 개선사항 통합)
     # ──────────────────────────────────────────────────────────
     @override
-    def _analyze(self, vid_path: str | Path) -> VideoInferenceResult:
+    def _analyze(self, vid_path: str | Path) -> ProbVisualContent:
         img_size = self.config.img_size
         transform = v2.Compose(
             [
@@ -307,4 +305,4 @@ class WaveletDetector(BaseVideoDetector[WaveletConfigParam]):
         if best_face_rgb is not None:
             visual_report = self.generate_visual_report(best_face_rgb, max_prob)
 
-        return VideoInferenceResult(prob=final_prob, image=visual_report)
+        return ProbVisualContent(probability=final_prob, image=visual_report)
