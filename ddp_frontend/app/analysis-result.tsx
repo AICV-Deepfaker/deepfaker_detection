@@ -86,61 +86,6 @@ function VisualImage({ url }: { url: string }) {
   );
 }
 
-function SectionCard({
-  title,
-  result,
-  probability,
-  visualUrl,
-  children,
-}: {
-  title: string;
-  result?: 'FAKE' | 'REAL' | 'UNKNOWN';
-  probability?: number;
-  visualUrl?: string;
-  children?: React.ReactNode;
-}) {
-  return (
-    <View style={styles.sectionCard}>
-      <ThemedText style={styles.sectionTitle}>{title}</ThemedText>
-
-      {result != null && result !== 'UNKNOWN' && <ResultBadge result={result} />}
-
-      <View style={styles.metricsRow}>
-        {probability != null && (
-          <View style={styles.metric}>
-            <ThemedText style={styles.metricLabel}>확률</ThemedText>
-            <ThemedText style={styles.metricValue}>{(probability * 100).toFixed(2)}%</ThemedText>
-          </View>
-        )}
-      </View>
-
-      {visualUrl ? <VisualImage url={visualUrl} /> : null}
-
-      {children}
-    </View>
-  );
-}
-
-function SttKeywordsCard({ keywords }: { keywords: { keyword: string; detected: boolean }[] }) {
-  const list = keywords.length ? keywords : STT_KEYWORDS.map((k) => ({ keyword: k, detected: false }));
-
-  return (
-    <View style={styles.sectionCard}>
-      <ThemedText style={styles.sectionTitle}>STT 키워드</ThemedText>
-      <View style={styles.keywordGrid}>
-        {list.map(({ keyword, detected }) => (
-          <View key={keyword} style={[styles.keywordChip, detected && styles.keywordChipDetected]}>
-            <ThemedText style={[styles.keywordText, detected && styles.keywordTextDetected]}>
-              {keyword}
-            </ThemedText>
-            <ThemedText style={styles.keywordStatus}>{detected ? '감지됨' : '미감지'}</ThemedText>
-          </View>
-        ))}
-      </View>
-    </View>
-  );
-}
-
 const RISK_COLOR: Record<string, string> = {
   high: '#E53935',
   medium: '#FB8C00',
@@ -154,6 +99,114 @@ const RISK_LABEL: Record<string, string> = {
   none: '해당없음',
 };
 
+function SectionCard({
+  title,
+  result,
+  probability,
+  visualUrl,
+  children,
+}: {
+  title: string;
+  result?: 'FAKE' | 'REAL' | 'UNKNOWN';
+  probability?: number;
+  visualUrl?: string;
+  children?: React.ReactNode;
+}) {
+  const hasContent = visualUrl != null || React.Children.count(children) > 0;
+  const [expanded, setExpanded] = useState(false);
+
+  return (
+    <View style={styles.sectionCard}>
+      {/* 항상 보이는 헤더 */}
+      <TouchableOpacity
+        style={styles.sectionHeader}
+        onPress={() => hasContent && setExpanded(!expanded)}
+        activeOpacity={hasContent ? 0.7 : 1}
+      >
+        <View style={styles.sectionHeaderLeft}>
+          <ThemedText style={styles.sectionTitle}>{title}</ThemedText>
+          {result != null && result !== 'UNKNOWN' && <ResultBadge result={result} />}
+        </View>
+        <View style={styles.sectionHeaderRight}>
+          {probability != null && (
+            <ThemedText style={styles.metricValueInline}>
+              {(probability * 100).toFixed(1)}%
+            </ThemedText>
+          )}
+          {hasContent && (
+            <MaterialIcons
+              name={expanded ? 'keyboard-arrow-up' : 'keyboard-arrow-down'}
+              size={22}
+              color={SUB}
+            />
+          )}
+        </View>
+      </TouchableOpacity>
+
+      {/* 펼쳐질 때만 보이는 내용 */}
+      {expanded && hasContent && (
+        <View style={styles.sectionContent}>
+          {probability != null && (
+            <View style={styles.metricsRow}>
+              <View style={styles.metric}>
+                <ThemedText style={styles.metricLabel}>확률</ThemedText>
+                <ThemedText style={styles.metricValue}>{(probability * 100).toFixed(2)}%</ThemedText>
+              </View>
+            </View>
+          )}
+          {visualUrl ? <VisualImage url={visualUrl} /> : null}
+          {children}
+        </View>
+      )}
+    </View>
+  );
+}
+
+function SttKeywordsCard({ keywords }: { keywords: { keyword: string; detected: boolean }[] }) {
+  const [expanded, setExpanded] = useState(false);
+  const list = keywords.length ? keywords : STT_KEYWORDS.map((k) => ({ keyword: k, detected: false }));
+  const detectedCount = list.filter(k => k.detected).length;
+
+  return (
+    <View style={styles.sectionCard}>
+      <TouchableOpacity
+        style={styles.sectionHeader}
+        onPress={() => setExpanded(!expanded)}
+        activeOpacity={0.7}
+      >
+        <View style={styles.sectionHeaderLeft}>
+          <ThemedText style={styles.sectionTitle}>STT 키워드</ThemedText>
+          {detectedCount > 0 && (
+            <View style={[styles.badge, styles.badgeFake]}>
+              <ThemedText style={styles.badgeText}>{detectedCount}개 감지</ThemedText>
+            </View>
+          )}
+        </View>
+        <MaterialIcons
+          name={expanded ? 'keyboard-arrow-up' : 'keyboard-arrow-down'}
+          size={22}
+          color={SUB}
+        />
+      </TouchableOpacity>
+
+      {expanded && (
+        <View style={styles.sectionContent}>
+          <View style={styles.keywordGrid}>
+            {list.map(({ keyword, detected }) => (
+              <View key={keyword} style={[styles.keywordChip, detected && styles.keywordChipDetected]}>
+                <ThemedText style={[styles.keywordText, detected && styles.keywordTextDetected]}>
+                  {keyword}
+                </ThemedText>
+                <ThemedText style={styles.keywordStatus}>{detected ? '감지됨' : '미감지'}</ThemedText>
+              </View>
+            ))}
+          </View>
+        </View>
+      )}
+    </View>
+  );
+}
+
 function SttAnalysisCard({
   riskLevel,
   riskReason,
@@ -165,6 +218,7 @@ function SttAnalysisCard({
   transcript?: string;
   searchResults?: SttSearchResult[];
 }) {
+  const [expanded, setExpanded] = useState(false);
   if (!riskLevel && !transcript) return null;
 
   const color = RISK_COLOR[riskLevel ?? 'none'] ?? '#90A4AE';
@@ -172,39 +226,53 @@ function SttAnalysisCard({
 
   return (
     <View style={styles.sectionCard}>
-      <ThemedText style={styles.sectionTitle}>STT 사기 분석</ThemedText>
+      <TouchableOpacity
+        style={styles.sectionHeader}
+        onPress={() => setExpanded(!expanded)}
+        activeOpacity={0.7}
+      >
+        <View style={styles.sectionHeaderLeft}>
+          <ThemedText style={styles.sectionTitle}>STT 사기 분석</ThemedText>
+          {riskLevel && (
+            <View style={[styles.riskBadgeInline, { backgroundColor: color }]}>
+              <ThemedText style={styles.riskBadgeText}>{label?.toUpperCase()}</ThemedText>
+            </View>
+          )}
+        </View>
+        <MaterialIcons
+          name={expanded ? 'keyboard-arrow-up' : 'keyboard-arrow-down'}
+          size={22}
+          color={SUB}
+        />
+      </TouchableOpacity>
 
-      {riskLevel && (
-        <View style={[styles.riskBadge, { backgroundColor: color }]}>
-          <ThemedText style={styles.riskBadgeText}>위험도: {label?.toUpperCase()}</ThemedText>
+      {expanded && (
+        <View style={styles.sectionContent}>
+          {riskReason ? (
+            <ThemedText style={styles.riskReason}>{riskReason}</ThemedText>
+          ) : null}
+          {transcript ? (
+            <View style={styles.transcriptBox}>
+              <ThemedText style={styles.transcriptLabel}>전사 텍스트</ThemedText>
+              <ThemedText style={styles.transcriptText}>{transcript}</ThemedText>
+            </View>
+          ) : null}
+          {searchResults && searchResults.length > 0 ? (
+            <View style={styles.searchSection}>
+              <ThemedText style={styles.transcriptLabel}>관련 최신 사례</ThemedText>
+              {searchResults.map((item, i) => (
+                <View key={i} style={styles.searchItem}>
+                  <ThemedText style={styles.searchKeyword}>[{item.keyword}]</ThemedText>
+                  <ThemedText style={styles.searchTitle}>{item.title}</ThemedText>
+                  <ThemedText style={styles.searchContent} numberOfLines={3}>
+                    {item.content}
+                  </ThemedText>
+                </View>
+              ))}
+            </View>
+          ) : null}
         </View>
       )}
-
-      {riskReason ? (
-        <ThemedText style={styles.riskReason}>{riskReason}</ThemedText>
-      ) : null}
-
-      {transcript ? (
-        <View style={styles.transcriptBox}>
-          <ThemedText style={styles.transcriptLabel}>전사 텍스트</ThemedText>
-          <ThemedText style={styles.transcriptText}>{transcript}</ThemedText>
-        </View>
-      ) : null}
-
-      {searchResults && searchResults.length > 0 ? (
-        <View style={styles.searchSection}>
-          <ThemedText style={styles.transcriptLabel}>관련 최신 사례</ThemedText>
-          {searchResults.map((item, i) => (
-            <View key={i} style={styles.searchItem}>
-              <ThemedText style={styles.searchKeyword}>[{item.keyword}]</ThemedText>
-              <ThemedText style={styles.searchTitle}>{item.title}</ThemedText>
-              <ThemedText style={styles.searchContent} numberOfLines={3}>
-                {item.content}
-              </ThemedText>
-            </View>
-          ))}
-        </View>
-      ) : null}
     </View>
   );
 }
@@ -631,27 +699,54 @@ const styles = StyleSheet.create({
   sectionCard: {
     backgroundColor: CARD_BG,
     borderRadius: 16,
-    padding: 16,
+    overflow: 'hidden',
     marginBottom: 16,
     borderWidth: 1,
     borderColor: BORDER,
   },
 
-  sectionTitle: { fontSize: 16, fontWeight: '700', color: TEXT, marginBottom: 10 },
+  // 접기/펼치기 헤더
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+  },
+  sectionHeaderLeft: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginRight: 8,
+  },
+  sectionHeaderRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  sectionContent: {
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+    borderTopWidth: 1,
+    borderTopColor: BORDER,
+    paddingTop: 12,
+  },
+
+  sectionTitle: { fontSize: 16, fontWeight: '700', color: TEXT },
+  metricValueInline: { fontSize: 14, fontWeight: '700', color: TEXT },
 
   badge: {
     flexDirection: 'row',
     alignItems: 'center',
-    alignSelf: 'flex-start',
     gap: 6,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
+    paddingVertical: 4,
+    paddingHorizontal: 10,
     borderRadius: 8,
-    marginBottom: 12,
   },
   badgeFake: { backgroundColor: FAKE_RED },
   badgeReal: { backgroundColor: REAL_GREEN },
-  badgeText: { color: '#fff', fontWeight: '700', fontSize: 14 },
+  badgeText: { color: '#fff', fontWeight: '700', fontSize: 13 },
 
   metricsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 16, marginBottom: 12 },
   metric: {},
@@ -704,6 +799,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 8,
     marginBottom: 10,
+  },
+  riskBadgeInline: {
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 8,
   },
   riskBadgeText: { color: '#fff', fontWeight: '700', fontSize: 13 },
   riskReason: { fontSize: 14, color: TEXT, marginBottom: 10, lineHeight: 20 },

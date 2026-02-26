@@ -212,11 +212,14 @@ class WaveletDetector(BaseVideoDetector[WaveletConfigParam, ProbVisualContent]):
         timestamps: list[float],
         transform: v2.Compose,
         img_size: int,
+        agg_prob: float | None = None,  # 집계 확률(프론트 표시값과 동일하게)
     ) -> bytes:
         """inference_result.py의 6-row 시각화 figure를 PNG bytes로 반환."""
         probs_arr = np.array(all_probs)
-        avg_prob = float(np.mean(probs_arr))
-        verdict = "FAKE" if avg_prob >= 0.5 else "REAL"
+        mean_prob = float(np.mean(probs_arr))
+        # agg_prob이 주어지면 배너/판정에 사용 (프론트와 동일한 수치 표시)
+        display_prob = agg_prob if agg_prob is not None else mean_prob
+        verdict = "FAKE" if display_prob >= 0.5 else "REAL"
         verdict_col = "#e74c3c" if verdict == "FAKE" else "#2ecc71"
         n_frames = len(frames_rgb)
         n_rep = min(_N_REP_FRAMES, n_frames)
@@ -226,7 +229,7 @@ class WaveletDetector(BaseVideoDetector[WaveletConfigParam, ProbVisualContent]):
         fig = plt.figure(figsize=(22, 30))  # type: ignore
         fig.suptitle(
             f"Wavelet Inference Result\n"
-            f"Overall Verdict: [{verdict}]  (Avg Fake Prob = {avg_prob:.4f})",
+            f"Overall Verdict: [{verdict}]  (Fake Prob = {display_prob:.4f})",
             fontsize=18, fontweight="bold", y=0.99, color=verdict_col,
         )
         gs = gridspec.GridSpec(6, 4, figure=fig, hspace=0.5, wspace=0.3, top=0.95, bottom=0.02)
@@ -236,7 +239,7 @@ class WaveletDetector(BaseVideoDetector[WaveletConfigParam, ProbVisualContent]):
         ax_banner.set_facecolor(verdict_col)
         ax_banner.text(
             0.5, 0.5,
-            f"VERDICT: {verdict}  |  Avg Fake Probability: {avg_prob:.4f}"
+            f"VERDICT: {verdict}  |  Fake Probability: {display_prob:.4f}"
             f"  |  Frames Analyzed: {n_frames}",
             transform=ax_banner.transAxes,
             fontsize=16, fontweight="bold", color="white", va="center", ha="center",
@@ -263,7 +266,9 @@ class WaveletDetector(BaseVideoDetector[WaveletConfigParam, ProbVisualContent]):
         ax_hist = fig.add_subplot(gs[2, :])
         ax_hist.hist(probs_arr, bins=20, range=(0, 1), color="steelblue", alpha=0.7, edgecolor="white")
         ax_hist.axvline(0.5, color="red", linestyle="--", lw=2, label="Threshold")
-        ax_hist.axvline(avg_prob, color="orange", linestyle="-", lw=2, label=f"Mean = {avg_prob:.4f}")
+        ax_hist.axvline(mean_prob, color="orange", linestyle="-", lw=2, label=f"Mean = {mean_prob:.4f}")
+        if agg_prob is not None and abs(agg_prob - mean_prob) > 0.001:
+            ax_hist.axvline(agg_prob, color="purple", linestyle="-", lw=2, label=f"Agg({_AGGREGATION}) = {agg_prob:.4f}")
         ax_hist.set_xlabel("Fake Probability", fontsize=11)
         ax_hist.set_ylabel("Frame Count", fontsize=11)
         ax_hist.set_title("Distribution of Frame Probabilities", fontsize=13)
@@ -418,7 +423,7 @@ class WaveletDetector(BaseVideoDetector[WaveletConfigParam, ProbVisualContent]):
         else:
             final_prob = float(np.mean(arr))
 
-        # ── 시각화 리포트 (inference_result.py: visualize와 동일한 인자 사용) ──
+        # ── 시각화 리포트 (프론트와 동일한 집계값 agg_prob 전달) ──
         visual_report = None
         if valid_frames and all_probs:
             visual_report = self.generate_visual_report(
@@ -427,6 +432,7 @@ class WaveletDetector(BaseVideoDetector[WaveletConfigParam, ProbVisualContent]):
                 timestamps,
                 transform,
                 img_size,
+                agg_prob=final_prob,  # 프론트에 반환하는 값과 동일한 수치 사용
             )
 
         # final_prob는 FAKE 확률 → ProbabilityContent는 REAL 확률을 기대하므로 변환

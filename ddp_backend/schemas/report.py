@@ -61,7 +61,8 @@ class VideoReport[Content: BaseModel](BaseReport):
         }
         if self.content is None:
             return base_dict
-        content_dict = self.content.model_dump()
+        # mode='json' 필수: field_serializer(visual_report S3key→URL 변환)가 반드시 적용되어야 함
+        content_dict = self.content.model_dump(mode='json')
         return {**base_dict, **content_dict}
 
 

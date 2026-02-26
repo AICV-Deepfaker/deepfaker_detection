@@ -214,6 +214,9 @@ async function fetchResult(
     throw new Error(`결과 조회 실패 (${resultRes.status}): ${text}`);
   }
   const raw = await resultRes.json();
+  // 시각화 URL 디버그 로그 (이미지가 안 보이면 여기서 URL 확인)
+  console.log('[API] wavelet.visual_report:', raw.wavelet?.visual_report);
+  console.log('[API] r_ppg.visual_report:', raw.r_ppg?.visual_report);
   const mapped = mapBackendResponse(raw, mode);
   return { ...mapped, result_id: resultId };
 }
