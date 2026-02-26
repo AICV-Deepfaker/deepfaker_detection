@@ -21,7 +21,7 @@ from pyngrok import ngrok  # type: ignore
 
 from ddp_backend.core.redis_bridge import redis_connector
 from ddp_backend.core.tk_broker import broker
-from ddp_backend.routers import auth, detection, user, video, websocket
+from ddp_backend.routers import alert, auth, detection, user, video, websocket
 
 _BACKEND_DIR = Path(__file__).parent
 load_dotenv(_BACKEND_DIR / ".env")
@@ -133,6 +133,7 @@ app.include_router(auth.router)
 app.include_router(user.router)
 app.include_router(video.router)
 app.include_router(websocket.router)
+app.include_router(alert.router)
 
 
 # ==========================================

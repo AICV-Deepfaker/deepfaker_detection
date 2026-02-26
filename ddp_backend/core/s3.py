@@ -284,3 +284,35 @@ def to_public_url(value: str | None) -> str | None:
 
     # key면 public url로 변환
     return _build_public_url(v)
+
+
+def to_presigned_url(value: str | None, expiration: int = 3600) -> str | None:
+    """
+    S3 key 또는 URL을 presigned URL로 변환 (기본 1시간 유효).
+    버킷이 비공개일 때 프론트에 이미지를 전달하려면 이 함수를 사용.
+    S3_DRY_RUN 모드에서는 public URL로 대체.
+    """
+    if not value:
+        return None
+    v = value.strip()
+
+    if S3_DRY_RUN:
+        return to_public_url(v)
+
+    # URL이든 key든 key로 정규화
+    key = _normalize_key(_extract_s3_key(v) or v)
+    if not key:
+        return None
+
+    try:
+        _require_bucket()
+        s3 = _s3_client()
+        url = s3.generate_presigned_url(
+            "get_object",
+            Params={"Bucket": S3_BUCKET, "Key": key},
+            ExpiresIn=expiration,
+        )
+        return url
+    except Exception:
+        # presigned URL 생성 실패 시 public URL로 fallback
+        return _build_public_url(key)

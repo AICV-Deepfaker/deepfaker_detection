@@ -2,7 +2,7 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, Field, computed_field, field_serializer, model_serializer
 
-from ddp_backend.core.s3 import to_public_url
+from ddp_backend.core.s3 import to_presigned_url
 from ddp_backend.models.report import DeepReportData, FastReportData, STTScript
 
 from .enums import AnalyzeMode, ModelName, Result, Status, STTRiskLevel
@@ -46,7 +46,7 @@ class VisualContent(BaseModel):
     def vis_report_s3_key_to_path(self, value: str | None, _info): # type: ignore
         if value is None:
             return None
-        return to_public_url(value)
+        return to_presigned_url(value)
 
 class ProbVisualContent(ProbabilityContent, VisualContent): ...
 
