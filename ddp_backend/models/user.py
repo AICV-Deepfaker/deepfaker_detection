@@ -30,6 +30,7 @@ class UserBase(Base):
     birth: date | None = None
     profile_image: str | None = Field(default=None, max_length=MAX_S3_LEN)
     affiliation: Affiliation | None = Field(
+        default=None,
         sa_column=Column(
             Enum(Affiliation, values_callable=enum_to_value),
             nullable=True,
@@ -44,6 +45,7 @@ class User(UserBase, CreatedTimestampMixin, table=True):
 
     user_id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True, index=True)
     login_method: LoginMethod = Field(
+        default=LoginMethod.LOCAL,
         sa_column=Column(
             Enum(LoginMethod, values_callable=enum_to_value),
             nullable=False,
