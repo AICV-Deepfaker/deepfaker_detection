@@ -489,7 +489,7 @@ export type UserMeResponse = {
 
 export async function getMe(): Promise<UserMeResponse> {
   const authHeaders = await getAuthHeader();
-  const res = await fetch(`${API_BASE}/me`, {
+  const res = await fetch(`${API_BASE}/user/me`, {
     method: 'GET',
     headers: { 'ngrok-skip-browser-warning': 'true', ...authHeaders },
   });

@@ -51,8 +51,9 @@ class UserMeResponse(UserBase):
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
     user_id: uuid.UUID
     created_at: datetime
-    # activation_points 컬럼을 프론트 규격(active_points)으로 노출
+    # activation_points 컬럼을 프론트 규격(active_points, total_points)으로 노출
     active_points: int = Field(default=0, validation_alias="activation_points")
+    total_points: int = Field(default=0, validation_alias="activation_points")
 
 
 # 이메일 중복 확인 요청
