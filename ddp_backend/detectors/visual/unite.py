@@ -21,19 +21,35 @@ class UniteDetector(BaseVideoDetector[BaseVideoConfig, ProbabilityContent]):
 
     @override
     def load_model(self):
+        import torch
+
         sess_options = ort.SessionOptions()
-        # 메모리 풀 비활성화 → 4GB 단일 버퍼 연속 할당 실패 방지
         sess_options.enable_mem_pattern = False
         sess_options.enable_cpu_mem_arena = False
 
-        # CUDA는 VRAM 부족(~4GB attention 행렬) 시 OOM → CPU만 사용
-        providers: list[str] = []
+        cuda_available = False
         try:
-            if ort.get_device() == "GPU":
-                providers = ["CUDAExecutionProvider", "CPUExecutionProvider"]
-            else:
-                providers = ["CPUExecutionProvider"]
+            cuda_available = ort.get_device() == "GPU"
         except Exception:
+            pass
+
+        if cuda_available:
+            # CUDA EP 아레나 선점 할당 최소화:
+            # - arena_extend_strategy=kSameAsRequested: 필요한 만큼만 할당 (기본값은 큰 블록 선점)
+            # - initial_chunk_size_bytes=1MB: 초기 아레나 크기를 최소화해 cublasCreate 실패 방지
+            # - gpu_mem_limit: ORT가 사용 가능한 최대 VRAM 제한 (14 GB)
+            cuda_provider_options = {
+                "device_id": 0,
+                "arena_extend_strategy": "kSameAsRequested",
+                "initial_chunk_size_bytes": 1 * 1024 * 1024,   # 1 MB
+                "gpu_mem_limit": 14 * 1024 * 1024 * 1024,      # 14 GB
+                "cudnn_conv_algo_search": "DEFAULT",
+                "do_copy_in_default_stream": True,
+            }
+            # PyTorch 캐시 해제 후 ORT 세션 초기화 (단편화된 VRAM 확보)
+            torch.cuda.empty_cache()
+            providers: list = [("CUDAExecutionProvider", cuda_provider_options), "CPUExecutionProvider"]
+        else:
             providers = ["CPUExecutionProvider"]
 
         self.session = ort.InferenceSession(
@@ -67,4 +83,5 @@ class UniteDetector(BaseVideoDetector[BaseVideoConfig, ProbabilityContent]):
             result_prob.append(cur_prob)
         max_prob = max(result_prob)
 
-        return ProbabilityContent(probability=max_prob)
+        # softmax[0][1]은 FAKE 클래스 확률 → ProbabilityContent는 REAL 확률 기대
+        return ProbabilityContent(probability=1.0 - max_prob)

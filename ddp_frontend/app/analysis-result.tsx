@@ -118,14 +118,16 @@ function SectionCard({
 }) {
   const hasContent = visualUrl != null || React.Children.count(children) > 0;
   const [expanded, setExpanded] = useState(false);
-  const percent =
+  // probability는 REAL 확률: FAKE → fake% = (1-prob)*100, REAL → real% = prob*100
+  const rawPercent =
               probability != null
                 ? (result === 'FAKE'
-                    ? probability * 100
+                    ? (1 - probability) * 100
                     : result === 'REAL'
-                      ? (1 - probability) * 100
+                      ? probability * 100
                       : probability * 100)
                 : null;
+  const percent = rawPercent != null ? Math.min(95, rawPercent) : null;
 
   return (
     <View style={styles.sectionCard}>
@@ -481,7 +483,7 @@ export default function AnalysisResultScreen() {
   // deep mode에서는 data.frequency가 없으므로 data.unite?.probability로 fallback
   const displayProb = data.frequency?.probability ?? data.unite?.probability;
   const displayPercent = displayProb != null
-    ? Math.round(isFake ? displayProb * 100 : (1 - displayProb) * 100)
+    ? Math.min(95, Math.round(isFake ? (1 - displayProb) * 100 : displayProb * 100))
     : null;
   const analysisLabel = isEvidence ? '주파수 분석 기준' : 'UNITE 분석 기준';
 
