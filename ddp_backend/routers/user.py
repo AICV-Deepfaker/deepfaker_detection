@@ -5,7 +5,7 @@ from datetime import date
 from fastapi import APIRouter, Depends, File, Form, UploadFile, HTTPException
 from sqlmodel import Session
 
-from pydantic import SecretStr
+from pydantic import SecretStr, EmailStr
 
 from ddp_backend.core.database import get_db
 from ddp_backend.core.security import get_current_user
@@ -63,7 +63,7 @@ def check_nickname_route(body: CheckNickname, db: Session = Depends(get_db)):
 # 회원가입 - multipart/form-data (이메일/닉네임 중복 확인 후 유저 생성, 프로필 이미지 S3 업로드)
 @router.post("/register", response_model=UserCreateResponse)
 async def register_route(
-    email: str = Form(...),
+    email: EmailStr = Form(...),
     password: SecretStr = Form(...),
     name: str = Form(...),
     nickname: str | None = Form(None),

@@ -85,18 +85,26 @@ def process_and_save(img_path, save_name):
         rgb = cv2.resize(rgb, (IMG_SIZE, IMG_SIZE))
 
         plt.figure(figsize=(12, 7))
+
         plt.subplot(2, 3, 1); plt.imshow(rgb); plt.title("Input Image"); plt.axis("off")
         plt.subplot(2, 3, 2); plt.imshow(np.abs(LH), cmap="gray"); plt.title("LH"); plt.axis("off")
         plt.subplot(2, 3, 3); plt.imshow(np.abs(HL), cmap="gray"); plt.title("HL"); plt.axis("off")
         plt.subplot(2, 3, 5); plt.imshow(np.abs(HH), cmap="gray"); plt.title("HH"); plt.axis("off")
-        
+
         plt.subplot(2, 3, 6)
         color = 'red' if prob > 0.5 else 'blue'
-        plt.text(0.1, 0.5, f"Fake Prob: {prob:.4f}\nClass: {'FAKE' if cls==1 else 'REAL'}", 
-                 fontsize=14, color=color, weight='bold')
+        plt.text(
+            0.05, 0.55,
+            f"Fake Prob: {prob:.4f}\nClass: {'FAKE' if cls==1 else 'REAL'}",
+            fontsize=14, color=color, weight='bold'
+        )
         plt.axis("off")
 
-        plt.savefig(os.path.join(SAVE_DIR, f"{save_name}.png"), dpi=100)
+        # ✅ 내부/외부 여백 줄이기
+        plt.tight_layout(pad=0.2)
+
+        out_path = os.path.join(SAVE_DIR, f"{save_name}.png")
+        plt.savefig(out_path, dpi=150, bbox_inches="tight", pad_inches=0.0)
         plt.close()
     except Exception as e:
         print(f"Error on {img_path}: {e}")
